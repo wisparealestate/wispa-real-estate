@@ -17,7 +17,9 @@ This guide outlines the complete steps to deploy your project using Render (back
   `postgresql://username:password@hostname:5432/databasename`
 
 ## 2. Deploy Backend to Render
- Set environment variables (e.g., `DATABASE_URL` with your PostgreSQL connection string).
+> **Note:** The default branch on GitHub is typically `main` (not `master`). Ensure you select the correct branch when connecting your repository in Render or Vercel.
+
+Set environment variables (e.g., `DATABASE_URL` with your PostgreSQL connection string).
 
    Example values for your Render PostgreSQL database:
    - Hostname: dpg-d6acunfgi27c73d1sgsg-a
