@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .notifications-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .notifications-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .notifications-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-tab {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            background: transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .filter-tab.active {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+        }
+        .filter-tab:hover {
+            border-color: #2563eb;
+        }
+        .notification-item {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .notification-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        .notification-item.unread {
+            background: #f0f7ff;
+            border-left: 4px solid #2563eb;
+        }
+        .notification-icon {
+            flex: 0 0 40px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .notification-icon.login {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .notification-icon.like {
+            background: #fce7f3;
+            color: #ec4899;
+        }
+        .notification-icon.message {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+        .notification-icon.listing {
+            background: #e0e7ff;
+            color: #6366f1;
+        }
+        .notification-icon.system {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+        .notification-icon.admin {
+            background: #fcd34d;
+            color: #b45309;
+        }
+        .notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .notification-title {
+            font-weight: 600;
+            color: #111;
+            margin-bottom: 4px;
+        }
+        .notification-message {
+            font-size: 0.95rem;
+            color: var(--secondary);
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .notification-time {
+            font-size: 0.85rem;
+            color: #999;
+        }
+        .notification-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .notification-action {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notification-action:hover {
+            background: var(--light);
+        }
+        .notification-action.primary {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+        }
+        .notification-action.primary:hover {
+            background: #1d4ed8;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--secondary);
+        }
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        .empty-state p {
+            font-size: 1.05rem;
+            margin: 0;
+        }
+        .mark-all-read {
+            padding: 8px 14px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .mark-all-read:hover {
+            background: var(--light);
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-decoration: none;
+            color: inherit;
+            font-size: 14px;
+        }
+        .unread-badge {
+            display: inline-block;
+            background: #ef4444;
+            color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .notification-item.read {
+            opacity: 0.7;
+        }
+        /* Modal Styles */
+        .notification-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .notification-modal.active {
+            display: flex;
+        }
+        .notification-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: transparent;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+        }
+        .modal-close:hover {
+            color: #000;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .modal-icon.login {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .modal-icon.like {
+            background: #fce7f3;
+            color: #ec4899;
+        }
+        .modal-icon.message {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+        .modal-icon.listing {
+            background: #e0e7ff;
+            color: #6366f1;
+        }
+        .modal-icon.system {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+        .modal-icon.admin {
+            background: #fcd34d;
+            color: #b45309;
+        }
+        .modal-header-text h2 {
+            margin: 0 0 4px 0;
+            font-size: 1.3rem;
+            color: #111;
+        }
+        .modal-header-text .modal-time {
+            font-size: 0.85rem;
+            color: #999;
+        }
+        .modal-body {
+            margin-bottom: 24px;
+        }
+        .modal-body h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111;
+            margin: 0 0 12px 0;
+        }
+        .modal-body-text {
+            color: var(--secondary);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        .modal-details {
+            background: var(--light);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .modal-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-detail-row:last-child {
+            border-bottom: none;
+        }
+        .modal-detail-label {
+            font-weight: 500;
+            color: #666;
+        }
+        .modal-detail-value {
+            color: #111;
+            font-weight: 600;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-action-btn {
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .modal-action-btn:hover {
+            background: var(--light);
+        }
+        .modal-action-btn.primary {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        .modal-action-btn.primary:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <!-- ADMIN HEADER -->
+    <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px; position:fixed; top:0; left:0; width:100vw; z-index:1002; box-sizing:border-box;">
+        <div class="header-left" style="display:flex; flex-direction:column;">
+            <span style="font-size:25px; font-weight:500; color:black; margin-right: 30px; font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;">ADMIN PANEL</span>
+        </div>
+        <div class="header-right" style="display:flex; align-items:center; gap:18px; position:relative;">
+            <span title="Search" id="header-search" style="font-size:22px; cursor:pointer;">🔍</span>
+            <span title="Notifications" id="header-notification" style="font-size:22px; cursor:pointer;">🔔</span>
+            <span title="Chat" id="header-chat" style="font-size:22px; cursor:pointer;">💬</span>
+            <div class="hamburger-menu" style="position:relative;">
+                <input type="checkbox" id="hamburger-toggle" style="display:none;">
+                <label for="hamburger-toggle" style="cursor:pointer; display:inline-block;">
+                    <span style="font-size:28px;">☰</span>
+                </label>
+                <div class="menu-dropdown" style="display:none; position:absolute; top:40px; right:0; background:var(--white); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); min-width:180px; z-index:100;">
+                    <a href="admin.html#overview" class="menu-link" data-page="overview" style="display:block; padding:12px 18px; text-decoration:none;">Overview</a>
+                    <a href="admin.html#properties" class="menu-link" data-page="properties" style="display:block; padding:12px 18px; text-decoration:none;">Properties</a>
+                    <a href="admin.html#users" class="menu-link" data-page="users" style="display:block; padding:12px 18px; text-decoration:none;">Users</a>
+                    <a href="admin.html#agents" class="menu-link" data-page="agents" style="display:block; padding:12px 18px; text-decoration:none;">Agents</a>
+                    <a href="admin.html#analytics" class="menu-link" data-page="analytics" style="display:block; padding:12px 18px; text-decoration:none;">Analytics</a>
+                    <a href="admin.html#documents" class="menu-link" data-page="documents" style="display:block; padding:12px 18px; text-decoration:none;">Documents</a>
+                    <a href="admin.html#settings" class="menu-link" data-page="settings" style="display:block; padding:12px 18px; text-decoration:none;">Settings</a>
+                </div>
+            </div>
+        </div>
+        <script>
+            // Hamburger menu dropdown toggle and header icon wiring
+            document.addEventListener('DOMContentLoaded', function() {
+                var toggle = document.getElementById('hamburger-toggle');
+                var dropdown = document.querySelector('.menu-dropdown');
+                var label = document.querySelector('label[for="hamburger-toggle"]');
+                if(toggle && dropdown && label) {
+                    toggle.addEventListener('change', function() {
+                        dropdown.style.display = toggle.checked ? 'block' : 'none';
+                    });
+                    label.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        toggle.checked = !toggle.checked;
+                        dropdown.style.display = toggle.checked ? 'block' : 'none';
+                    });
+                    document.addEventListener('click', function(e) {
+                        if (!dropdown.contains(e.target) && !label.contains(e.target)) {
+                            toggle.checked = false;
+                            dropdown.style.display = 'none';
+                        }
+                    });
+                }
+                // Header icon wiring
+                var searchIcon = document.getElementById('header-search');
+                var notifIcon = document.getElementById('header-notification');
+                var chatIcon = document.getElementById('header-chat');
+                if(searchIcon) {
+                    searchIcon.addEventListener('click', function(){
+                        window.location.href = 'admin-search.html';
+                    });
+                }
+                if(notifIcon) {
+                    notifIcon.addEventListener('click', function(){
+                        window.location.href = 'notifications.html';
+                    });
+                }
+                if(chatIcon) {
+                    chatIcon.addEventListener('click', function(){
+                        window.location.href = 'admin-chat.html';
+                    });
+                }
+            });
+        </script>
+    </header>
+    <div style="height:80px;"></div>
+
+    <main class="admin-main">
+        <div class="search-section" style="width:100%;max-width:600px;margin:40px auto 0 auto;padding:20px;">
+            <h2>Notifications</h2>
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">All</button>
+                    <button class="filter-tab" data-filter="login">Login</button>
+                    <button class="filter-tab" data-filter="like">Likes</button>
+                    <button class="filter-tab" data-filter="message">Messages</button>
+                    <button class="filter-tab" data-filter="system">System</button>
+                    <button class="filter-tab" data-filter="listing">Listings</button>
+                    <button class="filter-tab" data-filter="admin">Admin</button>
+                    <button class="filter-tab" data-filter="unread">Unread</button>
+                </div>
+                <button class="mark-all-read" id="markAllReadBtn">Mark all read</button>
+            </div>
+            <!-- Notifications List -->
+            <div id="notificationsList"></div>
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display:none;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <p>No notifications yet</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notification Detail Modal -->
+    <div id="notificationModal" class="notification-modal">
+        <div class="notification-modal-content">
+            <button class="modal-close" onclick="closeNotificationModal()">✕</button>
+            <div class="modal-header">
+                <div id="modalIcon" class="modal-icon"></div>
+                <div class="modal-header-text">
+                    <h2 id="modalTitle"></h2>
+                    <div class="modal-time" id="modalTime"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="modalContent" class="modal-body-text"></div>
+                <div id="modalDetails"></div>
+            </div>
+            <div id="modalActions" class="modal-actions"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p style="text-align:center">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        let notifications = [];
+        let currentFilter = 'all';
+
+        // Generate notifications from user activities (user-specific)
+        function generateNotifications() {
+            const notifies = [];
+            const user = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+            
+            if (!user.id) {
+                return notifies;
+            }
+            
+            const userId = user.id;
+            const likedProps = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+            const purchases = JSON.parse(localStorage.getItem('purchases_' + userId) || '[]');
+            const conversations = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
+            const activityLog = JSON.parse(localStorage.getItem('activityLog_' + userId) || '[]');
+
+            // 1. Login Activity Notifications
+            if (activityLog && activityLog.length > 0) {
+                activityLog.slice(0, 3).forEach((activity, idx) => {
+                    if (activity.type === 'login') {
+                        notifies.push({
+                            id: 'login-' + idx,
+                            type: 'login',
+                            title: 'Account Login',
+                            message: `Successful login from ${activity.location || 'unknown location'} at ${new Date(activity.timestamp).toLocaleString()}`,
+                            fullMessage: `Your account was successfully accessed. Login time: ${new Date(activity.timestamp).toLocaleString()}. If this wasn't you, please change your password immediately.`,
+                            timestamp: new Date(activity.timestamp),
+                            read: false,
+                            details: {
+                                'Location': activity.location || 'Unknown',
+                                'Device': activity.device || 'Web Browser',
+                                'IP Address': activity.ip || 'Not recorded'
+                            }
+                        });
+                    }
+                });
+            }
+
+            // 2. Liked Properties Notifications
+            if (likedProps && likedProps.length > 0) {
+                // Show recent likes
+                const recentLikes = likedProps.slice(-3);
+                recentLikes.forEach((propId, idx) => {
+                    notifies.push({
+                        id: 'like-' + idx,
+                        type: 'like',
+                        title: 'Property Liked',
+                        message: `You marked property #${propId} as a favorite`,
+                        fullMessage: `You have successfully added property #${propId} to your liked properties. You can view all your liked properties in the "Likes" section.`,
+                        timestamp: new Date(Date.now() - (idx * 3600000)),
+                        read: idx > 0,
+                        details: {
+                            'Property ID': propId,
+                            'Total Likes': likedProps.length,
+                            'Action': 'View in Likes'
+                        }
+                    });
+                });
+            }
+
+            // 3. Chat/Message Notifications
+            if (conversations && conversations.length > 0) {
+                conversations.slice(0, 3).forEach((conv, idx) => {
+                    const lastMsg = conv.messages && conv.messages.length > 0 ? 
+                        conv.messages[conv.messages.length - 1] : null;
+                    if (lastMsg) {
+                        notifies.push({
+                            id: 'msg-' + idx,
+                            type: 'message',
+                            title: `New message from ${conv.agentName || 'Agent'}`,
+                            message: lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : ''),
+                            fullMessage: lastMsg.text,
+                            timestamp: new Date(lastMsg.ts),
+                            read: idx > 0,
+                            conversationId: conv.id,
+                            details: {
+                                'From': conv.agentName || 'Agent',
+                                'Conversation': conv.subject || 'Property Inquiry',
+                                'Messages': (conv.messages || []).length
+                            }
+                        });
+                    }
+                });
+            }
+
+            // 4. System Messages
+            const systemMessages = [
+                {
+                    id: 'sys-1',
+                    type: 'system',
+                    title: 'Profile Verification Reminder',
+                    message: 'Complete your profile to unlock more features and match with better listings',
+                    fullMessage: 'Your profile is 75% complete. Finish filling out your profile details to get access to personalized property recommendations and agent connections.',
+                    timestamp: new Date(Date.now() - 86400000),
+                    read: true,
+                    details: {
+                        'Status': '75% Complete',
+                        'Action Required': 'Update Profile Information',
+                        'Priority': 'Medium'
+                    }
+                },
+                {
+                    id: 'sys-2',
+                    type: 'system',
+                    title: 'Security Update Required',
+                    message: 'Update your password to enhance account security',
+                    fullMessage: 'We recommend updating your password at least once every 90 days for security purposes. Your last password change was over 2 months ago.',
+                    timestamp: new Date(Date.now() - 172800000),
+                    read: true,
+                    details: {
+                        'Last Changed': '60 days ago',
+                        'Recommendation': 'Change Password',
+                        'Priority': 'High'
+                    }
+                }
+            ];
+
+            // 5. Listing Notifications
+            if (purchases && purchases.length > 0) {
+                const listingNotify = {
+                    id: 'lst-1',
+                    type: 'listing',
+                    title: 'New Properties Listed',
+                    message: `${purchases.length} new properties added to your saved searches`,
+                    fullMessage: `We found ${purchases.length} new property listings that match your saved search criteria. These properties were recently added by our agents.`,
+                    timestamp: new Date(Date.now() - 3600000),
+                    read: false,
+                    details: {
+                        'Matching Properties': purchases.length,
+                        'Search Updated': new Date().toLocaleDateString(),
+                        'View': 'Browse New Listings'
+                    }
+                };
+                notifies.push(listingNotify);
+            }
+
+            // Add system messages
+            notifies.push(...systemMessages);
+
+            return notifies.sort((a, b) => b.timestamp - a.timestamp);
+        }
+
+        // Initialize notifications - load user-specific notifications
+        function init() {
+            const user = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+            
+            if (!user.id) {
+                console.log('User not logged in');
+                return;
+            }
+            
+            const userId = user.id;
+            
+            // Load user-specific notifications
+            let stored = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
+            notifications = stored.length > 0 ? stored : generateNotifications();
+            
+            // Save all notifications
+            localStorage.setItem('notifications_' + userId, JSON.stringify(notifications));
+            renderNotifications();
+        }
+
+        function saveNotifications() {
+            localStorage.setItem('wispaNotifications', JSON.stringify(notifications));
+        }
+
+        function formatTime(date) {
+            // Handle both Date objects and strings from localStorage
+            const dateObj = typeof date === 'string' ? new Date(date) : date;
+            const now = new Date();
+            const diffMs = now - dateObj;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return dateObj.toLocaleDateString();
+        }
+
+        function getIcon(type) {
+            const icons = {
+                login: '🔐',
+                like: '❤️',
+                message: '💬',
+                system: '⚙️',
+                listing: '🏠',
+                admin: '📢'
+            };
+            return icons[type] || '🔔';
+        }
+
+        function renderNotifications() {
+            const filtered = notifications.filter(n => {
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'unread') return !n.read;
+                return n.type === currentFilter;
+            });
+
+            const list = document.getElementById('notificationsList');
+            const empty = document.getElementById('emptyState');
+
+            if (filtered.length === 0) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = filtered.map(n => `
+                <div class="notification-item ${n.read ? 'read' : 'unread'} notification-clickable" data-id="${n.id}" onclick="openNotificationModal('${n.id}')">
+                    <div class="notification-icon ${n.type}">
+                        ${getIcon(n.type)}
+                    </div>
+                    <div class="notification-content">
+                        <div class="notification-title">${n.title}</div>
+                        <div class="notification-message">${n.message}</div>
+                        <div class="notification-time">${formatTime(n.timestamp)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openNotificationModal(id) {
+            const notif = notifications.find(n => n.id === id);
+            if (!notif) return;
+
+            // Mark as read
+            notif.read = true;
+            saveNotifications();
+            renderNotifications();
+
+            // Set modal content
+            const modal = document.getElementById('notificationModal');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const time = document.getElementById('modalTime');
+            const content = document.getElementById('modalContent');
+            const details = document.getElementById('modalDetails');
+            const actions = document.getElementById('modalActions');
+
+            icon.className = `modal-icon ${notif.type}`;
+            icon.textContent = getIcon(notif.type);
+            title.textContent = notif.title;
+            time.textContent = formatTime(notif.timestamp);
+            content.innerHTML = `<p>${notif.fullMessage || notif.message}</p>`;
+
+            // Build details section with file info
+            let detailsHtml = '';
+            if (notif.details && Object.keys(notif.details).length > 0) {
+                detailsHtml = `
+                    <div class="modal-details">
+                        ${Object.entries(notif.details).map(([key, value]) => `
+                            <div class="modal-detail-row">
+                                <span class="modal-detail-label">${key}</span>
+                                <span class="modal-detail-value">${value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Add file attachment info if available
+            if (notif.file) {
+                detailsHtml += `
+                    <div class="modal-details" style="margin-top:16px;">
+                        <div class="modal-detail-row">
+                            <span class="modal-detail-label">📎 Attachment</span>
+                            <span class="modal-detail-value">${notif.file.name}</span>
+                        </div>
+                        <button class="modal-action-btn primary" style="width:100%;margin-top:10px;" onclick="downloadNotificationFile('${notif.id}');">⬇️ Download File</button>
+                    </div>
+                `;
+            }
+            details.innerHTML = detailsHtml;
+
+            // Build actions section
+            let actionsHtml = '';
+            if (notif.type === 'login') {
+                actionsHtml = `
+                    <button class="modal-action-btn" onclick="closeNotificationModal()">OK</button>
+                    <button class="modal-action-btn primary" onclick="window.location.href='security.html'">Review Security</button>
+                `;
+            } else if (notif.type === 'message') {
+                actionsHtml = `
+                    <button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>
+                    <button class="modal-action-btn primary" onclick="window.location.href='messages.html?conv=${notif.conversationId || ''}'; closeNotificationModal();">Reply</button>
+                `;
+            } else if (notif.type === 'like') {
+                actionsHtml = `
+                    <button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>
+                    <button class="modal-action-btn primary" onclick="window.location.href='likes.html'; closeNotificationModal();">View Likes</button>
+                `;
+            } else if (notif.type === 'listing') {
+                actionsHtml = `
+                    <button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>
+                    <button class="modal-action-btn primary" onclick="window.location.href='search.html'; closeNotificationModal();">Browse Properties</button>
+                `;
+            } else if (notif.type === 'admin') {
+                actionsHtml = `<button class="modal-action-btn primary" onclick="closeNotificationModal()">✓ Acknowledged</button>`;
+            } else {
+                actionsHtml = `<button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>`;
+            }
+            actions.innerHTML = actionsHtml;
+
+            // Show modal
+            modal.classList.add('active');
+        }
+
+        function closeNotificationModal() {
+            document.getElementById('notificationModal').classList.remove('active');
+        }
+
+        function downloadNotificationFile(notificationId) {
+            const notif = notifications.find(n => n.id === notificationId);
+            if (!notif || !notif.file) return;
+            
+            const file = notif.file;
+            const link = document.createElement('a');
+            link.href = file.data;
+            link.download = file.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function toggleRead(id) {
+            const notif = notifications.find(n => n.id === id);
+            if (notif) {
+                notif.read = !notif.read;
+                saveNotifications();
+                renderNotifications();
+            }
+        }
+
+        function deleteNotification(id) {
+            notifications = notifications.filter(n => n.id !== id);
+            saveNotifications();
+            renderNotifications();
+        }
+
+        function markAllRead() {
+            notifications.forEach(n => n.read = true);
+            saveNotifications();
+            renderNotifications();
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('notificationModal');
+            if (e.target === modal) {
+                closeNotificationModal();
+            }
+        });
+
+        // Event listeners
+        document.querySelectorAll('.filter-tab').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                renderNotifications();
+            });
+        });
+
+        document.getElementById('markAllReadBtn').addEventListener('click', markAllRead);
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

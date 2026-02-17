@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mortgage Calculator - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header removed -->
+
+    <main>
+        <div class="main-container">
+            <section class="services-hero calculator-hero">
+                <div class="hero-content">
+                    <p class="eyebrow">Estimate Costs — Plan Confidently</p>
+                    <h1>Mortgage & Affordability Calculator</h1>
+                    <p class="lead">Quickly estimate monthly payments, total interest and affordability for properties you want to buy anywhere in the world.</p>
+                </div>
+            </section>
+
+            <section class="calculator-section">
+                <div class="calculator-panel">
+                    <form id="mortgage-form" class="calc-form">
+                        <div class="form-row">
+                            <label for="loan-amount">Loan Amount</label>
+                            <input type="number" id="loan-amount" class="form-control" placeholder="200,000" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="interest-rate">Interest Rate (annual %)</label>
+                            <input type="number" id="interest-rate" class="form-control" step="0.01" placeholder="3.5" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="loan-term">Loan Term (years)</label>
+                            <input type="number" id="loan-term" class="form-control" placeholder="25" required>
+                        </div>
+
+                        <div class="form-row actions-row">
+                            <button type="submit" class="btn view-btn">Calculate</button>
+                            <button type="button" id="reset-calc" class="btn">Reset</button>
+                        </div>
+                    </form>
+
+                    <aside class="calc-results" id="results">
+                        <h3>Results</h3>
+                        <div class="result-item"><strong>Monthly Payment:</strong> <span id="monthly-payment">€0.00</span></div>
+                        <div class="result-item"><strong>Total Payment:</strong> <span id="total-payment">€0.00</span></div>
+                        <div class="result-item"><strong>Total Interest:</strong> <span id="total-interest">€0.00</span></div>
+                        <div class="result-item"><strong>Required Income (approx):</strong> <span id="required-income">€0.00</span></div>
+                    </aside>
+                </div>
+            </section>
+        </div>
+    </main>
+    <footer>
+        <p style="text-align: center;">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

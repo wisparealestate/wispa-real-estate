@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Messages - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header and navigation removed -->
+
+    <main>
+        <div class="main-container">
+            <section class="services-hero">
+                <div class="hero-content">
+                    <p class="eyebrow">Conversation</p>
+                    <h1>Messages</h1>
+                    <p class="lead">Open conversation and message your agent. This view is opened when selecting a conversation from the list.</p>
+                </div>
+            </section>
+
+            <section class="services-section">
+                <div style="max-width:900px;margin:20px auto;">
+                    <div id="chatBox" class="chat-box" style="background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;height:520px;">
+                        <div id="messages" style="flex:1;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:10px;background:transparent"></div>
+                        <div style="border-top:1px solid var(--border);padding:12px;display:flex;gap:8px;align-items:center;">
+                            <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;">
+                            <button id="sendBtn" class="btn">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <p style="text-align:center">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        (function(){
+            // Check if user is logged in
+            const wispaUser = localStorage.getItem('wispaUser');
+            if (!wispaUser) {
+                document.getElementById('messages').innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text);">Please <a href="login.html">login</a> to view messages.</p>';
+                return;
+            }
+
+            const userData = JSON.parse(wispaUser);
+            const userId = userData.id;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const convId = urlParams.get('conv') || 'conv-1';
+            const messagesEl = document.getElementById('messages');
+            const inputEl = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+
+            function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+            // Render conversation messages
+            function renderList(list){
+                messagesEl.innerHTML = '';
+                if (!list || list.length === 0) {
+                    messagesEl.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">No messages yet. Start the conversation!</p>';
+                    return;
+                }
+                list.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'chat-message ' + (m.sender === 'user' ? 'sent' : 'received');
+                    div.style.maxWidth = '78%';
+                    div.style.padding = '10px 12px';
+                    div.style.borderRadius = '10px';
+                    div.style.alignSelf = m.sender === 'user' ? 'flex-end' : 'flex-start';
+                    div.style.background = m.sender === 'user' ? 'var(--primary)' : 'var(--light)';
+                    div.style.color = m.sender === 'user' ? '#fff' : 'var(--text)';
+                    div.innerHTML = `<div style="font-size:14px;margin-bottom:6px">${escapeHtml(m.text)}</div><div style="font-size:11px;opacity:0.7;text-align:${m.sender==='user'?'right':'left'}">${new Date(m.ts).toLocaleTimeString()}</div>`;
+                    messagesEl.appendChild(div);
+                });
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+
+            // Load initial messages from localStorage
+            // Merge messages from all relevant keys (user/agent and admin)
+            const keys = [
+                'wispaMessages_' + userId + '_' + convId,
+                'adminMessages_' + convId,
+                'wispaMessages_' + convId // fallback for legacy
+            ];
+            function loadMessages(){
+                let all = [];
+                const seen = new Set();
+                for (let i = 0; i < keys.length; i++) {
+                    const arr = localStorage.getItem(keys[i]);
+                    if (arr) {
+                        try {
+                            const msgs = JSON.parse(arr);
+                            if (Array.isArray(msgs)) {
+                                msgs.forEach(m => {
+                                    const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                                    if (!seen.has(sig)) {
+                                        all.push(m);
+                                        seen.add(sig);
+                                    }
+                                });
+                            }
+                        } catch(e){}
+                    }
+                }
+                // Sort by time/ts ascending
+                all.sort((a,b) => {
+                    const ta = a.time || a.ts || 0;
+                    const tb = b.time || b.ts || 0;
+                    return ta - tb;
+                });
+                return all;
+            }
+            renderList(loadMessages());
+
+            // Clear unread count for this conversation
+            try {
+                const convsKey = 'conversations_' + userId;
+                const convs = JSON.parse(localStorage.getItem(convsKey) || '[]');
+                const found = convs.find(c => c.id === convId);
+                if (found && found.unread && found.unread > 0) {
+                    found.unread = 0;
+                    localStorage.setItem(convsKey, JSON.stringify(convs));
+                }
+            } catch (e) {}
+
+            // Listen for storage changes (if admin updates messages in another tab/window)
+            window.addEventListener('storage', (e) => {
+                if (keys.includes(e.key)) {
+                    renderList(loadMessages());
+                }
+            });
+
+            function send(text){
+                if (!text || !text.trim()) return;
+                const cur = loadMessages();
+                const now = Date.now();
+                const msg = { sender: 'user', text: text.trim(), ts: now, time: now };
+                cur.push(msg);
+                // Save to user/agent key
+                localStorage.setItem(key, JSON.stringify(cur));
+                // Also save to admin key for cross-role visibility
+                const adminKey = 'adminMessages_' + convId;
+                let adminMsgs = [];
+                try { adminMsgs = JSON.parse(localStorage.getItem(adminKey) || '[]'); } catch(e){}
+                // Avoid duplicate by checking timestamp/text/sender
+                const sig = msg.ts + '|' + msg.text + '|' + msg.sender;
+                const exists = adminMsgs.some(m => (m.ts||m.time) + '|' + m.text + '|' + m.sender === sig);
+                if (!exists) {
+                    adminMsgs.push(msg);
+                    localStorage.setItem(adminKey, JSON.stringify(adminMsgs));
+                }
+                inputEl.value = '';
+                renderList(cur);
+            }
+
+            sendBtn.addEventListener('click', ()=> send(inputEl.value));
+            inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { e.preventDefault(); send(inputEl.value); } });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1428 @@
+/* ==================================================
+   RESET & BASE STYLES
+   ================================================== */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: #333;
+    background: var(--white);
+    line-height: 1.6;
+}
+
+/* ==================================================
+   CSS VARIABLES (Theme)
+   ================================================== */
+:root {
+    --primary: #4CAF50;
+    --primary-dark: #45a049;
+    --secondary: #2196F3;
+    --danger: #f44336;
+    --light: #ffffff;
+    --lighter: #fffffff5;
+    --border: #e0e0e0;
+    --text: #333;
+    --text-light: #666;
+    --white: #fff;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* ==================================================
+   MAIN LAYOUT
+   ================================================== */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-container {
+    flex: 1;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+}
+
+/* ==================================================
+   HEADER (Unified across all devices)
+   ================================================== */
+.main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--white);
+    padding: 12px 20px;
+    box-shadow: var(--shadow);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    gap: 15px;
+    min-height: 70px;
+    flex-wrap: nowrap;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 48px;
+    flex-shrink: 0;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 200px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* Search Bar */
+.search-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--white);
+}
+
+.search-bar-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.search-bar-wrapper input[type="text"] {
+    width: 100%;
+    padding: 12.5px 40px 12.5px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    color: #888;
+    pointer-events: none;
+}
+
+/* Header Buttons */
+.profile-btn,
+.notification-btn,
+.hamburger-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    transition: all 0.2s ease;
+    height: 40px;
+    width: 40px;
+}
+
+.profile-btn:hover,
+.notification-btn:hover,
+.hamburger-btn:hover {
+    background: var(--light);
+    color: var(--primary);
+}
+
+/* Hamburger Menu */
+.hamburger-menu-container {
+    position: relative;
+}
+
+.hamburger-btn {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.hamburger-btn {
+    transition: transform 0.22s ease, color 0.18s ease;
+}
+
+.hamburger-btn.active {
+    transform: rotate(90deg);
+}
+
+.hamburger-dropdown {
+    /* keep in flow but hidden via opacity/visibility for smooth animation */
+    display: flex;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--white);
+    box-shadow: var(--shadow-hover);
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 180px;
+    z-index: 1200;
+    flex-direction: column;
+    transform-origin: top right;
+    transform: translateY(-8px) scale(0.98);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 200ms ease, transform 180ms ease, visibility 200ms;
+}
+
+.hamburger-dropdown.show {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.hamburger-dropdown button,
+.hamburger-dropdown a {
+    padding: 12px 14px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hamburger-dropdown button:hover,
+.hamburger-dropdown a:hover {
+    background: var(--light);
+    color: var(--primary);
+}
+
+/* ==================================================
+   FILTER SECTION (Quick Search)
+   ================================================== */
+.quick-search {
+    background: var(--white);
+    padding: 25px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.quick-search h2 {
+    text-align: center;
+    font-size: 24px;
+    margin: 0 0 20px 0;
+    color: var(--text);
+}
+
+.search-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-control {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--white);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Keep select width inside its control and truncate long labels */
+select.form-control {
+    max-width: 100%;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-appearance: menulist;
+    appearance: menulist;
+}
+
+.btn-search {
+    width: 100%;
+    padding: 11px 20px;
+    font-weight: 600;
+}
+
+/* ==================================================
+   HOT PROPERTIES SECTION
+   ================================================== */
+.hot-properties-section {
+    margin-bottom: 40px;
+}
+
+.hot-properties-section h2 {
+    text-align: center;
+    font-size: 26px;
+    margin: 0 0 25px 0;
+    color: var(--text);
+}
+
+.carousel-wrapper {
+    margin-bottom: 20px;
+}
+
+.hot-row {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 10px 0;
+    scroll-behavior: smooth;
+}
+
+.hot-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.hot-row::-webkit-scrollbar-track {
+    background: var(--lighter);
+    border-radius: 10px;
+}
+
+.hot-row::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}
+
+.hot-row::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
+
+.hot-card {
+    flex: 0 0 calc(50% - 10px);
+    min-width: 280px;
+    background: var(--white);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.hot-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.hot-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.hot-card-content {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.hot-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--text);
+}
+
+.hot-card-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 10px 0;
+}
+
+.hot-card-details {
+    font-size: 13px;
+    color: var(--text-light);
+    display: flex;
+    gap: 15px;
+    margin-top: auto;
+}
+
+/* ==================================================
+   PROPERTY GRID (Shared for featured & listings)
+   ================================================== */
+.featured-section,
+.listings-section {
+    margin-bottom: 40px;
+}
+
+.featured-section h2,
+.listings-section h2 {
+    text-align: center;
+    font-size: 26px;
+    margin: 0 0 25px 0;
+    color: var(--text);
+}
+
+.property-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.property-card {
+    background: var(--white);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.property-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.property-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.property-card-content {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.property-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--text);
+    min-height: 40px;
+}
+
+.property-location {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.property-details {
+    font-size: 13px;
+    color: var(--text-light);
+    display: flex;
+    gap: 15px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.property-details span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.property-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 12px 0;
+}
+
+.property-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.property-actions button {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.like-btn {
+    background: var(--lighter);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.like-btn:hover {
+    background: #FFE0E6;
+    color: #d32f2f;
+    border-color: #d32f2f;
+}
+
+.like-btn.liked {
+    background: #FFE0E6;
+    color: #d32f2f;
+    border-color: #d32f2f;
+}
+
+.view-btn {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.view-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* ==================================================
+   LOAD MORE BUTTON
+   ================================================== */
+.load-more {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.load-more .btn {
+    padding: 12px 40px;
+}
+
+/* ==================================================
+   SERVICES SECTION
+   ================================================== */
+.services-section {
+    margin-bottom: 40px;
+}
+
+.services-section h2 {
+    text-align: center;
+    font-size: 26px;
+    margin: 0 0 25px 0;
+    color: var(--text);
+}
+
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.service-card {
+    background: var(--white);
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.service-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.service-card h3 {
+    font-size: 18px;
+    margin: 0 0 12px 0;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.service-card p {
+    font-size: 14px;
+    color: var(--text-light);
+    margin: 0 0 16px 0;
+    flex: 1;
+}
+
+/* ==================================================
+   SERVICES HERO + SMALL ADJUSTMENTS
+   ================================================== */
+.services-hero {
+    background: linear-gradient(180deg, rgba(76,175,80,0.06), rgba(255,255,255,0));
+    padding: 36px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+.services-hero .hero-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 6px 12px;
+}
+.services-hero .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+.services-hero h1 {
+    font-size: 32px;
+    margin: 6px 0 12px 0;
+    color: var(--text);
+}
+.services-hero .lead {
+    font-size: 16px;
+    color: var(--text-light);
+    max-width: 820px;
+    margin: 0 auto 18px;
+}
+.hero-cta {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.hero-cta .btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+}
+.section-intro {
+    text-align: center;
+    max-width: 900px;
+    margin: 0 auto 18px;
+    color: var(--text-light);
+}
+.service-icon {
+    font-size: 44px;
+    margin-bottom: 14px;
+}
+
+@media (min-width: 900px) {
+    .services-hero {
+        padding: 48px 20px;
+    }
+    .services-hero h1 {
+        font-size: 36px;
+    }
+}
+
+/* ==================================================
+   CALCULATOR STYLES
+   ================================================== */
+.calculator-section {
+    margin-bottom: 40px;
+}
+.calculator-panel {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+}
+.calc-form {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.calc-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.calc-form label {
+    font-weight: 600;
+    color: var(--text-light);
+    font-size: 13px;
+}
+.calc-form .form-control {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+}
+.actions-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+}
+.calc-results {
+    background: var(--white);
+    padding: 18px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.calc-results h3 {
+    margin-top: 0;
+    font-size: 18px;
+}
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+}
+.result-item:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 880px) {
+    .calculator-panel {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==================================================
+   VALUATION FORM STYLES
+   ================================================== */
+.valuation-section {
+    margin-bottom: 40px;
+}
+.valuation-panel {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    align-items: start;
+}
+.valuation-form {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.valuation-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.valuation-result {
+    background: var(--white);
+    padding: 18px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+@media (max-width: 880px) {
+    .valuation-panel {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==================================================
+   NEWSLETTER SECTION
+   ================================================== */
+.newsletter-section {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--white);
+    padding: 40px 25px;
+    border-radius: 8px;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.newsletter-content h2 {
+    font-size: 28px;
+    margin: 0 0 12px 0;
+}
+
+.newsletter-content p {
+    font-size: 16px;
+    margin: 0 0 24px 0;
+    opacity: 0.95;
+}
+
+.newsletter-form {
+    display: flex;
+    gap: 10px;
+    max-width: 450px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+}
+
+.newsletter-form input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.newsletter-form button {
+    padding: 12px 30px;
+    background: var(--white);
+    color: var(--primary);
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.newsletter-form button:hover {
+    background: var(--light);
+}
+
+/* ==================================================
+   FOOTER
+   ================================================== */
+.main-footer {
+    background: #2c3e50;
+    color: var(--white);
+    padding: 40px 20px 20px;
+    margin-top: auto;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+}
+
+.footer-column h4 {
+    font-size: 16px;
+    margin: 0 0 16px 0;
+    font-weight: 600;
+}
+
+.footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-column ul li {
+    margin-bottom: 10px;
+}
+
+.footer-column a {
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    font-size: 14px;
+}
+
+.footer-column a:hover {
+    color: var(--white);
+}
+
+.social-links {
+    display: flex;
+    gap: 12px;
+    font-size: 16px;
+}
+
+.footer-bottom {
+    text-align: center;
+    border-top: 1px solid #34495e;
+    padding-top: 20px;
+    margin: 0 auto;
+    max-width: 1200px;
+    color: #95a5a6;
+    font-size: 13px;
+}
+
+/* ==================================================
+   MODALS
+   ================================================== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--white);
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-content h2 {
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    color: var(--text);
+}
+
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.modal-content input:focus,
+.modal-content select:focus,
+.modal-content textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.modal-content button[type="submit"] {
+    padding: 12px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.modal-content button[type="submit"]:hover {
+    background: var(--primary-dark);
+}
+
+.close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s ease;
+    background: none;
+    border: none;
+}
+
+.close:hover {
+    color: var(--text);
+}
+
+/* ==================================================
+   BUTTONS (Generic)
+   ================================================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--primary);
+    border: 2px solid var(--primary);
+}
+
+.btn-secondary:hover {
+    background: var(--light);
+}
+
+/* ==================================================
+   RESPONSIVE DESIGN
+   ================================================== */
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 16px;
+    }
+
+    .main-header {
+        padding: 15px 21px;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .header-center {
+        min-width: 150px;
+    }
+
+    .search-bar {
+        max-width: 100%;
+    }
+
+    .search-bar-wrapper input[type="text"] {
+        font-size: 13px;
+        padding: 11.5px 36px 11.5px 12px;
+    }
+
+    .quick-search {
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .quick-search h2 {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+
+    .search-form {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 10px;
+    }
+
+    .property-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .hot-card {
+        flex: 0 0 calc(60% - 10px);
+        min-width: 240px;
+    }
+
+    .hot-card img {
+        height: 160px;
+    }
+
+    .services-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+
+    .service-card {
+        padding: 20px;
+    }
+
+    .hot-properties-section h2,
+    .featured-section h2,
+    .listings-section h2,
+    .services-section h2 {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+
+    .newsletter-section {
+        padding: 30px 20px;
+        margin-bottom: 30px;
+    }
+
+    .newsletter-content h2 {
+        font-size: 24px;
+    }
+
+    .newsletter-form {
+        flex-wrap: wrap;
+    }
+
+    .footer-content {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+/* Mobile (600px and below) */
+@media (max-width: 600px) {
+    html, body {
+        background: var(--lighter);
+    }
+
+    .main-container {
+        padding: 12px;
+        background: var(--white);
+    }
+
+    .main-header {
+        padding: 13px 15px;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .header-center {
+        min-width: 100px;
+        flex: 0.8;
+    }
+
+    .header-left {
+        min-width: 36px;
+    }
+
+    .header-right {
+        min-width: unset;
+        gap: 3px;
+    }
+
+    .search-bar {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .search-bar-wrapper input[type="text"] {
+        font-size: 12px;
+        padding: 9.5px 32px 9.5px 10px;
+    }
+
+    .quick-search {
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .quick-search h2 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    .search-form {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .form-control {
+        width: 100%;
+    }
+
+    .property-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .property-card-content {
+        padding: 12px;
+    }
+
+    .property-title {
+        font-size: 15px;
+        min-height: auto;
+    }
+
+    .property-price {
+        font-size: 16px;
+    }
+
+    .hot-properties-section h2,
+    .featured-section h2,
+    .listings-section h2,
+    .services-section h2 {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+
+    .hot-row {
+        gap: 12px;
+        padding: 8px 0;
+    }
+
+    .hot-card {
+        flex: 0 0 calc(100% - 0px);
+        min-width: unset;
+    }
+
+    .hot-card img {
+        height: 150px;
+    }
+
+    .hot-card-content {
+        padding: 12px;
+    }
+
+    .hot-card-title {
+        font-size: 14px;
+    }
+
+    .hot-card-price {
+        font-size: 16px;
+    }
+
+    .services-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .service-card {
+        padding: 16px;
+        text-align: center;
+    }
+
+    .service-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .service-card h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .service-card p {
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    .newsletter-section {
+        padding: 20px 16px;
+        margin-bottom: 24px;
+    }
+
+    .newsletter-content h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+
+    .newsletter-content p {
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+
+    .newsletter-form {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .newsletter-form input {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .newsletter-form button {
+        width: 100%;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .modal-content h2 {
+        font-size: 20px;
+    }
+}/* ==================================================
+   DEFAULT (non-home)  use Services page styling
+   Applies to all existing and future pages that are NOT the homepage (.home)
+   ================================================== */
+body:not(.home) {
+  background: #ffffff;
+  color: var(--text);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Page container + header to match services page look */
+body:not(.home) .main-container {
+  background: var(--white);
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+body:not(.home) .main-header {
+  background: var(--white);
+  box-shadow: var(--shadow);
+  border-radius: 8px;
+  padding: 12px 20px;
+}
+
+/* Headings and type scale like services page */
+body:not(.home) h1 {
+  font-size: 36px;
+  line-height: 1.08;
+  color: var(--text);
+}
+body:not(.home) h2 {
+  font-size: 26px;
+  color: var(--text);
+}
+
+/* Services hero & section styles (if present on a page) */
+body:not(.home) .services-hero {
+  background: linear-gradient(180deg, rgba(76,175,80,0.06), rgba(255,255,255,0));
+  padding: 36px 16px;
+  border-radius: 8px;
+}
+body:not(.home) .hero-content { max-width: 1000px; margin: 0 auto; text-align: center; }
+
+/* Service cards, newsletter and other shared blocks */
+body:not(.home) .service-card,
+body:not(.home) .property-card,
+body:not(.home) .calc-form,
+body:not(.home) .valuation-form {
+  background: var(--white);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+/* Newsletter block like services page */
+body:not(.home) .newsletter-section {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--white);
+  padding: 40px 25px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Buttons and primary accents remain site-wide via variables */
+/* Add additional non-home tweaks below if needed */
+/* ==================================================
+   DEFAULT (non-home)  use Services page styling
+   Applies to all existing and future pages that are NOT the homepage (.home)
+   ================================================== */
+body:not(.home) {
+  background: #ffffff;
+  color: var(--text);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Page container + header to match services page look */
+body:not(.home) .main-container {
+  background: var(--white);
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+body:not(.home) .main-header {
+  background: var(--white);
+  box-shadow: var(--shadow);
+  border-radius: 8px;
+  padding: 12px 20px;
+}
+
+/* Headings and type scale like services page */
+body:not(.home) h1 {
+  font-size: 36px;
+  line-height: 1.08;
+  color: var(--text);
+}
+body:not(.home) h2 {
+  font-size: 26px;
+  color: var(--text);
+}
+
+/* Services hero & section styles (if present on a page) */
+body:not(.home) .services-hero {
+  background: linear-gradient(180deg, rgba(76,175,80,0.06), rgba(255,255,255,0));
+  padding: 36px 16px;
+  border-radius: 8px;
+}
+body:not(.home) .hero-content { max-width: 1000px; margin: 0 auto; text-align: center; }
+
+/* Service cards, newsletter and other shared blocks */
+body:not(.home) .service-card,
+body:not(.home) .property-card,
+body:not(.home) .calc-form,
+body:not(.home) .valuation-form {
+  background: var(--white);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+/* Newsletter block like services page */
+body:not(.home) .newsletter-section {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--white);
+  padding: 40px 25px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Buttons and primary accents remain site-wide via variables */
+/* Add additional non-home tweaks below if needed */

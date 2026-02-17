@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wispa Real Estate - Code Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .doc-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        header p { font-size: 1.1em; opacity: 0.9; }
+        nav {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        nav a {
+            padding: 10px 16px;
+            background: #2c3e50;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        nav a:hover { background: #34495e; }
+        nav a.active { background: #27ae60; }
+        .file-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .file-section.active { display: block; }
+        .file-section h2 {
+            font-size: 2em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #27ae60;
+            padding-bottom: 10px;
+        }
+        .code-block {
+            background: #f8f8f8;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        .code-line {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .code-line:last-child { border-bottom: none; }
+        .line-number {
+            flex: 0 0 50px;
+            background: #e8e8e8;
+            color: #666;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        .line-code {
+            flex: 0 0 35%;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .line-explanation {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 0.95em;
+            color: #555;
+        }
+        .line-explanation strong { color: #2c3e50; }
+        .section-intro {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .section-intro h3 { color: #2c3e50; margin-bottom: 8px; }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        @media (max-width: 1024px) {
+            .code-line { flex-direction: column; gap: 10px; }
+            .line-code, .line-explanation { flex: 1; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="doc-container">
+        <header>
+            <h1>📚 Wispa Real Estate - Code Documentation</h1>
+            <p>Complete line-by-line explanation of all source code</p>
+        </header>
+
+        <nav>
+            <a href="#" class="nav-link active" data-file="index">index.html</a>
+            <a href="#" class="nav-link" data-file="profile">profile.html</a>
+            <a href="#" class="nav-link" data-file="notifications">notifications.html</a>
+            <a href="#" class="nav-link" data-file="script">script.js (excerpt)</a>
+            <a href="#" class="nav-link" data-file="styles">styles.css (excerpt)</a>
+        </nav>
+
+        <!-- INDEX.HTML DOCUMENTATION -->
+        <div id="index" class="file-section active">
+            <h2>📄 index.html - Main Homepage</h2>
+            <div class="section-intro">
+                <h3>Purpose</h3>
+                <p>This is the main landing page of Wispa Real Estate. It displays the header navigation, property search filters, hot properties carousel, featured listings, available properties grid, services overview, newsletter subscription, and footer. The page is fully responsive and uses JavaScript for dynamic property rendering.</p>
+            </div>
+
+            <h3>DOCTYPE & HTML Setup</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1</div>
+                    <div class="line-code">&lt;!DOCTYPE html&gt;</div>
+                    <div class="line-explanation"><strong>Document Type Declaration:</strong> Tells the browser this is an HTML5 document. Must be the very first line.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">2</div>
+                    <div class="line-code">&lt;html lang="en"&gt;</div>
+                    <div class="line-explanation"><strong>HTML Root Element:</strong> Opens the HTML document. <strong>lang="en"</strong> specifies English as the page language for accessibility and SEO.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">3</div>
+                    <div class="line-code">&lt;head&gt;</div>
+                    <div class="line-explanation"><strong>Head Section:</strong> Contains metadata, title, and stylesheet links. Not visible on the page.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">4</div>
+                    <div class="line-code">&lt;meta charset="UTF-8"&gt;</div>
+                    <div class="line-explanation"><strong>Character Encoding:</strong> Specifies UTF-8 encoding to support all languages and special characters correctly.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">5</div>
+                    <div class="line-code">&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</div>
+                    <div class="line-explanation"><strong>Viewport Meta Tag:</strong> Makes the page responsive on mobile devices. <strong>width=device-width</strong> adapts to device screen width. <strong>initial-scale=1.0</strong> sets zoom level to 100%.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">6</div>
+                    <div class="line-code">&lt;title&gt;Wispa Real Estate&lt;/title&gt;</div>
+                    <div class="line-explanation"><strong>Page Title:</strong> Displays in the browser tab and is used by search engines. Critical for SEO.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">7</div>
+                    <div class="line-code">&lt;link rel="stylesheet" href="styles.css"&gt;</div>
+                    <div class="line-explanation"><strong>CSS Stylesheet Link:</strong> Imports the external stylesheet <strong>styles.css</strong> to apply all styling to the page.</div>
+                </div>
+            </div>
+
+            <h3>Header Navigation</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">10</div>
+                    <div class="line-code">&lt;header class="main-header"&gt;</div>
+                    <div class="line-explanation"><strong>Header Element:</strong> Semantic HTML element for the top navigation bar. <strong>class="main-header"</strong> applies specific styling from CSS.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">11</div>
+                    <div class="line-code">&lt;div class="header-left"&gt;</div>
+                    <div class="line-explanation"><strong>Left Header Section:</strong> Contains the user profile button. Uses flexbox alignment.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">12</div>
+                    <div class="line-code">&lt;a class="profile-btn" aria-label="User profile" href="profile.html"&gt;</div>
+                    <div class="line-explanation"><strong>Profile Link:</strong> Anchors to <strong>profile.html</strong>. <strong>aria-label</strong> provides accessibility label for screen readers. <strong>class="profile-btn"</strong> for styling.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">13-15</div>
+                    <div class="line-code">&lt;svg&gt;...&lt;/svg&gt;</div>
+                    <div class="line-explanation"><strong>SVG User Icon:</strong> Inline SVG graphic showing a user profile icon. Scalable vector graphics scale without losing quality.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">17</div>
+                    <div class="line-code">&lt;div class="header-center"&gt;</div>
+                    <div class="line-explanation"><strong>Center Header Section:</strong> Contains the search bar. Takes up flexible space in the header.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">18</div>
+                    <div class="line-code">&lt;form class="search-bar"&gt;</div>
+                    <div class="line-explanation"><strong>Search Form:</strong> Form element for property search. Will be handled by JavaScript in script.js.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">19-21</div>
+                    <div class="line-code">&lt;input type="text" placeholder="Search for Properties"&gt;</div>
+                    <div class="line-explanation"><strong>Search Input Field:</strong> Text input where users type search terms. <strong>placeholder</strong> shows gray hint text inside the field.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">22</div>
+                    <div class="line-code">&lt;span class="search-icon"&gt;</div>
+                    <div class="line-explanation"><strong>Search Icon Container:</strong> Wraps the magnifying glass SVG icon positioned absolutely over the input.</div>
+                </div>
+            </div>
+
+            <h3>Header Right (Notifications & Hamburger)</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">28</div>
+                    <div class="line-code">&lt;div class="header-right"&gt;</div>
+                    <div class="line-explanation"><strong>Right Header Section:</strong> Contains notification bell and hamburger menu. Aligned to the right.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">29</div>
+                    <div class="line-code">&lt;a href="notifications.html" class="notification-btn"&gt;</div>
+                    <div class="line-explanation"><strong>Notification Link:</strong> Navigates to the notifications page showing user alerts and updates.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">35</div>
+                    <div class="line-code">&lt;div class="hamburger-menu-container" id="hamburgerMenuContainer"&gt;</div>
+                    <div class="line-explanation"><strong>Hamburger Menu Container:</strong> <strong>id="hamburgerMenuContainer"</strong> allows JavaScript to target and control this element. Houses the toggle button and dropdown menu.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">36</div>
+                    <div class="line-code">&lt;button class="hamburger-btn" aria-label="Open menu"&gt;&#9776;&lt;/button&gt;</div>
+                    <div class="line-explanation"><strong>Hamburger Button:</strong> <strong>&#9776;</strong> is the HTML entity for the three horizontal lines (☰) icon. Clicking toggles the dropdown menu. Handled by JavaScript.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">37</div>
+                    <div class="line-code">&lt;div class="hamburger-dropdown"&gt;</div>
+                    <div class="line-explanation"><strong>Hamburger Dropdown Menu:</strong> Hidden by default, shows Chat and Wallet options when hamburger button is clicked.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">38-45</div>
+                    <div class="line-code">&lt;button class="chat-btn"&gt; / &lt;button class="wallet-btn"&gt;</div>
+                    <div class="line-explanation"><strong>Menu Items:</strong> Two buttons for Chat and Wallet features. Styled and handled by JavaScript in script.js.</div>
+                </div>
+            </div>
+
+            <h3>Modals (Pop-up Dialogs)</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">49</div>
+                    <div class="line-code">&lt;div id="post-ad-modal" class="modal"&gt;</div>
+                    <div class="line-explanation"><strong>Post Ad Modal:</strong> Hidden pop-up dialog for users to list new properties. <strong>id="post-ad-modal"</strong> for JavaScript control. Toggled by JavaScript.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">50</div>
+                    <div class="line-code">&lt;div class="modal-content"&gt;</div>
+                    <div class="line-explanation"><strong>Modal Content Container:</strong> The actual pop-up box. Centered on page with semi-transparent overlay behind it.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">51</div>
+                    <div class="line-code">&lt;span class="close"&gt;&times;&lt;/span&gt;</div>
+                    <div class="line-explanation"><strong>Close Button:</strong> <strong>&times;</strong> is the HTML entity for the multiplication sign (×). JavaScript closes the modal when clicked.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">52-68</div>
+                    <div class="line-code">&lt;form id="post-ad-form"&gt;...&lt;/form&gt;</div>
+                    <div class="line-explanation"><strong>Property Posting Form:</strong> Collects property details (title, price, type, bedrooms, bathrooms, area, location, image URL). Each input has a required attribute for form validation.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">70</div>
+                    <div class="line-code">&lt;div id="chat-modal" class="modal"&gt;</div>
+                    <div class="line-explanation"><strong>Chat Modal:</strong> Pop-up for customer support chat. Contains message history display and input field for typing messages.</div>
+                </div>
+            </div>
+
+            <h3>Main Content Sections</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">82</div>
+                    <div class="line-code">&lt;main&gt;</div>
+                    <div class="line-explanation"><strong>Main Content:</strong> Semantic HTML5 element. Contains the primary page content (not navigation or footer).</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">83</div>
+                    <div class="line-code">&lt;section class="quick-search"&gt;</div>
+                    <div class="line-explanation"><strong>Quick Search Section:</strong> Filter bar for users to search properties by type, location, price range. Same on desktop and mobile.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">84</div>
+                    <div class="line-code">&lt;form id="quick-search-form"&gt;</div>
+                    <div class="line-explanation"><strong>Search Filter Form:</strong> <strong>id="quick-search-form"</strong> allows JavaScript to attach event listeners and handle filter logic.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">85-99</div>
+                    <div class="line-code">&lt;select&gt; &lt;input&gt;</div>
+                    <div class="line-explanation"><strong>Filter Controls:</strong> Dropdown for property types and location. Text inputs for min/max price. Users adjust these and click "Filter" button to narrow results.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">104</div>
+                    <div class="line-code">&lt;section class="hot-properties"&gt;</div>
+                    <div class="line-explanation"><strong>Hot Properties Section:</strong> Displays trending properties in a horizontal scrolling carousel. Two rows for visual interest.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">106-107</div>
+                    <div class="line-code">&lt;div class="hot-row" id="hot-row-1|2"&gt;</div>
+                    <div class="line-explanation"><strong>Hot Property Rows:</strong> Two separate rows with IDs. JavaScript populates these with dynamically generated property cards in a horizontal scroll layout.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">111</div>
+                    <div class="line-code">&lt;section class="featured-properties"&gt;</div>
+                    <div class="line-explanation"><strong>Featured Properties Section:</strong> Highlights premium/promoted properties in a grid layout. Users see these top-tier listings prominently.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">113</div>
+                    <div class="line-code">&lt;div id="featured-list" class="property-grid"&gt;</div>
+                    <div class="line-explanation"><strong>Featured List Container:</strong> JavaScript renders featured property cards here in a responsive grid. Shows 6 featured properties by default.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">122</div>
+                    <div class="line-code">&lt;section class="listings"&gt;</div>
+                    <div class="line-explanation"><strong>Available Properties Section:</strong> Main product listing area. Shows all available properties (not featured) in a grid with infinite scroll capability.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">124</div>
+                    <div class="line-code">&lt;div id="property-list" class="property-grid"&gt;</div>
+                    <div class="line-explanation"><strong>Property List Container:</strong> JavaScript dynamically renders property cards here. Implements pagination with "Load More" button.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">131</div>
+                    <div class="line-code">&lt;section class="services-preview"&gt;</div>
+                    <div class="line-explanation"><strong>Services Overview Section:</strong> Shows 4 main service offerings (Sales, Rentals, Mortgage Calculator, Property Valuation) as cards.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">133-156</div>
+                    <div class="line-code">&lt;div class="service-card"&gt;...&lt;/div&gt;</div>
+                    <div class="line-explanation"><strong>Service Cards:</strong> Each card has a title, description, and a button linking to that service. Styled with hover effects for interactivity.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">161</div>
+                    <div class="line-code">&lt;section class="cta"&gt;</div>
+                    <div class="line-explanation"><strong>Call-to-Action Section:</strong> "Stay Updated" newsletter subscription. Encourages users to sign up for property alerts.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">165</div>
+                    <div class="line-code">&lt;form id="newsletter-form"&gt;</div>
+                    <div class="line-explanation"><strong>Newsletter Form:</strong> Collects email address for newsletter subscriptions. JavaScript validates and saves to localStorage.</div>
+                </div>
+            </div>
+
+            <h3>Footer</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">172</div>
+                    <div class="line-code">&lt;footer&gt;</div>
+                    <div class="line-explanation"><strong>Footer Element:</strong> Semantic HTML element at the bottom. Contains company info, links, and copyright.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">173</div>
+                    <div class="line-code">&lt;div class="footer-content"&gt;</div>
+                    <div class="line-explanation"><strong>Footer Content Wrapper:</strong> Grid container with 4 columns (About, Services, Support, Follow Us) that reflow on mobile.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">174-192</div>
+                    <div class="line-code">&lt;div class="footer-section"&gt;...&lt;/div&gt;</div>
+                    <div class="line-explanation"><strong>Footer Sections:</strong> Each section contains heading and list of navigation links. Organized by topic for user navigation and SEO.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">196</div>
+                    <div class="line-code">&lt;p&gt;&copy; 2026 Wispa Real Estate. All rights reserved.&lt;/p&gt;</div>
+                    <div class="line-explanation"><strong>Copyright Notice:</strong> <strong>&copy;</strong> is the HTML entity for the copyright symbol (©). Standard legal notice.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">200</div>
+                    <div class="line-code">&lt;script src="script.js"&gt;&lt;/script&gt;</div>
+                    <div class="line-explanation"><strong>JavaScript File Link:</strong> Imports external script.js at the end of body. Loads after HTML so DOM is ready. Handles all interactions, API calls, and dynamic rendering.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE.HTML DOCUMENTATION -->
+        <div id="profile" class="file-section">
+            <h2>👤 profile.html - User Profile Page</h2>
+            <div class="section-intro">
+                <h3>Purpose</h3>
+                <p>Displays the logged-in user's profile information including avatar, name, email, activity statistics (liked items, purchases), and allows editing of profile details. Includes edit modal for updating user info and logout functionality.</p>
+            </div>
+
+            <h3>Key Components</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1-25</div>
+                    <div class="line-code">Head & Meta Tags</div>
+                    <div class="line-explanation"><strong>Same as index.html:</strong> DOCTYPE, meta tags for UTF-8 encoding and viewport. Title is "User Profile - Wispa Real Estate". Links to styles.css for styling.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">27-28</div>
+                    <div class="line-code">&lt;a href="index.html" class="back-link"&gt;&larr; Back&lt;/a&gt;</div>
+                    <div class="line-explanation"><strong>Back Navigation:</strong> <strong>&larr;</strong> (left arrow entity) links back to homepage. Appears at top of profile page.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">30</div>
+                    <div class="line-code">&lt;div class="profile-form"&gt;</div>
+                    <div class="line-explanation"><strong>Profile Container:</strong> Main wrapper for profile content. Limited to 450px max-width for readability. Centered on page.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">32</div>
+                    <div class="line-code">&lt;div class="avatar-section"&gt;</div>
+                    <div class="line-explanation"><strong>Avatar Section:</strong> Contains user's profile picture. Circular image with upload capability.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">33</div>
+                    <div class="line-code">&lt;img id="profilePic" src="..."&gt;</div>
+                    <div class="line-explanation"><strong>Profile Picture:</strong> <strong>id="profilePic"</strong> allows JavaScript to update the image when user uploads a new avatar. Starts with placeholder image.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">35-36</div>
+                    <div class="line-code">&lt;label for="avatarInput"&gt; / &lt;input id="avatarInput" type="file"&gt;</div>
+                    <div class="line-explanation"><strong>Avatar Upload:</strong> File input hidden by default. When user clicks "Change Avatar" label, file picker opens. JavaScript reads the file and displays preview.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">39-50</div>
+                    <div class="line-code">&lt;div class="stats-row"&gt;</div>
+                    <div class="line-explanation"><strong>Statistics Cards:</strong> Two cards showing "Liked" count and "Purchased" count. JavaScript populates these numbers from localStorage data.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">52-75</div>
+                    <div class="line-code">&lt;input id="displayName|Email" type="text|email"&gt;</div>
+                    <div class="line-explanation"><strong>User Info Fields:</strong> Editable text inputs for display name, email, and bio. Initially populated from localStorage. User clicks "Edit Profile" to modify.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">77-82</div>
+                    <div class="line-code">&lt;div class="info-row"&gt;</div>
+                    <div class="line-explanation"><strong>Metadata Display:</strong> Shows "Member Since" date and "Total Searches" count. Read-only fields with light background styling.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">84-91</div>
+                    <div class="line-code">&lt;div class="button-group"&gt;</div>
+                    <div class="line-explanation"><strong>Action Buttons:</strong> Grid of buttons for Settings, Privacy, User Agreement, and Save Profile. Multiple button groups arranged vertically.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">93</div>
+                    <div class="line-code">&lt;button class="logout-btn" id="logoutBtn"&gt;Logout&lt;/button&gt;</div>
+                    <div class="line-explanation"><strong>Logout Button:</strong> Red button at bottom. JavaScript shows confirmation dialog before logging out and redirecting to login page.</div>
+                </div>
+            </div>
+
+            <h3>Edit Profile Modal</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">96</div>
+                    <div class="line-code">&lt;div id="editModal" class="modal"&gt;</div>
+                    <div class="line-explanation"><strong>Edit Modal:</strong> Hidden pop-up for editing profile info. JavaScript shows/hides it when user clicks Edit button.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">97</div>
+                    <div class="line-code">&lt;div class="modal-dialog"&gt;</div>
+                    <div class="line-explanation"><strong>Modal Dialog Box:</strong> The centered white box that appears. Contains form fields and action buttons.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">99</div>
+                    <div class="line-code">&lt;input id="nameInput|emailInput|bioInput" type="text|email"&gt;</div>
+                    <div class="line-explanation"><strong>Modal Input Fields:</strong> Three fields to edit name, email, and bio. JavaScript populates with current values when modal opens.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">108</div>
+                    <div class="line-code">&lt;button id="saveEdit"&gt;Save&lt;/button&gt;</div>
+                    <div class="line-explanation"><strong>Save Button:</strong> Saves edited data to localStorage, updates UI, closes modal, and shows success message.</div>
+                </div>
+            </div>
+
+            <h3>Agreement Modal & JavaScript</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">113</div>
+                    <div class="line-code">&lt;div id="agreementModal" class="modal"&gt;</div>
+                    <div class="line-explanation"><strong>Agreement Modal:</strong> Shows User Agreement terms. Displayed when user clicks "User Agreement" button.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">130+</div>
+                    <div class="line-code">&lt;script&gt;...&lt;/script&gt;</div>
+                    <div class="line-explanation"><strong>JavaScript Logic:</strong> Handles all interactions. Key functions: load user data, update display, handle edits, manage avatar upload, control modals, and logout.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">132</div>
+                    <div class="line-code">function safeParse(key) { ... }</div>
+                    <div class="line-explanation"><strong>Safe JSON Parser:</strong> Safely retrieves data from localStorage. Wrapped in try-catch to prevent errors if data is corrupted.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">135</div>
+                    <div class="line-code">const user = safeParse('wispaUser') || defaultUser;</div>
+                    <div class="line-explanation"><strong>Load User Data:</strong> Gets stored user object from localStorage or uses default empty object. Redirects to login if no user is stored.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">145+</div>
+                    <div class="line-code">document.getElementById(...).textContent = ...</div>
+                    <div class="line-explanation"><strong>Populate UI:</strong> Sets username, email, avatar image, and activity counts on the page from loaded user data.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">165+</div>
+                    <div class="line-code">avatarInput.addEventListener('change', ...)</div>
+                    <div class="line-explanation"><strong>Avatar Upload Handler:</strong> When user selects file, reads it as data URL, displays preview, and saves to localStorage.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">180+</div>
+                    <div class="line-code">saveBtn.addEventListener('click', ...)</div>
+                    <div class="line-explanation"><strong>Save Profile Handler:</strong> Validates inputs, updates user object in memory, saves to localStorage, refreshes UI with new data.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTIFICATIONS.HTML DOCUMENTATION -->
+        <div id="notifications" class="file-section">
+            <h2>🔔 notifications.html - Notifications Page</h2>
+            <div class="section-intro">
+                <h3>Purpose</h3>
+                <p>Displays all user notifications (likes, purchases, messages, alerts, info). Features filtering by type, mark as read/unread functionality, delete individual notifications, and mark all as read. Notifications are stored in localStorage and persist across sessions.</p>
+            </div>
+
+            <h3>Structure & Components</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1-35</div>
+                    <div class="line-code">Head Section & Styling</div>
+                    <div class="line-explanation"><strong>Meta Tags:</strong> Standard head setup. Internal <strong>&lt;style&gt;</strong> block contains all CSS for the notifications page. No external stylesheet needed for this page.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">40</div>
+                    <div class="line-code">&lt;div class="notifications-container"&gt;</div>
+                    <div class="line-explanation"><strong>Main Container:</strong> Max-width 600px, centered. All notifications content goes here.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">41</div>
+                    <div class="line-code">&lt;a href="index.html" class="back-link"&gt;</div>
+                    <div class="line-explanation"><strong>Back Link:</strong> Returns user to homepage. Always available at top of page.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">43-47</div>
+                    <div class="line-code">&lt;div class="notifications-header"&gt;</div>
+                    <div class="line-explanation"><strong>Header Section:</strong> Shows title "Notifications" and "Mark all as read" button. Button style changes based on unread count.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">50-58</div>
+                    <div class="line-code">&lt;div class="filter-tabs"&gt;</div>
+                    <div class="line-explanation"><strong>Filter Tabs:</strong> 6 filter buttons (All, Unread, Likes, Purchases, Messages, Alerts). Click to filter notifications by type. Active tab is highlighted in blue.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">61</div>
+                    <div class="line-code">&lt;div id="notificationsList"&gt;&lt;/div&gt;</div>
+                    <div class="line-explanation"><strong>Notifications List:</strong> JavaScript renders notification items here. Each item shows icon, title, message, time, and action buttons.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">64-70</div>
+                    <div class="line-code">&lt;div id="emptyState"&gt;</div>
+                    <div class="line-explanation"><strong>Empty State:</strong> Shows when no notifications match the current filter. SVG bell icon with "No notifications yet" message.</div>
+                </div>
+            </div>
+
+            <h3>Notification Item Structure</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">75+</div>
+                    <div class="line-code">&lt;div class="notification-item"&gt;</div>
+                    <div class="line-explanation"><strong>Notification Card:</strong> Each notification is a card with flex layout. Highlighted in light blue if unread. Hovers for interactivity.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">76</div>
+                    <div class="line-code">&lt;div class="notification-icon ${type}"&gt;</div>
+                    <div class="line-explanation"><strong>Icon Badge:</strong> Colored circle with emoji. Color changes by type (red for alerts, green for purchases, etc.). JavaScript inserts emoji based on notification type.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">80</div>
+                    <div class="line-code">&lt;div class="notification-title"&gt;</div>
+                    <div class="line-explanation"><strong>Notification Title:</strong> Bold heading summarizing the notification. E.g., "Someone liked your listing".</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">81</div>
+                    <div class="line-code">&lt;div class="notification-message"&gt;</div>
+                    <div class="line-explanation"><strong>Message Body:</strong> Detailed message text. E.g., "John Doe liked 'Modern Apartment in Downtown'".</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">82</div>
+                    <div class="line-code">&lt;div class="notification-time"&gt;</div>
+                    <div class="line-explanation"><strong>Relative Time:</strong> JavaScript displays human-readable time ("5m ago", "2h ago", "1d ago") instead of timestamps.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">83-89</div>
+                    <div class="line-code">&lt;div class="notification-actions"&gt;</div>
+                    <div class="line-explanation"><strong>Action Buttons:</strong> Three buttons per notification: View (navigates to property), Mark read/unread (toggles state), Delete (removes notification).</div>
+                </div>
+            </div>
+
+            <h3>JavaScript Logic</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">100+</div>
+                    <div class="line-code">const defaultNotifications = [...]</div>
+                    <div class="line-explanation"><strong>Sample Data:</strong> Default notifications array with 5 sample items. Each has id, type, title, message, timestamp, read status, and action URL.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">130</div>
+                    <div class="line-code">function init() { ... }</div>
+                    <div class="line-explanation"><strong>Initialize:</strong> Loads notifications from localStorage or uses defaults. Renders initial view. Called on page load.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">136</div>
+                    <div class="line-code">function saveNotifications() { ... }</div>
+                    <div class="line-explanation"><strong>Save to Storage:</strong> Persists current notifications array to localStorage so changes survive page refresh.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">140</div>
+                    <div class="line-code">function formatTime(date) { ... }</div>
+                    <div class="line-explanation"><strong>Time Formatter:</strong> Converts timestamp to relative format. "Just now" for seconds, "5m ago" for minutes, "2h ago" for hours, etc.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">155</div>
+                    <div class="line-code">function renderNotifications() { ... }</div>
+                    <div class="line-explanation"><strong>Render Function:</strong> Filters notifications by current tab, maps to HTML, and inserts into DOM. Creates notification cards dynamically.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">180</div>
+                    <div class="line-code">function toggleRead(id) { ... }</div>
+                    <div class="line-explanation"><strong>Toggle Read Status:</strong> Finds notification by ID, flips read boolean, saves to storage, re-renders list.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">187</div>
+                    <div class="line-code">function deleteNotification(id) { ... }</div>
+                    <div class="line-explanation"><strong>Delete Function:</strong> Removes notification from array, saves, and refreshes display.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">193</div>
+                    <div class="line-code">function handleAction(id) { ... }</div>
+                    <div class="line-explanation"><strong>Action Handler:</strong> "View" button marks notification as read and navigates to associated property or page.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">204</div>
+                    <div class="line-code">document.querySelectorAll('.filter-tab').forEach(btn => { ... })</div>
+                    <div class="line-explanation"><strong>Filter Tab Click Handler:</strong> Attaches click listeners to filter buttons. Updates currentFilter variable and re-renders list.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">212</div>
+                    <div class="line-code">document.getElementById('markAllReadBtn').addEventListener('click', ...)</div>
+                    <div class="line-explanation"><strong>Mark All Read:</strong> Sets all notifications' read property to true, saves, and re-renders.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCRIPT.JS DOCUMENTATION -->
+        <div id="script" class="file-section">
+            <h2>⚙️ script.js - Main JavaScript Logic (Excerpt)</h2>
+            <div class="section-intro">
+                <h3>Purpose</h3>
+                <p>Controls all interactive functionality: property data generation, search/filter logic, modal handling, like/favorite features, form submissions, localStorage management, hamburger menu, and dynamic rendering of property cards.</p>
+            </div>
+
+            <h3>Core Functions Explained</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1-30</div>
+                    <div class="line-code">Mobile button event listeners</div>
+                    <div class="line-explanation"><strong>Mobile Button Handlers:</strong> Attaches click listeners to mobile navigation buttons (notification, likes, wallet, chat, support). Each navigates to corresponding page when clicked.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">35-65</div>
+                    <div class="line-code">const propertyImageIds = [...]</div>
+                    <div class="line-explanation"><strong>Image ID Array:</strong> 30 Unsplash photo IDs for real estate images. Script randomly selects IDs to create unique property image URLs. Prevents duplicate images.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">68</div>
+                    <div class="line-code">function getRandomPropertyImage() { ... }</div>
+                    <div class="line-explanation"><strong>Random Image Getter:</strong> Picks random ID from array and constructs full Unsplash URL with size parameters. Returns complete image URL for a property.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">73</div>
+                    <div class="line-code">function getRandomPropertyImages() { ... }</div>
+                    <div class="line-explanation"><strong>Multiple Images:</strong> Generates 1-4 random images for a single property. Simulates galleries where properties have multiple photos.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">100+</div>
+                    <div class="line-code">const propertyTemplates = { ... }</div>
+                    <div class="line-explanation"><strong>Property Templates:</strong> Objects defining property types (land, house, rent). Each has title, bed/bath ranges, area ranges, and price ranges for realistic data generation.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">200+</div>
+                    <div class="line-code">function generateProperties() { ... }</div>
+                    <div class="line-explanation"><strong>Property Generator:</strong> Creates 30 properties per country (land, houses, rentals). Randomizes bed/bath/area within defined ranges. Generates ~4500+ unique properties total for diverse search results.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">340</div>
+                    <div class="line-code">function renderProperties(props, append = false) { ... }</div>
+                    <div class="line-explanation"><strong>Property Renderer:</strong> Takes property array, creates HTML card for each, inserts into DOM. Handles pagination. If append=true, adds to existing list (Load More feature). Updates like buttons based on stored favorites.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">410</div>
+                    <div class="line-code">function filterProperties() { ... }</div>
+                    <div class="line-explanation"><strong>Filter Logic:</strong> Applies all active filters (type, location, price range, bedrooms, search term) to property array. Returns filtered subset for display.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">500</div>
+                    <div class="line-code">function renderHotProperties() { ... }</div>
+                    <div class="line-explanation"><strong>Hot Properties Carousel:</strong> Randomly selects 50 properties, splits into 2 rows of 25. Renders as horizontal scrolling cards. Updates on page load.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">560</div>
+                    <div class="line-code">function renderFeaturedProperties() { ... }</div>
+                    <div class="line-explanation"><strong>Featured List:</strong> Filters properties with featured=true. Shows up to 6 featured properties in a grid. Highlighted prominently on homepage.</div>
+                </div>
+            </div>
+
+            <h3>Event Handlers</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">650+</div>
+                    <div class="line-code">postAdBtn.addEventListener('click', ...)</div>
+                    <div class="line-explanation"><strong>Post Ad Modal:</strong> Shows modal when "Post Property" button clicked. Reveals form for users to list new property.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">700+</div>
+                    <div class="line-code">quickSearchForm.addEventListener('submit', ...)</div>
+                    <div class="line-explanation"><strong>Quick Search Handler:</strong> Processes filter form submission. Calls filterProperties() with selected filters. Updates property list display.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">800+</div>
+                    <div class="line-code">loadMoreBtn.addEventListener('click', ...)</div>
+                    <div class="line-explanation"><strong>Load More:</strong> Increments page counter and calls renderProperties with append=true. Adds next 20 properties to bottom of list.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">850+</div>
+                    <div class="line-code">.like-btn.addEventListener('click', ...)</div>
+                    <div class="line-explanation"><strong>Like Button Handler:</strong> Toggles property's liked state. Updates heart icon color. Saves liked property IDs to localStorage for persistence.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">950+</div>
+                    <div class="line-code">postAdForm.addEventListener('submit', ...)</div>
+                    <div class="line-explanation"><strong>Post Ad Submission:</strong> Creates new property object from form inputs. Adds to properties array. Saves to localStorage. Shows success notification. Closes modal.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1000+</div>
+                    <div class="line-code">mortgageForm.addEventListener('submit', ...)</div>
+                    <div class="line-explanation"><strong>Mortgage Calculator:</strong> Calculates monthly payment, total payment, and total interest using standard mortgage formulas. Displays results.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1050+</div>
+                    <div class="line-code">valuationForm.addEventListener('submit', ...)</div>
+                    <div class="line-explanation"><strong>Property Valuation:</strong> Estimates property value based on type, size, bedrooms, and location. Shows price range with multipliers.</div>
+                </div>
+            </div>
+
+            <h3>Hamburger Menu</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1100+</div>
+                    <div class="line-code">(function(){...})()</div>
+                    <div class="line-explanation"><strong>IIFE (Immediately Invoked Function):</strong> Encapsulates hamburger menu logic. Prevents global scope pollution.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1102</div>
+                    <div class="line-code">const container = document.getElementById('hamburgerMenuContainer')</div>
+                    <div class="line-explanation"><strong>Get Container:</strong> Finds hamburger menu in DOM by ID. Used as reference for event delegation.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1107</div>
+                    <div class="line-code">btn.addEventListener('click', (e) => { dropdown.classList.toggle('show') })</div>
+                    <div class="line-explanation"><strong>Toggle Dropdown:</strong> Clicking hamburger button adds/removes "show" class to dropdown. CSS handles visibility toggle.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1117+</div>
+                    <div class="line-code">dropdown.querySelectorAll('button').forEach(b => { ... })</div>
+                    <div class="line-explanation"><strong>Menu Item Handlers:</strong> Each dropdown button has click handler. Chat/Wallet buttons navigate to respective pages. Dropdown closes after action.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1128</div>
+                    <div class="line-code">document.addEventListener('click', (e) => { if (!container.contains(e.target)) closeDropdown() })</div>
+                    <div class="line-explanation"><strong>Close on Outside Click:</strong> If user clicks anywhere outside hamburger menu, dropdown closes. Prevents menu staying open.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1133</div>
+                    <div class="line-code">document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDropdown() })</div>
+                    <div class="line-explanation"><strong>Close on Escape Key:</strong> Pressing Escape closes the dropdown menu. Improves keyboard accessibility.</div>
+                </div>
+            </div>
+
+            <h3>Data Persistence</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1150+</div>
+                    <div class="line-code">function loadProperties() { ... }</div>
+                    <div class="line-explanation"><strong>Load Properties:</strong> Checks localStorage for saved properties first. Falls back to generated data if none stored. Allows users' posted properties to persist.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1165+</div>
+                    <div class="line-code">function saveProperty(property) { ... }</div>
+                    <div class="line-explanation"><strong>Save Property:</strong> Adds new property to array and saves all properties to localStorage. Makes posted properties permanent.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1175+</div>
+                    <div class="line-code">function loadLikedProperties() { ... }</div>
+                    <div class="line-explanation"><strong>Load Favorites:</strong> Retrieves liked property IDs from localStorage. Used to highlight liked properties with filled hearts.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1180+</div>
+                    <div class="line-code">localStorage.setItem('likedProperties', JSON.stringify(liked))</div>
+                    <div class="line-explanation"><strong>Save Likes:</strong> Converts liked array to JSON and stores in browser's localStorage. Persists across sessions.</div>
+                </div>
+            </div>
+
+            <h3>Initialization</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1210+</div>
+                    <div class="line-code">document.addEventListener('DOMContentLoaded', () => { ... })</div>
+                    <div class="line-explanation"><strong>DOM Ready Event:</strong> Waits for HTML to fully load before running JS. Calls loadProperties() then renders hot, featured, and available property lists.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STYLES.CSS DOCUMENTATION -->
+        <div id="styles" class="file-section">
+            <h2>🎨 styles.css - Styling (Excerpt)</h2>
+            <div class="section-intro">
+                <h3>Purpose</h3>
+                <p>Defines all visual styling for the Wispa Real Estate website. Includes responsive design for mobile and desktop, color variables, component styles (buttons, cards, grids), layout systems (flexbox, grid), animations, and accessibility considerations.</p>
+            </div>
+
+            <h3>Root Variables & Resets</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1200+</div>
+                    <div class="line-code">:root { --primary: #4CAF50; --secondary: #666; ... }</div>
+                    <div class="line-explanation"><strong>CSS Variables:</strong> Defines reusable colors and sizing. Primary green (#4CAF50) used throughout site. Secondary gray for text. Makes theme changes simple (change one value, applies everywhere).</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1210</div>
+                    <div class="line-code">* { box-sizing: border-box; }</div>
+                    <div class="line-explanation"><strong>Universal Reset:</strong> Makes padding/borders part of element's width calculation. Prevents layout shift when adding padding.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1213</div>
+                    <div class="line-code">html, body { height: 100%; margin: 0; padding: 0; ... }</div>
+                    <div class="line-explanation"><strong>Body Styling:</strong> Removes default margins/padding. Sets full height viewport. Enables full-height layouts. Disables tap highlight on mobile for better UX.</div>
+                </div>
+            </div>
+
+            <h3>Header Styles</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">30</div>
+                    <div class="line-code">.main-header { display: flex; align-items: center; justify-content: space-between; ... }</div>
+                    <div class="line-explanation"><strong>Header Layout:</strong> Flexbox container distributes items (profile icon, search, notifications) with space between. Stays on top with fixed width.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">38</div>
+                    <div class="line-code">.header-center { flex: 1; }</div>
+                    <div class="line-explanation"><strong>Flexible Center:</strong> Search bar takes remaining space. flex:1 makes it grow to fill available width.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">50</div>
+                    <div class="line-code">.search-bar-wrapper { position: relative; }</div>
+                    <div class="line-explanation"><strong>Search Wrapper:</strong> Position relative allows absolute positioning of search icon inside. Icon positioned over input field.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">63</div>
+                    <div class="line-code">.search-icon { position: absolute; right: 14px; pointer-events: none; }</div>
+                    <div class="line-explanation"><strong>Icon Position:</strong> Absolute positioning places icon inside input. pointer-events:none makes it transparent to clicks (clicks pass through to input).</div>
+                </div>
+            </div>
+
+            <h3>Button Styles</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1240</div>
+                    <div class="line-code">.btn { display: inline-flex; padding: 10px 16px; background: var(--primary); ... }</div>
+                    <div class="line-explanation"><strong>Primary Button:</strong> Green background. Inline-flex for icon+text alignment. Hover effect: lifts button up 2px and adds shadow for depth.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1245</div>
+                    <div class="line-code">.btn.secondary { background: transparent; color: var(--primary); border: 2px solid var(--primary); }</div>
+                    <div class="line-explanation"><strong>Secondary Button:</strong> Outline style. Transparent background with green border. Text is green. Used for less important actions.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1250</div>
+                    <div class="line-code">.btn.ghost { background: transparent; border: 2px solid transparent; }</div>
+                    <div class="line-explanation"><strong>Ghost Button:</strong> Nearly invisible. Text only with hover effect revealing subtle border. Used for tertiary actions.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">1253</div>
+                    <div class="line-code">.btn.small { padding: 6px 10px; font-size: 14px; }</div>
+                    <div class="line-explanation"><strong>Small Button Variant:</strong> Reduced padding and font size. Used in compact spaces like modals or inline actions.</div>
+                </div>
+            </div>
+
+            <h3>Card & Grid Styles</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">280</div>
+                    <div class="line-code">.property-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }</div>
+                    <div class="line-explanation"><strong>Responsive Grid:</strong> CSS Grid auto-fills as many columns as fit in width. Each column min 300px, max flexible. Gap of 20px between items. Automatically reflows on resize.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">300</div>
+                    <div class="line-code">.property-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); ... }</div>
+                    <div class="line-explanation"><strong>Property Card:</strong> White background, rounded corners, subtle shadow. Hover effect lifts card up with larger shadow for interactivity.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">310</div>
+                    <div class="line-code">.property-image { width: 100%; height: 200px; object-fit: cover; }</div>
+                    <div class="line-explanation"><strong>Card Image:</strong> Full width, fixed 200px height. object-fit:cover crops image to fill space without distortion. Maintains aspect ratio.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">320</div>
+                    <div class="line-code">.property-price { font-size: 24px; font-weight: bold; color: var(--primary); }</div>
+                    <div class="line-explanation"><strong>Price Display:</strong> Large, bold, green text. Draws attention. Most important info for buyers.</div>
+                </div>
+            </div>
+
+            <h3>Responsive Design (Mobile)</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">700+</div>
+                    <div class="line-code">@media (max-width: 768px) { ... }</div>
+                    <div class="line-explanation"><strong>Tablet Breakpoint:</strong> Adjusts layout for screens smaller than 768px. Stacks multi-column layouts into single column. Reduces padding for mobile space.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">750</div>
+                    <div class="line-code">.property-grid { grid-template-columns: 1fr; }</div>
+                    <div class="line-explanation"><strong>Mobile Grid:</strong> Single column layout on tablets. Properties stack vertically for better readability on small screens.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">900+</div>
+                    <div class="line-code">@media (max-width: 600px) { ... }</div>
+                    <div class="line-explanation"><strong>Mobile Breakpoint:</strong> Heavy adjustments for phones under 600px. Removes search bar width limit. Compact spacing. Ultra-tight margins.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">910</div>
+                    <div class="line-code">.main-header { padding: 4px 4px; }</div>
+                    <div class="line-explanation"><strong>Compact Header:</strong> Minimal padding on tiny screens. Maximizes usable screen space on phones.</div>
+                </div>
+            </div>
+
+            <h3>Modal Styles</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">900</div>
+                    <div class="line-code">.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }</div>
+                    <div class="line-explanation"><strong>Modal Overlay:</strong> Hidden by default (display:none). Fixed positioning covers entire screen. Semi-transparent black background. High z-index keeps on top. JavaScript changes display to show modal.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">910</div>
+                    <div class="line-code">.modal-content { background-color: #fff; }</div>
+                    <div class="line-explanation"><strong>Modal Box:</strong> White background for content. Centered on screen. Appears on top of overlay.</div>
+                </div>
+            </div>
+
+            <h3>Footer Styles</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">970</div>
+                    <div class="line-code">footer { text-align: center; padding: 20px; background-color: #333; color: white; }</div>
+                    <div class="line-explanation"><strong>Footer:</strong> Dark background (#333). White text. Centered. Spans full page width. Appears at bottom.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">980</div>
+                    <div class="line-code">.footer-content { display: flex; justify-content: space-around; }</div>
+                    <div class="line-explanation"><strong>Footer Layout:</strong> Flexbox distributes 4 sections evenly across width (About, Services, Support, Follow Us).</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">995</div>
+                    <div class="line-code">@media (max-width: 768px) { .footer-content { flex-direction: column; } }</div>
+                    <div class="line-explanation"><strong>Mobile Footer:</strong> Stacks footer sections vertically on small screens instead of side-by-side.</div>
+                </div>
+            </div>
+
+            <h3>Animations & Transitions</h3>
+            <div class="code-block">
+                <div class="code-line">
+                    <div class="line-number">1250</div>
+                    <div class="line-code">.btn { transition: transform .14s ease, background .14s ease, box-shadow .14s ease; }</div>
+                    <div class="line-explanation"><strong>Smooth Transitions:</strong> Changes to transform, background, and shadow animate smoothly over 140ms. Makes interactions feel polished and responsive.</div>
+                </div>
+                <div class="code-line">
+                    <div class="line-number">290</div>
+                    <div class="line-code">.property-card:hover { transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }</div>
+                    <div class="line-explanation"><strong>Hover Effect:</strong> Card lifts up 5px (translateY) and shadow intensifies on hover. Makes interaction obvious and delightful.</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 Wispa Real Estate. Code Documentation v1.0 | <a href="index.html">Back to Site</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Navigation between documentation sections
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const fileId = link.dataset.file;
+                
+                // Hide all sections
+                document.querySelectorAll('.file-section').forEach(s => s.classList.remove('active'));
+                
+                // Remove active from all nav links
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                
+                // Show selected section
+                document.getElementById(fileId).classList.add('active');
+                link.classList.add('active');
+                
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

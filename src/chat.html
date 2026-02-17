@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Chat - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header and navigation removed -->
+
+    <main>
+        <div class="main-container">
+            <section class="services-hero">
+                <div class="hero-content">
+                    <p class="eyebrow">Support & Messages</p>
+                    <h1>Chat</h1>
+                    <p class="lead">Send messages to our agents and support team. Conversations are stored locally for this demo.</p>
+                </div>
+            </section>
+
+            <section class="services-section">
+                <h2>Your Conversations</h2>
+                <p class="section-intro">Select a conversation or start a new chat below.</p>
+
+                <div class="chat-wrapper" style="max-width:900px;margin:20px auto;">
+                    <div id="conversationsList" style="background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden;padding:12px;">
+                        <!-- Conversations will be injected here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <p style="text-align:center">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        (function(){
+            // Check if user is logged in
+            const wispaUser = localStorage.getItem('wispaUser');
+            if (!wispaUser) {
+                document.getElementById('conversationsList').innerHTML = '<p style="padding:20px;text-align:center;color:var(--text);">Please <a href="login.html">login</a> to view conversations.</p>';
+                return;
+            }
+
+            const userData = JSON.parse(wispaUser);
+            const userId = userData.id;
+
+            // Use user-specific conversations key
+            const KEY = 'conversations_' + userId;
+            const listEl = document.getElementById('conversationsList');
+
+            function loadConversations(){
+                try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; }
+            }
+
+            function saveConversations(v){ localStorage.setItem(KEY, JSON.stringify(v)); }
+
+            function formatTime(ts){ const d = new Date(ts); return d.toLocaleString(); }
+
+            function render(){
+                const convs = loadConversations();
+                listEl.innerHTML = '';
+                
+                if (!convs || convs.length === 0) {
+                    listEl.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-light);">No conversations yet. Start a conversation from a property detail page!</p>';
+                    return;
+                }
+
+                convs.forEach(c => {
+                    const a = document.createElement('a');
+                    a.href = `messages.html?conv=${encodeURIComponent(c.id)}`;
+                    a.className = 'conversation-item';
+                    a.style.display = 'flex';
+                    a.style.gap = '12px';
+                    a.style.padding = '12px';
+                    a.style.alignItems = 'center';
+                    a.style.borderBottom = '1px solid var(--border)';
+                    a.style.textDecoration = 'none';
+                    a.style.color = 'inherit';
+
+                    a.innerHTML = `
+                        <div style="width:56px;height:56px;border-radius:50%;background:var(--light);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--text);">${c.agent.split(' ').map(n=>n[0]).join('')}</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                                <strong style="font-size:15px">${c.agent}</strong>
+                                <small style="color:var(--secondary);font-size:12px">${formatTime(c.updated)}</small>
+                            </div>
+                            <div style="color:var(--secondary);font-size:14px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last}</div>
+                        </div>
+                        ${c.unread ? `<div style="margin-left:8px"><span class="unread-badge">${c.unread}</span></div>` : ''}
+                    `;
+
+                    listEl.appendChild(a);
+                });
+            }
+
+            render();
+
+            // Re-render when conversations or messages change in another tab/window
+            window.addEventListener('storage', function(e){
+                if (!e.key) return;
+                if (e.key === KEY || e.key === 'wispaMessageSignal_' + userId || (e.key.startsWith('wispaMessages_' + userId))) {
+                    render();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

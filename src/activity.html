@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Activity - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .activity-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: #fff;
+            padding: 40px 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .page-header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .page-header p {
+            margin: 0;
+            opacity: 0.95;
+            font-size: 15px;
+        }
+
+        .form-section {
+            background: #fff;
+            padding: 28px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        .form-section h3 {
+            margin: 0 0 20px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--light);
+        }
+
+        .info-item {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 15px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .activity-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .activity-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-content h4 {
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .activity-content p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .activity-time {
+            text-align: right;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .back-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .back-nav:hover {
+            background: var(--lighter);
+            border-color: var(--text-light);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="main-container">
+            <a href="profile.html" class="back-nav">← Back to Dashboard</a>
+
+            <div class="activity-page">
+                <div class="page-header">
+                    <h1>Account Activity</h1>
+                    <p>View your account activity, login history, and recent actions.</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number" id="viewedCount">0</div>
+                        <div class="stat-label">Properties Viewed</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="searchCount">0</div>
+                        <div class="stat-label">Searches This Month</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="messageCount">0</div>
+                        <div class="stat-label">Messages Sent</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Login Activity</h3>
+                    <div class="info-item">
+                        <div class="info-label">Last Login</div>
+                        <div class="info-value">Today at 2:45 PM</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Current Session Status</div>
+                        <div class="info-value">Active ✓</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Session IP Address</div>
+                        <div class="info-value">192.168.1.1</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Recent Activity</h3>
+                    <ul class="activity-list">
+                        <li class="activity-item">
+                            <div class="activity-content">
+                                <h4>Profile Updated</h4>
+                                <p>You updated your profile information</p>
+                            </div>
+                            <div class="activity-time">Today</div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-content">
+                                <h4>Logged In</h4>
+                                <p>You logged into your account</p>
+                            </div>
+                            <div class="activity-time">Today</div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-content">
+                                <h4>Property Viewed</h4>
+                                <p>You viewed a property listing</p>
+                            </div>
+                            <div class="activity-time">Yesterday</div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-content">
+                                <h4>Property Liked</h4>
+                                <p>You liked a property</p>
+                            </div>
+                            <div class="activity-time">2 days ago</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function safeParse(key) {
+            try { 
+                return JSON.parse(localStorage.getItem(key)); 
+            } catch(e) { 
+                return null; 
+            }
+        }
+
+        const user = safeParse('wispaUser');
+        if(!user || !user.username) {
+            window.location.href = 'login.html';
+        }
+
+        const viewedCountEl = document.getElementById('viewedCount');
+        const searchCountEl = document.getElementById('searchCount');
+        const messageCountEl = document.getElementById('messageCount');
+
+        viewedCountEl.textContent = '0';
+        searchCountEl.textContent = '0';
+        messageCountEl.textContent = '0';
+    </script>
+</body>
+</html>

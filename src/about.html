@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About Us - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+    <!-- Modals -->
+    <div id="post-ad-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Post a Property Ad</h2>
+            <form id="post-ad-form">
+                <input type="text" id="ad-title" placeholder="Property Title" required>
+                <input type="number" id="ad-price" placeholder="Price (€)" required>
+                <select id="ad-type" required>
+                    <option value="sale">For Sale</option>
+                    <option value="rent">For Rent</option>
+                </select>
+                <input type="number" id="ad-bedrooms" placeholder="Bedrooms" required>
+                <input type="number" id="ad-bathrooms" placeholder="Bathrooms" required>
+                <input type="number" id="ad-area" placeholder="Area (m²)" required>
+                <input type="text" id="ad-location" placeholder="Location" required>
+                <input type="url" id="ad-image" placeholder="Image URL">
+                <button type="submit" class="btn">Post Ad</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="chat-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Chat with Us</h2>
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Type your message...">
+            <button id="send-chat" class="btn">Send</button>
+        </div>
+    </div>
+
+    <main>
+        <div class="main-container">
+            <!-- About Hero Section -->
+            <section class="services-hero">
+                <div class="hero-content">
+                    <p class="eyebrow">London-based — Global Reach</p>
+                    <h1>About Wispa Real Estate</h1>
+                    <p class="lead">Wispa Real Estate is a licensed estate agent dedicated to providing exceptional service. With years of experience, we specialize in residential and commercial properties worldwide — offering expertise, market insights, and full support throughout your property journey.</p>
+                    <div class="hero-cta">
+                        <a class="btn view-btn" href="search.html">Browse Properties</a>
+                        <a class="btn" href="contact.html">Get In Touch</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Our Story Section -->
+            <section class="services-section">
+                <h2>Our Story</h2>
+                <p class="section-intro">We believe in making real estate simple, transparent, and accessible to everyone. From day one, our mission has been to connect buyers, sellers, and investors with exceptional properties and expert guidance.</p>
+
+                <div class="services-grid">
+                    <article class="service-card">
+                        <div class="service-icon">🎯</div>
+                        <h3>Our Mission</h3>
+                        <p>To empower clients with trusted expertise and seamless property solutions, making real estate transactions straightforward and rewarding.</p>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">👁️</div>
+                        <h3>Our Vision</h3>
+                        <p>To be the leading real estate platform recognized globally for integrity, innovation, and client-first service in property transactions.</p>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">🤝</div>
+                        <h3>Client First</h3>
+                        <p>Your goals drive everything we do. We listen, advise, and execute with your best interests at the center of every decision.</p>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">💡</div>
+                        <h3>Innovation</h3>
+                        <p>We leverage cutting-edge technology and market insights to deliver faster, smarter, and more transparent property solutions.</p>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">✅</div>
+                        <h3>Transparency</h3>
+                        <p>No hidden fees, no surprises. We provide clear communication and honest guidance every step of the way.</p>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">🌍</div>
+                        <h3>Global Experience</h3>
+                        <p>With expertise across international markets, we help you navigate property opportunities anywhere in the world.</p>
+                    </article>
+                </div>
+            </section>
+
+            <!-- Statistics Section -->
+            <section class="about-stats-section">
+                <h2>By The Numbers</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 class="stat-number">530+</h3>
+                        <p class="stat-label">Properties Sold</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="stat-number">1,070+</h3>
+                        <p class="stat-label">Happy Clients</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="stat-number">10+</h3>
+                        <p class="stat-label">Years Experience</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="stat-number">50+</h3>
+                        <p class="stat-label">Expert Agents</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="newsletter-section">
+                <div class="newsletter-content">
+                    <h2>Ready to Find Your Next Property?</h2>
+                    <p>Let our experienced team guide you through your real estate journey with confidence and expertise.</p>
+                    <div class="newsletter-form">
+                        <input type="email" placeholder="Your email address" aria-label="Email address">
+                        <button>Get Started</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- FOOTER (Same structure desktop & mobile) -->
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-column">
+                <h4>About Us</h4>
+                <ul>
+                    <li><a href="about.html">About Wispa</a></li>
+                    <li><a href="blog.html">Blog</a></li>
+                    <li><a href="agents.html">Our Agents</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Services</h4>
+                <ul>
+                    <li><a href="services.html">Buy Property</a></li>
+                    <li><a href="services.html">Rent Property</a></li>
+                    <li><a href="calculator.html">Mortgage Calculator</a></li>
+                    <li><a href="valuation.html">Property Valuation</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="contact.html">Contact Us</a></li>
+                    <li><a href="faq.html">FAQ</a></li>
+                    <li><a href="privacy.html">Privacy Policy</a></li>
+                </ul>
+            </div>
+        </div>
+        <p style="text-align: center;">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

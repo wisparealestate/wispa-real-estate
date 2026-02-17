@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .login-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1000px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .login-info {
+            color: white;
+            padding: 20px;
+        }
+
+        .login-info h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .login-info p {
+            font-size: 16px;
+            opacity: 0.95;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .benefits {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .benefit {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .benefit-icon {
+            font-size: 24px;
+            min-width: 30px;
+        }
+
+        .benefit-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        .login-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .login-header h2 {
+            font-size: 28px;
+            color: var(--text);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            color: var(--text);
+            background: white;
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-light);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .forgot-password a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        .form-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .btn-login {
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .auth-toggle a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .input-hint {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .login-wrapper {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .login-info {
+                padding: 0;
+            }
+
+            .login-info h1 {
+                font-size: 32px;
+            }
+
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <!-- Left Section - Info -->
+        <div class="login-info">
+            <h1>Welcome Back</h1>
+            <p>Log in to your Wispa Real Estate account and continue browsing your favorite properties.</p>
+            
+            <div class="benefits">
+                <div class="benefit">
+                    <div class="benefit-icon">🔐</div>
+                    <div class="benefit-text">Secure access to your account and saved properties</div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">💬</div>
+                    <div class="benefit-text">View your conversations with agents and admins</div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">❤️</div>
+                    <div class="benefit-text">Access your saved wishlist and favorites</div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">🔔</div>
+                    <div class="benefit-text">Stay updated with property notifications</div>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">⚙️</div>
+                    <div class="benefit-text">Manage your profile and preferences</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Section - Form -->
+        <div class="login-container">
+            <div class="login-header">
+                <h2>Login</h2>
+                <p>Enter your credentials to access your account</p>
+            </div>
+
+            <div class="error-message" id="error-message"></div>
+            <div class="success-message" id="success-message">
+                ✓ Login successful! Redirecting...
+            </div>
+
+            <form id="login-form">
+                <!-- Username/Email/ID -->
+                <div class="form-group">
+                    <label for="login-identifier">Name, Email, or User ID</label>
+                    <input type="text" id="login-identifier" placeholder="John Doe, john@example.com, or WISPA-..." required>
+                    <div class="input-hint">You can use your name, email address, or user ID</div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password" required>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-actions">
+                    <button type="submit" class="btn-login">Login</button>
+                </div>
+
+                <!-- Sign Up Link -->
+                <div class="auth-toggle">
+                    Don't have an account? <a href="signup.html">Create one now</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const identifier = document.getElementById('login-identifier').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+
+            // Validate inputs
+            if (!identifier || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            // For demo purposes, check against all users in wispaUsers array
+            let users = [];
+            try { users = JSON.parse(localStorage.getItem('wispaUsers') || '[]'); } catch(e) { users = []; }
+            if (!users.length) {
+                showError('No account found. Please sign up first.');
+                return;
+            }
+            // Find user by identifier
+            const identifierLower = identifier.toLowerCase();
+            const userData = users.find(u =>
+                (u.username && u.username.toLowerCase() === identifierLower) ||
+                (u.email && u.email.toLowerCase() === identifierLower) ||
+                (u.id === identifier)
+            );
+            if (!userData) {
+                showError('Username, email, or user ID not found.');
+                return;
+            }
+            // Validate password
+            if (!userData.password || userData.password !== password) {
+                showError('Incorrect password. Please try again.');
+                return;
+            }
+            // Set as current user
+            localStorage.setItem('wispaUser', JSON.stringify(userData));
+            // Login successful
+            showSuccess('Login successful! Redirecting...');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        });
+
+        function showError(message) {
+            errorMessage.textContent = '✗ ' + message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+            loginForm.style.opacity = '0.6';
+            loginForm.style.pointerEvents = 'none';
+        }
+    </script>
+</body>
+</html>

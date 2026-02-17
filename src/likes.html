@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liked Properties - Wispa Real Estate</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header and navigation removed -->
+
+  <main>
+    <div class="main-container">
+      <section class="services-hero">
+        <div class="hero-content">
+          <p class="eyebrow">Saved Listings</p>
+          <h1>Liked Properties</h1>
+          <p class="lead">Quick access to admin-posted properties you marked as favourites. Click a card to view full details or remove it from your likes.</p>
+          <div class="hero-cta">
+            <a class="btn view-btn" href="search.html">Browse Listings</a>
+            <a class="btn" href="profile.html">Your Profile</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="services-section">
+        <h2>Your Liked Properties</h2>
+        <p class="section-intro">Properties you liked are listed below. Use the heart icon on any listing to remove it.</p>
+
+        <div id="liked-list" class="services-grid">
+          <!-- Liked property cards will be injected here by JS -->
+        </div>
+      </section>
+
+      <section class="newsletter-section">
+        <div class="newsletter-content">
+          <h2>Keep browsing</h2>
+          <p>Save more properties to compare and contact agents directly from each listing.</p>
+          <div class="newsletter-form">
+            <input type="email" placeholder="Your email address" aria-label="Email address">
+            <button>Get updates</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p style="text-align: center;">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    (function(){
+      const list = document.getElementById('liked-list');
+      if (!list) return;
+      
+      // Get current user
+      const wispaUser = localStorage.getItem('wispaUser');
+      if (!wispaUser) {
+        list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text);">Please log in to view your liked properties. <a href="login.html">Login here</a></p>';
+        return;
+      }
+      
+      const userData = JSON.parse(wispaUser);
+      const userId = userData.id;
+      
+      // Get user-specific liked property IDs from localStorage
+      const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+      
+      if (!Array.isArray(liked) || liked.length === 0) {
+        list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text);">You have no liked properties yet. <a href="search.html">Browse listings</a> to save favourites.</p>';
+        return;
+      }
+
+      // Load all properties and filter for admin-posted ones that user has liked
+      loadProperties().then(props => {
+        const lookup = {};
+        
+        // Build lookup of all properties (all are admin-posted by default)
+        (props || []).forEach(p => { 
+          if(p && p.id!=null) {
+            lookup[String(p.id)] = p;
+          }
+        });
+
+        // Filter: only show liked property IDs that exist in admin-posted properties
+        const likedAdminProperties = liked.filter(id => String(id) in lookup);
+        
+        if (likedAdminProperties.length === 0) {
+          list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text);">No admin-posted properties found in your likes.</p>';
+          return;
+        }
+
+        // Render only admin-posted properties that user has liked
+        likedAdminProperties.forEach(id => {
+          const prop = lookup[String(id)];
+          const a = document.createElement('a');
+          a.href = `property-detail.html?id=${id}&fromLikes=true`;
+          a.className = 'property-card';
+          a.style.textDecoration = 'none';
+
+          // choose media
+          let mediaHtml = '';
+          if (prop && prop.images && prop.images.length > 0) {
+            const src = prop.images[0];
+            const isVideo = typeof src === 'string' && (src.indexOf('data:video')===0 || src.match(/\.(mp4|webm|ogg)(\?|$)/i));
+            if (isVideo) mediaHtml = `<video src="${src}" muted playsinline preload="metadata"></video>`;
+            else mediaHtml = `<img src="${src}" alt="${(prop && prop.title)||'Property'}">`;
+          } else {
+            mediaHtml = `<img src="https://via.placeholder.com/400x250" alt="Property">`;
+          }
+
+          const title = prop && prop.title ? prop.title : `Property ${id}`;
+          const price = prop && prop.price ? (typeof prop.price === 'number' ? '€'+prop.price.toLocaleString() : prop.price) : 'N/A';
+          const location = prop && prop.location ? prop.location : '';
+
+          // post badge
+          const postBadge = prop && prop.postTo ? `<span class="property-badge ${prop.postTo}">${prop.postTo==='hot'? '🔥 Hot' : prop.postTo==='featured'? '⭐ Featured' : '✓ Available'}</span>` : '';
+
+          a.innerHTML = `
+            <div class="property-image-container">
+              ${postBadge}
+              ${mediaHtml}
+            </div>
+            <div class="property-info">
+              <h3>${title}</h3>
+              <p class="price">${price}</p>
+              <div class="location-with-like">
+                <p class="location">${location}</p>
+                <button class="like-btn liked" data-property-id="${id}" onclick="(function(e){e.preventDefault(); removeLike('${id}');})(event)">♥</button>
+              </div>
+            </div>
+          `;
+
+          list.appendChild(a);
+        });
+      });
+
+      // remove like helper
+      window.removeLike = function(id){
+        const wispaUser = localStorage.getItem('wispaUser');
+        if (!wispaUser) return;
+        
+        const userData = JSON.parse(wispaUser);
+        const userId = userData.id;
+        const arr = JSON.parse(localStorage.getItem('likedProperties_' + userId)||'[]');
+        const idx = arr.indexOf(String(id)) !== -1 ? arr.indexOf(String(id)) : arr.indexOf(Number(id));
+        if(idx>-1) arr.splice(idx,1);
+        localStorage.setItem('likedProperties_' + userId, JSON.stringify(arr));
+        location.reload();
+      };
+    })();
+  </script>
+</body>
+</html>

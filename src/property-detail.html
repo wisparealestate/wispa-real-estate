@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Details - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .property-detail-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+        .property-detail-image {
+            width: 100% !important;
+            max-height: 720px !important;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: block;
+            cursor: pointer;
+        }
+        
+        /* Image Carousel Styles */
+        .property-image-carousel {
+            position: relative;
+            width: 100%;
+            max-height: 720px !important;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .carousel-images {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        
+        .carousel-image {
+            width: 100% !important;
+            height: 720px !important;
+            object-fit: cover !important;
+            flex-shrink: 0;
+            cursor: pointer;
+            display: block;
+        }
+        
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .carousel-nav:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .carousel-prev {
+            left: 10px;
+        }
+        
+        .carousel-next {
+            right: 10px;
+        }
+        
+        .image-counter {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            color: var(--white);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 10;
+        }
+        
+        .carousel-dots {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dot.active {
+            background: var(--white);
+            width: 24px;
+            border-radius: 4px;
+        }
+        .property-detail-info {
+            margin-bottom: 30px;
+        }
+        .property-detail-info h1 {
+            font-size: 32px;
+            margin: 0 0 20px 0;
+            color: var(--text);
+        }
+        .property-title-with-like {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .property-title-with-like h1 {
+            margin: 0;
+            flex: 1;
+        }
+        .property-post-badge {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--white);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        }
+        .property-post-badge.hot { background: linear-gradient(135deg,#ff6b6b,#ee5a6f); }
+        .property-post-badge.featured { background: linear-gradient(135deg,#ffd93d,#fcb045); color:#222; }
+        .property-post-badge.available { background: linear-gradient(135deg,#4CAF50,#45a049); }
+        .like-btn-detail {
+            font-size: 28px;
+            padding: 6px 12px;
+            flex-shrink: 0;
+        }
+        .property-detail-price {
+            font-size: 24px;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .property-detail-location {
+            font-size: 16px;
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+        .property-detail-description {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text);
+            margin-bottom: 30px;
+        }
+        .contact-admin-section {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .contact-admin-section h2 {
+            margin: 0 0 15px 0;
+            font-size: 22px;
+        }
+        .contact-admin-section p {
+            font-size: 15px;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+        .contact-btn {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 0 0 12px 0;
+            border: 1px solid white;
+            cursor: pointer;
+            font-size: 14px;
+            min-height: 48px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .contact-btn svg {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .contact-btn span {
+            white-space: nowrap;
+        }
+        .contact-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            opacity: 0.95;
+        }
+        .contact-btn:last-child {
+            margin-bottom: 0;
+        }
+        .contact-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-top: 20px;
+        }
+        .contact-btn.chat-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+        }
+        .contact-btn.whatsapp-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+        }
+        .contact-btn.telegram-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+        }
+        .contact-btn.email-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+        }
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--border);
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .back-button:hover {
+            background: var(--text-light);
+            color: var(--white);
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .property-detail-container {
+                margin: 20px auto;
+                padding: 15px;
+                border-radius: 0;
+            }
+            .property-title-with-like {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .like-btn-detail {
+                align-self: flex-end;
+            }
+            .property-detail-image {
+                margin-bottom: 20px;
+                max-height: 420px;
+                border-radius: 6px;
+            }
+            .carousel-image {
+                height: 420px;
+            }
+            .property-detail-info h1 {
+                font-size: 24px;
+            }
+            .property-detail-price {
+                font-size: 20px;
+            }
+            .contact-admin-section {
+                padding: 20px 15px;
+            }
+            .contact-admin-section h2 {
+                font-size: 18px;
+            }
+            .contact-methods {
+                flex-direction: column;
+                gap: 0;
+                margin-top: 15px;
+            }
+            .contact-btn {
+                margin: 0 0 12px 0;
+                padding: 12px 18px;
+                gap: 10px;
+            }
+            .contact-btn:last-child {
+                margin-bottom: 0;
+            }
+        }
+        .property-category-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+
+        /* Position badge above media in the detail card */
+        .property-detail-container {
+            position: relative;
+        }
+        .property-detail-container .property-category-badge {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            left: auto;
+            margin-bottom: 0;
+            float: none;
+            z-index: 8;
+        }
+        .property-detail-container .property-post-badge {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            left: auto;
+            margin-bottom: 0;
+            float: none;
+            z-index: 9;
+        }
+
+        /* When badge is placed inside the title row, align it left of the title */
+        .property-title-with-like .property-category-badge {
+            float: none;
+            margin: 0 12px 0 0;
+            align-self: center;
+        }
+
+        .property-category-badge.hot {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+        }
+
+        .property-category-badge.featured {
+            background: linear-gradient(135deg, #ffd93d, #fcb045);
+        }
+
+        .property-category-badge.available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        /* Similar Properties Section */
+        .similar-properties-section {
+            margin-top: 50px;
+            padding-top: 40px;
+            border-top: 2px solid var(--border);
+        }
+        .similar-properties-section h2 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: var(--text);
+            text-align: center;
+        }
+        .similar-properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+        .similar-property-card {
+            background: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .similar-property-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        .similar-property-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .similar-property-info {
+            padding: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .similar-property-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .similar-property-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .similar-property-location {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 10px;
+            flex: 1;
+        }
+        .similar-property-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px 15px 15px;
+            border-top: 1px solid var(--border);
+            gap: 10px;
+        }
+        .similar-property-label {
+            display: inline-block;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .similar-property-label.hot {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+        }
+        .similar-property-label.featured {
+            background: linear-gradient(135deg, #ffd93d, #fcb045);
+        }
+        .similar-property-label.available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        .similar-property-like-btn {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 6px 10px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .similar-property-like-btn:hover {
+            transform: scale(1.2);
+        }
+        .similar-property-like-btn.liked {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .similar-properties-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .similar-properties-grid {
+                grid-template-columns: 1fr;
+            }
+            .similar-properties-section h2 {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .property-detail-container {
+                margin: 10px auto;
+                padding: 12px;
+            }
+            .property-title-with-like {
+                flex-direction: row;
+                align-items: center;
+            }
+            .property-title-with-like h1 {
+                margin: 0;
+            }
+            .like-btn-detail {
+                font-size: 24px;
+                padding: 4px 8px;
+            }
+            .property-detail-image {
+                max-height: 200px;
+            }
+            .property-detail-info h1 {
+                font-size: 20px;
+            }
+            .property-detail-price {
+                font-size: 18px;
+            }
+            .property-detail-description {
+                font-size: 14px;
+            }
+            .contact-admin-section {
+                padding: 15px 12px;
+            }
+            .contact-btn {
+                font-size: 13px;
+                padding: 10px 15px;
+                gap: 6px;
+                margin: 0 0 10px 0;
+            }
+            .contact-btn:last-child {
+                margin-bottom: 0;
+            }
+            .contact-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            .contact-methods {
+                flex-direction: column;
+                gap: 0;
+                margin-top: 15px;
+            }
+            .back-button {
+                font-size: 13px;
+                padding: 8px 15px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .contact-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+                min-height: 40px;
+                gap: 8px;
+                margin: 0 0 8px 0;
+            }
+            .contact-btn:last-child {
+                margin-bottom: 0;
+            }
+            .contact-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            .contact-methods {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="property-detail-container">
+        <a href="index.html" class="back-button">← Back to Listings</a>
+        
+        <!-- Image Carousel -->
+        <div id="imageCarousel" class="property-image-carousel" style="display: none;">
+            <div class="carousel-images" id="carouselImages"></div>
+            <button class="carousel-nav carousel-prev" id="prevBtn" onclick="prevImage()">‹</button>
+            <button class="carousel-nav carousel-next" id="nextBtn" onclick="nextImage()">›</button>
+            <div class="carousel-dots" id="carouselDots"></div>
+            <div class="image-counter"><span id="currentImageIndex">1</span> / <span id="totalImages">1</span></div>
+        </div>
+        
+        <!-- Fallback Single Image -->
+        <img id="propertyImage" src="" alt="Property" class="property-detail-image">
+        
+        <div class="property-detail-info">
+            <div class="property-title-with-like">
+                <h1 id="propertyTitle"></h1>
+                <span id="postBadge" class="property-post-badge" style="display:none;"></span>
+                <span id="categoryBadge" class="property-category-badge" style="display:none;"></span>
+                <button class="like-btn like-btn-detail" id="detailLikeBtn" onclick="toggleLikeDetail(event)">♡</button>
+            </div>
+            <div class="property-detail-price" id="propertyPrice"></div>
+            <div class="property-detail-location" id="propertyLocation"></div>
+            <div class="property-detail-description">
+                <p>This is a beautiful property with excellent location and modern amenities. Perfect for families or investors looking for a premium real estate opportunity.</p>
+                <p>Features include spacious rooms, natural lighting, parking facilities, and proximity to schools and public transportation.</p>
+            </div>
+        </div>
+
+        <div class="contact-admin-section">
+            <h2>Interested in This Property?</h2>
+            <p>Contact our real estate team to schedule a viewing or get more information.</p>
+            <div class="contact-methods">
+                <button class="contact-btn chat-btn" onclick="openChat()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l6.29-.97C9.95 21.64 10.97 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.41 0-2.73-.36-3.88-.99l-.28-.15-2.89.44.44-2.89-.15-.28C4.36 14.73 4 13.41 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
+                    </svg>
+                    <span>Chat</span>
+                </button>
+                <button class="contact-btn whatsapp-btn" onclick="openWhatsApp()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004c-1.572 0-3.084.611-4.21 1.721-1.126 1.11-1.747 2.588-1.747 4.16 0 1.572.621 3.05 1.747 4.16 1.126 1.11 2.638 1.721 4.21 1.721h.004c1.572 0 3.084-.611 4.21-1.721 1.126-1.11 1.747-2.588 1.747-4.16 0-1.572-.621-3.05-1.747-4.16-1.126-1.11-2.638-1.721-4.21-1.721M19.856 3.144C17.727 1.017 14.97 0 12.038 0 5.41 0 0 5.41 0 12.038c0 2.126.554 4.182 1.608 5.984L0 24l6.266-1.605c1.752 1.015 3.773 1.554 5.908 1.554 6.628 0 12.038-5.41 12.038-12.038 0-2.932-.978-5.759-2.824-8.042"/>
+                    </svg>
+                    <span>WhatsApp</span>
+                </button>
+                <a href="https://t.me/wisparealestate" target="_blank" class="contact-btn telegram-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0m5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.51l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295-.393 0-.32-.147-.451-.52l-1.062-3.47-2.913-.924c-.633-.203-.638-.666.136-.99l11.27-4.347c.842-.327 1.577.198 1.275 1.487"/>
+                    </svg>
+                    <span>Telegram</span>
+                </a>
+                <button class="contact-btn email-btn" onclick="sendEmail()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                    <span>Email</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Similar Properties Section -->
+        <div class="similar-properties-section" id="similarPropertiesSection">
+            <h2>Similar Properties You Might Like</h2>
+            <div class="similar-properties-grid" id="similarPropertiesGrid"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Get property ID and category from URL query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const propertyId = urlParams.get('id') || 'Unknown';
+        const category = urlParams.get('category') || 'available';
+
+        // Use only admin-saved properties (persisted in localStorage).
+        // System-generated sample properties are disabled so only admin posts are visible.
+        const propertiesMap = {};
+
+        // Merge in any admin-saved properties from localStorage (array of properties)
+        try {
+            const storedProps = JSON.parse(localStorage.getItem('properties') || '[]');
+            if (Array.isArray(storedProps)) {
+                storedProps.forEach(p => {
+                    if (p && p.id != null) {
+                        propertiesMap[String(p.id)] = p;
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('property-detail: failed to parse stored properties', err);
+        }
+
+        const property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: ['https://via.placeholder.com/800x500'] };
+
+        // Normalize price string for display
+        if (typeof property.price === 'number') {
+            property.price = '€' + property.price.toLocaleString();
+        }
+
+        // Ensure images array exists (fallback to image field)
+        if (!property.images || !Array.isArray(property.images)) {
+            if (property.image) property.images = [property.image];
+            else property.images = property.images || [];
+        }
+
+        // Render description (use admin-saved description if available)
+        const detailDescDiv = document.querySelector('.property-detail-description');
+        if (detailDescDiv) {
+            if (property.description && property.description.trim() !== '') {
+                // allow basic line breaks to become paragraphs
+                const paragraphs = property.description.split(/\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+                detailDescDiv.innerHTML = paragraphs;
+            } else {
+                // keep default content if no description provided
+            }
+        }
+
+        // Carousel variables
+        let currentImageIndex = 0;
+        let propertyImages = [];
+
+        // Initialize carousel or single image
+        function initializeImages() {
+            const carousel = document.getElementById('imageCarousel');
+            const singleImage = document.getElementById('propertyImage');
+            
+            if (property.images && property.images.length > 1) {
+                // Multiple images - use carousel
+                propertyImages = property.images;
+                carousel.style.display = 'block';
+                singleImage.style.display = 'none';
+                
+                // Populate carousel images
+                const carouselImagesDiv = document.getElementById('carouselImages');
+                carouselImagesDiv.innerHTML = propertyImages.map(src => {
+                    const isVideo = typeof src === 'string' && src.indexOf('data:video') === 0 || (typeof src === 'string' && src.match(/\.(mp4|webm|ogg)(\?|$)/i));
+                    if (isVideo) {
+                        return `<video controls class="carousel-image"><source src="${src}"></video>`;
+                    }
+                    return `<img src="${src}" alt="Property image" class="carousel-image">`;
+                }).join('');
+                
+                // Set total images count
+                document.getElementById('totalImages').textContent = propertyImages.length;
+                
+                // Create dots
+                const dotsDiv = document.getElementById('carouselDots');
+                dotsDiv.innerHTML = propertyImages.map((_, idx) => 
+                    `<div class="dot ${idx === 0 ? 'active' : ''}" onclick="goToImage(${idx})"></div>`
+                ).join('');
+                
+                // Add click handler to carousel images
+                document.querySelectorAll('.carousel-image').forEach((el, idx) => {
+                    el.style.cursor = 'pointer';
+                    el.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        nextImage();
+                    });
+                });
+            } else {
+                // Single image
+                carousel.style.display = 'none';
+                singleImage.style.display = 'block';
+                // If single media is a video, render a video element instead
+                const singleSrc = property.images && property.images.length > 0 ? property.images[0] : (property.image || 'https://via.placeholder.com/800x500');
+                const isVideoSingle = typeof singleSrc === 'string' && singleSrc.indexOf('data:video') === 0 || (typeof singleSrc === 'string' && singleSrc.match(/\.(mp4|webm|ogg)(\?|$)/i));
+                if (isVideoSingle) {
+                    singleImage.style.display = 'none';
+                    // remove existing video if any
+                    const existing = document.getElementById('propertySingleVideo');
+                    if (existing) existing.remove();
+                    const vid = document.createElement('video');
+                    vid.id = 'propertySingleVideo';
+                    vid.controls = true;
+                    vid.className = 'property-detail-image';
+                    vid.src = singleSrc;
+                    singleImage.parentNode.insertBefore(vid, singleImage.nextSibling);
+                } else {
+                    // normal image
+                    const existing = document.getElementById('propertySingleVideo');
+                    if (existing) existing.remove();
+                    singleImage.style.display = 'block';
+                    singleImage.src = singleSrc;
+                }
+            }
+        }
+
+        // Navigate carousel
+        window.prevImage = function() {
+            currentImageIndex = (currentImageIndex - 1 + propertyImages.length) % propertyImages.length;
+            updateCarousel();
+        };
+
+        window.nextImage = function() {
+            currentImageIndex = (currentImageIndex + 1) % propertyImages.length;
+            updateCarousel();
+        };
+
+        window.goToImage = function(index) {
+            currentImageIndex = index;
+            updateCarousel();
+        };
+
+        function updateCarousel() {
+            const carouselImages = document.getElementById('carouselImages');
+            const offset = -currentImageIndex * 100;
+            carouselImages.style.transform = `translateX(${offset}%)`;
+            
+            document.getElementById('currentImageIndex').textContent = currentImageIndex + 1;
+            
+            // Update dots
+            document.querySelectorAll('.dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === currentImageIndex);
+            });
+        }
+
+        // Initialize images
+        initializeImages();
+
+        // Keyboard navigation for carousel
+        document.addEventListener('keydown', function(event) {
+            if (propertyImages.length <= 1) return;
+            if (event.key === 'ArrowLeft') {
+                prevImage();
+            } else if (event.key === 'ArrowRight') {
+                nextImage();
+            }
+        });
+
+        // Populate the page
+        document.getElementById('propertyTitle').textContent = property.title;
+        document.getElementById('propertyPrice').textContent = property.price;
+        document.getElementById('propertyLocation').textContent = property.location;
+        document.title = property.title + ' - Wispa Real Estate';
+
+        // Display category badge
+        const categoryBadge = document.getElementById('categoryBadge');
+        const categoryLabels = {
+            'hot': '🔥 Hot Property',
+            'featured': '⭐ Featured Property',
+            'available': '✓ Available Property'
+        };
+        categoryBadge.textContent = categoryLabels[category] || categoryLabels['available'];
+        categoryBadge.className = 'property-category-badge ' + category;
+
+        // Display post badge from stored property when available
+        const postBadge = document.getElementById('postBadge');
+        try {
+            const postTo = property.postTo || property.postto || null;
+            if (postTo && postTo !== '') {
+                postBadge.textContent = categoryLabels[postTo] || postTo.toUpperCase();
+                postBadge.className = 'property-post-badge ' + postTo;
+                postBadge.style.display = 'inline-block';
+                // hide the URL-category badge when a stored post badge exists
+                if (categoryBadge) categoryBadge.style.display = 'none';
+            } else {
+                postBadge.style.display = 'none';
+            }
+        } catch (e) {
+            postBadge.style.display = 'none';
+        }
+
+        // Initialize like button
+        function initializeLikeButton() {
+            const wispaUser = localStorage.getItem('wispaUser');
+            if (!wispaUser) {
+                const likeBtn = document.getElementById('detailLikeBtn');
+                likeBtn.textContent = '♡';
+                likeBtn.classList.remove('liked');
+                return;
+            }
+            
+            const userData = JSON.parse(wispaUser);
+            const userId = userData.id;
+            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+            const likeBtn = document.getElementById('detailLikeBtn');
+            
+            if (likedProperties.includes(parseInt(propertyId))) {
+                likeBtn.textContent = '♥';
+                likeBtn.classList.add('liked');
+            } else {
+                likeBtn.textContent = '♡';
+                likeBtn.classList.remove('liked');
+            }
+        }
+
+        // Toggle like on detail page
+        window.toggleLikeDetail = function(event) {
+            event.preventDefault();
+            
+            const wispaUser = localStorage.getItem('wispaUser');
+            if (!wispaUser) {
+                alert('Please log in to like properties');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const userData = JSON.parse(wispaUser);
+            const userId = userData.id;
+            const btn = document.getElementById('detailLikeBtn');
+            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+            const propId = parseInt(propertyId);
+            const index = likedProperties.indexOf(propId);
+            
+            if (index > -1) {
+                // Unlike
+                likedProperties.splice(index, 1);
+                btn.textContent = '♡';
+                btn.classList.remove('liked');
+            } else {
+                // Like
+                likedProperties.push(propId);
+                btn.textContent = '♥';
+                btn.classList.add('liked');
+            }
+            
+            localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties));
+        };
+
+        // Initialize like button on page load
+        initializeLikeButton();
+
+        // Function to find similar properties based on location and price
+        function findSimilarProperties() {
+            const currentPropId = parseInt(propertyId);
+            const currentLocation = property.location;
+            
+            // Extract price as number (remove €, spaces, and commas)
+            const priceStr = String(property.price).replace(/[€\s,]/g, '');
+            const currentPrice = parseInt(priceStr) || 0;
+            const priceRange = currentPrice * 0.25; // ±25% price range
+
+            // Get property categories
+            const getCategory = (id) => {
+                if (id >= 1 && id <= 20) return 'hot';
+                if (id >= 21 && id <= 30) return 'featured';
+                return 'available';
+            };
+
+            // Check if coming from likes page
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromLikes = urlParams.get('fromLikes') === 'true';
+            const likedProperties = fromLikes ? JSON.parse(localStorage.getItem('likedProperties') || '[]') : [];
+
+            const similarProps = [];
+
+            // Find similar properties
+            Object.entries(propertiesMap).forEach(([id, prop]) => {
+                const propId = parseInt(id);
+                
+                // Skip current property
+                if (propId === currentPropId) return;
+
+                const propPriceStr = String(prop.price).replace(/[€\s,]/g, '');
+                const propPrice = parseInt(propPriceStr) || 0;
+
+                // Check similarity: same location OR price within range
+                const sameLocation = prop.location === currentLocation;
+                const priceMatch = Math.abs(propPrice - currentPrice) <= priceRange;
+
+                if (sameLocation || priceMatch) {
+                    // If coming from likes page, only include properties that are liked
+                    if (fromLikes && !likedProperties.includes(propId)) {
+                        return;
+                    }
+                    
+                    similarProps.push({
+                        id: propId,
+                        ...prop,
+                        category: getCategory(propId),
+                        matchType: sameLocation && priceMatch ? 'both' : (sameLocation ? 'location' : 'price')
+                    });
+                }
+            });
+
+            // Limit to 8 similar properties
+            similarProps.sort((a, b) => {
+                // Prioritize both location and price matches
+                if (a.matchType === 'both' && b.matchType !== 'both') return -1;
+                if (b.matchType === 'both' && a.matchType !== 'both') return 1;
+                return 0;
+            });
+
+            return similarProps.slice(0, 8);
+        }
+
+        // Display similar properties
+        function displaySimilarProperties() {
+            const similarProps = findSimilarProperties();
+            const container = document.getElementById('similarPropertiesGrid');
+            const section = document.getElementById('similarPropertiesSection');
+            const sectionHeading = section.querySelector('h2');
+
+            if (similarProps.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            // Update heading based on whether viewing from likes page
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromLikes = urlParams.get('fromLikes') === 'true';
+            if (fromLikes) {
+                sectionHeading.textContent = 'Similar Properties In Your Likes';
+            } else {
+                sectionHeading.textContent = 'Similar Properties You Might Like';
+            }
+
+            container.innerHTML = similarProps.map(prop => {
+                const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                const isLiked = likedProperties.includes(prop.id);
+                const imageCount = prop.images ? prop.images.length : 1;
+                const imageCountBadge = imageCount > 1 ? `<div style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; z-index: 5;">${imageCount} 📷</div>` : '';
+                
+                // Preserve fromLikes parameter in similar property links
+                const urlParams = new URLSearchParams(window.location.search);
+                const fromLikes = urlParams.get('fromLikes') === 'true' ? '&fromLikes=true' : '';
+                
+                return `
+                <a href="property-detail.html?id=${prop.id}&category=${prop.category}${fromLikes}" class="similar-property-card">
+                    <div style="position: relative;">
+                        <img src="${prop.image || (prop.images ? prop.images[0] : '')}" alt="${prop.title}" class="similar-property-image">
+                        ${imageCountBadge}
+                    </div>
+                    <div class="similar-property-info">
+                        <div class="similar-property-price">${prop.price}</div>
+                        <div class="similar-property-title">${prop.title}</div>
+                        ${prop.bedrooms || prop.bathrooms || prop.area ? `<div class="similar-property-details">${prop.bedrooms || 0} bed • ${prop.bathrooms || 0} bath • ${prop.area || 0} m²</div>` : ''}\n                        <div class="similar-property-location">${prop.location}</div>
+                    </div>
+                    <div class="similar-property-footer">
+                        <span class="similar-property-label ${prop.category}">
+                            ${prop.category === 'hot' ? '🔥 Hot' : prop.category === 'featured' ? '⭐ Featured' : '✓ Available'}
+                        </span>
+                        <button class="similar-property-like-btn ${isLiked ? 'liked' : ''}" data-property-id="${prop.id}" onclick="toggleSimilarPropertyLike(event, ${prop.id})">${isLiked ? '♥' : '♡'}</button>
+                    </div>
+                </a>
+            `}).join('');
+        }
+
+        // Toggle like for similar properties
+        window.toggleSimilarPropertyLike = function(event, propertyId) {
+            event.stopPropagation();
+            event.preventDefault();
+            
+            const btn = event.target;
+            const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            const index = likedProperties.indexOf(propertyId);
+            
+            if (index > -1) {
+                likedProperties.splice(index, 1);
+                btn.textContent = '♡';
+                btn.classList.remove('liked');
+            } else {
+                likedProperties.push(propertyId);
+                btn.textContent = '♥';
+                btn.classList.add('liked');
+            }
+            
+            localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
+        };
+
+        // Display similar properties on page load
+        displaySimilarProperties();
+
+        // Generate default property message for contacts
+        function getPropertyMessage() {
+            return `Hi! I'm interested in "${property.title}" located in ${property.location}, priced at ${property.price}. Could you provide more information about this property?`;
+        }
+
+        // Open WhatsApp with property message
+        window.openWhatsApp = function() {
+            const propertyMessage = getPropertyMessage();
+            const encodedMessage = encodeURIComponent(propertyMessage);
+            const whatsappURL = `https://wa.me/442079460957?text=${encodedMessage}`;
+            window.open(whatsappURL, '_blank');
+        };
+
+        // Send email with property message
+        window.sendEmail = function() {
+            const propertyMessage = getPropertyMessage();
+            const emailSubject = encodeURIComponent(`Property Inquiry: ${property.title}`);
+            const emailBody = encodeURIComponent(propertyMessage + '\n\nPlease send me more details and booking information.');
+            const mailtoURL = `mailto:admin@wisparealestate.com?subject=${emailSubject}&body=${emailBody}`;
+            window.location.href = mailtoURL;
+        };
+
+        // Chat functionality
+        window.openChat = function() {
+            const modal = document.getElementById('propertyDetailChatModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const messagesDiv = document.getElementById('propertyDetailChatMessages');
+
+                // Get user ID for user-specific storage
+                const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                const userId = wispaUser.id || null;
+                if (!userId) {
+                    messagesDiv.innerHTML = '<p style="text-align:center;color:var(--secondary);">Please log in to chat with an agent.</p>';
+                    return;
+                }
+
+                // Render existing conversation for this property
+                const convId = 'property-' + propertyId;
+                function renderList(list){
+                    messagesDiv.innerHTML = '';
+                    (list || []).forEach(m => {
+                        const el = document.createElement('div');
+                        if (m.sender === 'user') {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
+                            el.textContent = m.text;
+                        } else if (m.sender === 'admin') {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                            el.textContent = m.text;
+                        } else {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                            el.textContent = m.text;
+                        }
+                        messagesDiv.appendChild(el);
+                    });
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                };
+
+                // Load existing messages from localStorage (including admin replies)
+                const messagesKey = 'wispaMessages_' + userId + '_' + convId;
+                const existingMessages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
+                const existing = existingMessages.length > 0 ? existingMessages : (window.getConversationMessages ? window.getConversationMessages(convId) : []);
+
+                // If first-time chat (no messages), show quick-message chooser
+                if (!existing || existing.length === 0) {
+                    // build quick choose UI
+                    const chooser = document.createElement('div');
+                    chooser.id = 'quickMessageChooser';
+                    chooser.style.cssText = 'position:absolute;left:50%;top:20%;transform:translateX(-50%);background:var(--white);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:2000;max-width:420px;width:90%;';
+                    chooser.innerHTML = `
+                        <div style="font-weight:700;margin-bottom:8px">Start with a quick message</div>
+                        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+                            <button data-msg="Is this still available?" class="quick-msg btn">1. Still available?</button>
+                            <button data-msg="I'm interested!" class="quick-msg btn">2. I am interested!</button>
+                            <button data-msg="Can we talk more about this property?" class="quick-msg btn">3. Can we talk more about this property? </button>
+                        </div>
+                        <div style="display:flex;gap:8px;justify-content:flex-end">
+                            <button id="quickCompose" class="btn">Compose my own</button>
+                            <button id="quickSkip" class="btn">Skip</button>
+                        </div>
+                    `;
+
+                    // ensure chooser isn't duplicated
+                    const existingChooser = document.getElementById('quickMessageChooser');
+                    if (existingChooser) existingChooser.remove();
+
+                    // Insert chooser inside the modal content so it appears within the chat form
+                    const modalContent = modal.firstElementChild || modal;
+                    // ensure modal content is positioned so absolute child is relative to it
+                    if (modalContent && getComputedStyle(modalContent).position === 'static') {
+                        modalContent.style.position = 'relative';
+                    }
+
+                    // position chooser within modal
+                    chooser.style.cssText = 'position:absolute;left:16px;right:16px;top:80px;background:var(--white);padding:14px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:2000;max-width:420px;margin:0 auto;';
+
+                    modalContent.appendChild(chooser);
+
+                    // handlers (scoped)
+                    chooser.querySelectorAll('.quick-msg').forEach(btn => {
+                        btn.addEventListener('click', function(){
+                            const text = this.dataset.msg || this.textContent;
+                            // Get logged-in user info
+                            const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                            const userName = wispaUser.username || wispaUser.email || 'Anonymous User';
+                            const userEmail = wispaUser.email || '';
+                            const uid = wispaUser.id || null;
+                            
+                            if (window.saveConversationMessage) {
+                                window.saveConversationMessage(convId, 'user', text);
+                            } else {
+                                const key = 'wispaMessages_' + uid + '_' + convId;
+                                const cur = JSON.parse(localStorage.getItem(key) || '[]');
+                                cur.push({ sender: 'user', text: text, ts: Date.now(), userName: userName, userEmail: userEmail });
+                                localStorage.setItem(key, JSON.stringify(cur));
+                                try { localStorage.setItem(key + '_backup', JSON.stringify(cur)); } catch(e){}
+                            }
+                            chooser.remove();
+                            const messagesKey = 'wispaMessages_' + uid + '_' + convId;
+                            renderList(JSON.parse(localStorage.getItem(messagesKey) || '[]'));
+                            if (typeof showNotification === 'function') showNotification('Message sent');
+                        });
+                    });
+
+                    chooser.querySelector('#quickCompose').addEventListener('click', function(){
+                        chooser.remove();
+                        const inputEl = document.getElementById('propertyDetailChatInput');
+                        if (inputEl) inputEl.focus();
+                    });
+
+                    chooser.querySelector('#quickSkip').addEventListener('click', function(){
+                        chooser.remove();
+                    });
+                }
+
+                // Load and display all existing messages (including admin replies)
+                renderList(JSON.parse(localStorage.getItem(messagesKey) || '[]'));
+
+                // Set up polling interval to check for new messages from admin (every 2 seconds)
+                const pollInterval = setInterval(function(){
+                    const currentMessages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
+                    renderList(currentMessages);
+                }, 2000);
+
+                // Store interval on modal so it can be cleared when closed
+                modal._pollInterval = pollInterval;
+
+                // Listen for storage changes (if admin updates in another window)
+                const storageHandler = function(e) {
+                    if(e.key === messagesKey || e.key === 'wispaMessageSignal_' + userId){
+                        const updatedMessages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
+                        renderList(updatedMessages);
+                    }
+                };
+                window.addEventListener('storage', storageHandler);
+                modal._storageHandler = storageHandler;
+
+                // Subscribe for live updates
+                if (window.subscribeConversation) {
+                    window.subscribeConversation(convId, (list) => renderList(list || []));
+                }
+
+                loadPropertyDocuments();
+
+                const input = document.getElementById('propertyDetailChatInput');
+                if (input) {
+                    input.focus();
+                }
+            }
+        };
+
+        // Switch between chat tabs
+        window.switchChatTab = function(tab) {
+            const messagesTab = document.getElementById('messagesTab');
+            const documentsTab = document.getElementById('documentsTab');
+            const buttons = document.querySelectorAll('.chat-tab-btn');
+            
+            buttons.forEach(btn => {
+                btn.style.background = 'transparent';
+                btn.style.borderColor = 'var(--border)';
+                btn.style.color = 'var(--text)';
+            });
+            
+            if (tab === 'messages') {
+                messagesTab.style.display = 'flex';
+                documentsTab.style.display = 'none';
+                buttons[0].style.background = 'white';
+                buttons[0].style.borderColor = 'var(--primary)';
+                buttons[0].style.color = 'var(--primary)';
+            } else {
+                messagesTab.style.display = 'none';
+                documentsTab.style.display = 'block';
+                buttons[1].style.background = 'white';
+                buttons[1].style.borderColor = 'var(--primary)';
+                buttons[1].style.color = 'var(--primary)';
+            }
+        };
+
+        // Load property documents from admin
+        function loadPropertyDocuments() {
+            const properties = JSON.parse(localStorage.getItem('properties') || '[]');
+            const currentPropId = parseInt(propertyId);
+            const adminProp = properties.find(p => {
+                return p.id === currentPropId || p.title === property.title || (p.address && p.address === property.address);
+            });
+
+            const docsList = document.getElementById('propertyDocumentsList');
+            
+            if (!adminProp || !adminProp.documents) {
+                docsList.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 20px;">No documents available for this property yet.</p>';
+                return;
+            }
+
+            const docTypes = {
+                purchase: '📤 Purchase Documents',
+                construction: '🏗️ Construction Records',
+                ownership: '🔐 Proof of Ownership',
+                other: '📋 Additional Documents'
+            };
+
+            let html = '';
+            let hasDocuments = false;
+
+            Object.entries(docTypes).forEach(([key, label]) => {
+                if (adminProp.documents[key]?.length > 0) {
+                    hasDocuments = true;
+                    html += `
+                        <div class="document-section">
+                            <h4>${label}</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${adminProp.documents[key].map((doc, idx) => `
+                                    <div class="document-badge">
+                                        📄 ${doc.name.substring(0, 20)}${doc.name.length > 20 ? '...' : ''}
+                                        <button onclick="shareDocumentInChat('${doc.name}', '${label}')">📤</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!hasDocuments) {
+                html = '<p style="color: var(--text-light); text-align: center; padding: 20px;">No documents available for this property yet.</p>';
+            }
+
+            docsList.innerHTML = html;
+        }
+
+        // Share document in chat
+        window.shareDocumentInChat = function(docName, docType) {
+            const messagesDiv = document.getElementById('propertyDetailChatMessages');
+            const adminMessage = document.createElement('div');
+            adminMessage.style.cssText = 'margin: 10px 0; padding: 12px; background: #f0f0f0; border-radius: 8px; text-align: left; font-size: 13px; border-left: 4px solid var(--primary);';
+            adminMessage.innerHTML = `
+                <strong>📄 Document Shared:</strong><br>
+                ${docType}: ${docName}<br>
+                <span style="font-size: 11px; color: var(--text-light);">✓ Verified and authentic</span>
+            `;
+            messagesDiv.appendChild(adminMessage);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Switch to messages tab
+            switchChatTab('messages');
+        };
+
+        // Close chat modal
+        function closePropertyDetailChat() {
+            const modal = document.getElementById('propertyDetailChatModal');
+            if (modal) {
+                // Clear polling interval when modal closes
+                if(modal._pollInterval) {
+                    clearInterval(modal._pollInterval);
+                    modal._pollInterval = null;
+                }
+                // Remove storage event listener
+                if(modal._storageHandler) {
+                    window.removeEventListener('storage', modal._storageHandler);
+                    modal._storageHandler = null;
+                }
+                modal.style.display = 'none';
+            }
+        }
+
+        // Send chat message
+        window.sendPropertyDetailMessage = function() {
+            const input = document.getElementById('propertyDetailChatInput');
+            const messagesDiv = document.getElementById('propertyDetailChatMessages');
+            const convId = 'property-' + propertyId;
+
+            if (!input || input.value.trim() === '') return;
+
+            // Get logged-in user info
+            const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+            const userName = wispaUser.username || wispaUser.email || 'Anonymous User';
+            const userEmail = wispaUser.email || '';
+            const userId = wispaUser.id || null;
+
+            // Save user message into conversation store
+            if (window.saveConversationMessage) {
+                window.saveConversationMessage(convId, 'user', input.value.trim());
+                // immediately render the updated list so user sees the message without waiting for subscription
+                if (window.getConversationMessages) {
+                    const updated = window.getConversationMessages(convId) || [];
+                    messagesDiv.innerHTML = '';
+                    updated.forEach(m => {
+                        const el = document.createElement('div');
+                        if (m.sender === 'user') {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
+                            el.textContent = m.text;
+                        } else {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                            el.textContent = m.text;
+                        }
+                        messagesDiv.appendChild(el);
+                    });
+                }
+                if (typeof showNotification === 'function') showNotification('Message sent');
+            } else if (userId) {
+                const key = 'wispaMessages_' + userId + '_' + convId;
+                const cur = JSON.parse(localStorage.getItem(key) || '[]');
+                cur.push({ sender: 'user', text: input.value.trim(), ts: Date.now(), userName: userName, userEmail: userEmail });
+                localStorage.setItem(key, JSON.stringify(cur));
+                try { localStorage.setItem(key + '_backup', JSON.stringify(cur)); } catch(e){}
+                // render fallback-saved messages immediately
+                const updated = JSON.parse(localStorage.getItem(key) || '[]');
+                messagesDiv.innerHTML = '';
+                updated.forEach(m => {
+                    const el = document.createElement('div');
+                    if (m.sender === 'user') {
+                        el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
+                        el.textContent = m.text;
+                    } else {
+                        el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                        el.textContent = m.text;
+                    }
+                    messagesDiv.appendChild(el);
+                });
+                if (typeof showNotification === 'function') showNotification('Message sent');
+            }
+
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('propertyDetailChatModal');
+            if (modal && event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Allow Enter key to send message
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && document.activeElement.id === 'propertyDetailChatInput') {
+                sendPropertyDetailMessage();
+            }
+        });
+    </script>
+
+    <!-- Chat Modal for Property Detail Page -->
+    <div id="propertyDetailChatModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+        <div style="background-color: var(--white); margin: 15% auto; padding: 0; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; height: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-radius: 8px 8px 0 0;">
+                <h2 style="margin: 0; font-size: 18px;">💬 Chat with Us</h2>
+                <button onclick="closePropertyDetailChat()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: white;">×</button>
+            </div>
+            
+            <!-- Documents Tab -->
+            <div style="display: flex; gap: 10px; padding: 10px 15px; border-bottom: 1px solid var(--border); background: #f9f9f9;">
+                <button class="chat-tab-btn active" onclick="switchChatTab('messages')" style="flex: 1; padding: 10px; background: white; border: 2px solid var(--primary); border-radius: 4px; color: var(--primary); font-weight: 600; cursor: pointer;">💬 Messages</button>
+                <button class="chat-tab-btn" onclick="switchChatTab('documents')" style="flex: 1; padding: 10px; background: transparent; border: 2px solid var(--border); border-radius: 4px; color: var(--text); font-weight: 600; cursor: pointer;">📄 Documents</button>
+            </div>
+
+            <!-- Messages Tab -->
+            <div id="messagesTab" class="chat-tab-content" style="flex: 1; display: flex; flex-direction: column;">
+                <div id="propertyDetailChatMessages" style="flex: 1; overflow-y: auto; padding: 15px; background: #fafafa;"></div>
+                <div style="padding: 15px; border-top: 1px solid var(--border); display: flex; gap: 10px;">
+                    <input type="text" id="propertyDetailChatInput" placeholder="Type your message..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px;">
+                    <button onclick="sendPropertyDetailMessage()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Send</button>
+                </div>
+            </div>
+
+            <!-- Documents Tab -->
+            <div id="documentsTab" class="chat-tab-content" style="flex: 1; overflow-y: auto; padding: 15px; background: #fafafa; display: none;">
+                <div id="propertyDocumentsList" style="margin-bottom: 20px;"></div>
+                <div style="padding: 15px; background: white; border-radius: 6px; border-left: 4px solid var(--primary);">
+                    <p style="font-size: 12px; color: var(--text-light);">📎 Available documents for this property have been verified by Wispa Real Estate. All documents are authentic and available for download.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .chat-tab-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .document-section {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .document-section h4 {
+            margin: 0 0 10px 0;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .document-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            margin-right: 8px;
+        }
+        
+        .document-badge button {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            border-radius: 3px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .document-badge button:hover {
+            background: rgba(255,255,255,0.5);
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,1225 @@
+// ...existing code...
+
+const mobileSupportBtn = document.getElementById('mobile-support-btn');
+const mobileLikesBtn = document.getElementById('mobile-likes-btn');
+const mobileWalletBtn = document.getElementById('mobile-wallet-btn');
+const mobileNotificationBtn = document.getElementById('mobile-notification-btn');
+const mobileChatBtn = document.getElementById('mobile-chat-btn');
+
+if (mobileSupportBtn) {
+    mobileSupportBtn.addEventListener('click', function() {
+        window.location.href = 'contact.html';
+    });
+}
+
+if (mobileLikesBtn) {
+    mobileLikesBtn.addEventListener('click', function() {
+        window.location.href = 'likes.html';
+    });
+}
+
+if (mobileWalletBtn) {
+    mobileWalletBtn.addEventListener('click', function() {
+        window.location.href = 'wallet.html';
+    });
+}
+
+if (mobileNotificationBtn) {
+    mobileNotificationBtn.addEventListener('click', function() {
+        window.location.href = 'notifications.html';
+    });
+}
+
+if (mobileChatBtn) {
+    mobileChatBtn.addEventListener('click', function() {
+        window.location.href = 'chat.html';
+    });
+}
+
+// ==================================================
+// PROPERTY DATA & GENERATION
+// ==================================================
+
+// Array of working Unsplash photo IDs for property images
+const propertyImageIds = [
+    '1506905925456-403c2fe79591', // Modern house
+    '1512917774080-9991f1c4c750', // Luxury home
+    '1564013799919-ab600027ffc6', // Beautiful house
+    '1570129477497-45c003edd2be', // Modern architecture
+    '1449844908441-8829872d2607', // House exterior
+    '1484154218962-a197022b5858', // Residential area
+    '1502672260266-1c1ef2d93688', // Modern home
+    '1439066615861-d1af74d74000', // House with garden
+    '1475855581690-80accde3ae2b', // Luxury property
+    '1502672260266-1c1ef2d93688', // Contemporary home
+    '1512917774080-9991f1c4c750', // Urban property
+    '1558618666-fcd25c85cd64', // Modern apartment
+    '1570129477492-45c003edd2be', // Family home
+    '1502672260266-1c1ef2d93688', // Spacious living
+    '1560518099-ce2b3eac8db9', // Garden view
+    '1512917774080-9991f1c4c750', // Cozy apartment
+    '1506905925456-403c2fe79591', // Dream house
+    '1445083114551-6e7b4b7e3c89', // Luxury living
+    '1514432324607-a09d9fa4aeffa', // Modern design
+    '1470071459604-3b5ec3a7fe75', // Spacious home
+    '1464207687429-7505649dae38', // Beach property
+    '1556909114-f6e7ad7d3136', // City apartment
+    '1484299724270-9c6fef0d6d81', // Elegant home
+    '1516594547529-c61b6bca042c', // Villa
+    '1502672260266-1c1ef2d93688', // Modern property
+    '1520763185298-1b434c919afe', // Suburban home
+    '1507003211169-0a1dd7228f2d', // Luxury estate
+    '1514432324607-a09d9fa4aeffa', // Contemporary design
+    '1502672260266-1c1ef2d93688', // Residential property
+    '1570129477492-45c003edd2be'  // Family residence
+];
+
+    // Function to get a random property image URL
+    function getRandomPropertyImage() {
+        const randomId = propertyImageIds[Math.floor(Math.random() * propertyImageIds.length)];
+        return `https://images.unsplash.com/${randomId}?w=400&h=300&fit=crop&auto=format`;
+    }
+
+    // Function to generate multiple images for a property (1-4 images)
+    function getRandomPropertyImages() {
+        const numImages = Math.floor(Math.random() * 4) + 1; // 1 to 4 images
+        const images = [];
+        for (let i = 0; i < numImages; i++) {
+            images.push(getRandomPropertyImage());
+        }
+        return images;
+    }
+
+    // ...existing code...
+
+    // Mobile Post Ad button
+    if (mobilePostAd) {
+        mobilePostAd.addEventListener('click', (e) => {
+            e.preventDefault();
+            const postModal = document.getElementById('post-ad-modal');
+            if (postModal) postModal.style.display = 'block';
+            if (mobileMenu) mobileMenu.classList.remove('active');
+        });
+    }
+
+    // Mobile Chat button
+    if (mobileChat) {
+        mobileChat.addEventListener('click', (e) => {
+            e.preventDefault();
+            const chatModalEl = document.getElementById('chat-modal');
+            if (chatModalEl) {
+                chatModalEl.style.display = 'block';
+                if (typeof loadChatMessages === 'function') loadChatMessages();
+            }
+            if (mobileMenu) mobileMenu.classList.remove('active');
+        });
+    }
+
+    // Mobile Notification button
+    if (mobileNotification) {
+        mobileNotification.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Notifications feature coming soon!');
+            if (mobileMenu) mobileMenu.classList.remove('active');
+        });
+    }
+
+    // Mobile Wallet button
+    if (mobileWallet) {
+        mobileWallet.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Transactions feature coming soon!');
+            if (mobileMenu) mobileMenu.classList.remove('active');
+        });
+    }
+
+    const propertyList = document.getElementById('property-list');
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const categoryLinks = document.querySelectorAll('nav ul li a');
+    // const applyFiltersBtn = document.getElementById('apply-filters');
+
+    // Generate comprehensive property data for all countries
+    const countries = [
+        'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
+        'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan',
+        'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
+        'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica',
+        'Croatia', 'Cuba', 'Cyprus', 'Czechia', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt',
+        'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon',
+        'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana',
+        'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica',
+        'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho',
+        'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali',
+        'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro',
+        'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger',
+        'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea',
+        'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis',
+        'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia',
+        'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea',
+        'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan',
+        'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu',
+        'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City',
+        'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
+    ];
+
+    // Property templates for different types
+    const propertyTemplates = {
+        land: [
+            { title: 'Prime land plot', area: [500, 2000], priceRange: [50000, 500000] },
+            { title: 'Commercial land', area: [1000, 5000], priceRange: [100000, 1000000] },
+            { title: 'Residential land', area: [300, 1500], priceRange: [30000, 300000] },
+            { title: 'Agricultural land', area: [2000, 10000], priceRange: [20000, 200000] },
+            { title: 'Investment land', area: [800, 3000], priceRange: [80000, 800000] },
+            { title: 'Development land', area: [1500, 8000], priceRange: [150000, 1500000] },
+            { title: 'Beachfront land', area: [600, 2500], priceRange: [100000, 2000000] },
+            { title: 'Mountain land', area: [1000, 4000], priceRange: [40000, 400000] },
+            { title: 'Urban land', area: [200, 800], priceRange: [150000, 1500000] },
+            { title: 'Industrial land', area: [3000, 15000], priceRange: [200000, 2000000] }
+        ],
+        house: [
+            { title: 'Modern villa', bedrooms: [3, 6], bathrooms: [2, 4], area: [200, 500], priceRange: [200000, 2000000] },
+            { title: 'Detached house', bedrooms: [2, 5], bathrooms: [1, 3], area: [120, 350], priceRange: [150000, 800000] },
+            { title: 'Townhouse', bedrooms: [2, 4], bathrooms: [1, 3], area: [80, 200], priceRange: [100000, 500000] },
+            { title: 'Apartment', bedrooms: [1, 3], bathrooms: [1, 2], area: [50, 150], priceRange: [80000, 400000] },
+            { title: 'Penthouse', bedrooms: [2, 4], bathrooms: [2, 3], area: [100, 250], priceRange: [300000, 1500000] },
+            { title: 'Bungalow', bedrooms: [2, 4], bathrooms: [1, 2], area: [90, 180], priceRange: [120000, 600000] },
+            { title: 'Cottage', bedrooms: [1, 3], bathrooms: [1, 2], area: [60, 140], priceRange: [90000, 350000] },
+            { title: 'Mansion', bedrooms: [5, 10], bathrooms: [4, 8], area: [400, 1000], priceRange: [1000000, 5000000] },
+            { title: 'Condo', bedrooms: [1, 2], bathrooms: [1, 2], area: [40, 100], priceRange: [70000, 300000] },
+            { title: 'Duplex', bedrooms: [3, 6], bathrooms: [2, 4], area: [150, 300], priceRange: [180000, 900000] }
+        ],
+        rent: [
+            { title: 'Luxury apartment', bedrooms: [1, 4], bathrooms: [1, 3], area: [60, 200], priceRange: [800, 5000] },
+            { title: 'Studio apartment', bedrooms: [0, 0], bathrooms: [1, 1], area: [25, 50], priceRange: [400, 1200] },
+            { title: 'Family house', bedrooms: [3, 6], bathrooms: [2, 4], area: [150, 400], priceRange: [1500, 8000] },
+            { title: 'Room for rent', bedrooms: [1, 1], bathrooms: [1, 1], area: [15, 30], priceRange: [200, 600] },
+            { title: 'Villa rental', bedrooms: [4, 8], bathrooms: [3, 6], area: [250, 600], priceRange: [3000, 15000] },
+            { title: 'Office space', bedrooms: [0, 0], bathrooms: [1, 2], area: [50, 200], priceRange: [1000, 5000] },
+            { title: 'Commercial space', bedrooms: [0, 0], bathrooms: [1, 2], area: [100, 500], priceRange: [2000, 10000] },
+            { title: 'Penthouse rental', bedrooms: [2, 4], bathrooms: [2, 3], area: [120, 300], priceRange: [2500, 10000] },
+            { title: 'Townhouse rental', bedrooms: [2, 4], bathrooms: [1, 3], area: [100, 250], priceRange: [1200, 6000] },
+            { title: 'Cottage rental', bedrooms: [1, 3], bathrooms: [1, 2], area: [70, 150], priceRange: [600, 2500] }
+        ]
+    };
+
+    // Generate properties for all countries
+    function generateProperties() {
+        const properties = [];
+        let idCounter = 1;
+        const dates = ['Today', 'Yesterday', '1 hour ago', '2 hours ago', '3 hours ago', '5 hours ago', '1 day ago', '2 days ago', '3 days ago', '4 days ago', '5 days ago', '6 days ago', '1 week ago', '2 weeks ago'];
+
+        countries.forEach(country => {
+            // Generate 10 land properties per country
+            propertyTemplates.land.forEach((template, index) => {
+                const area = Math.floor(Math.random() * (template.area[1] - template.area[0] + 1)) + template.area[0];
+                const price = Math.floor(Math.random() * (template.priceRange[1] - template.priceRange[0] + 1)) + template.priceRange[0];
+                properties.push({
+                    id: String(idCounter++).padStart(8, '0'),
+                    title: `${template.title} for sale`,
+                    price: price,
+                    type: 'sale',
+                    bedrooms: 0,
+                    bathrooms: 0,
+                    area: area,
+                    location: `${country}, City Center`,
+                    images: getRandomPropertyImages(),
+                    featured: Math.random() < 0.1, // 10% chance to be featured
+                    date: dates[Math.floor(Math.random() * dates.length)]
+                });
+            });
+
+            // Generate 10 house properties per country
+            propertyTemplates.house.forEach((template, index) => {
+                const bedrooms = Math.floor(Math.random() * (template.bedrooms[1] - template.bedrooms[0] + 1)) + template.bedrooms[0];
+                const bathrooms = Math.floor(Math.random() * (template.bathrooms[1] - template.bathrooms[0] + 1)) + template.bathrooms[0];
+                const area = Math.floor(Math.random() * (template.area[1] - template.area[0] + 1)) + template.area[0];
+                const price = Math.floor(Math.random() * (template.priceRange[1] - template.priceRange[0] + 1)) + template.priceRange[0];
+                properties.push({
+                    id: String(idCounter++).padStart(8, '0'),
+                    title: `${bedrooms}-bedroom ${template.title} for sale`,
+                    price: price,
+                    type: 'sale',
+                    bedrooms: bedrooms,
+                    bathrooms: bathrooms,
+                    area: area,
+                    location: `${country}, Residential Area`,
+                    images: getRandomPropertyImages(),
+                    featured: Math.random() < 0.1, // 10% chance to be featured
+                    date: dates[Math.floor(Math.random() * dates.length)]
+                });
+            });
+
+            // Generate 10 rent properties per country
+            propertyTemplates.rent.forEach((template, index) => {
+                const bedrooms = template.bedrooms ? Math.floor(Math.random() * (template.bedrooms[1] - template.bedrooms[0] + 1)) + template.bedrooms[0] : 0;
+                const bathrooms = Math.floor(Math.random() * (template.bathrooms[1] - template.bathrooms[0] + 1)) + template.bathrooms[0];
+                const area = Math.floor(Math.random() * (template.area[1] - template.area[0] + 1)) + template.area[0];
+                const price = Math.floor(Math.random() * (template.priceRange[1] - template.priceRange[0] + 1)) + template.priceRange[0];
+                properties.push({
+                    id: String(idCounter++).padStart(8, '0'),
+                    title: `${bedrooms > 0 ? bedrooms + '-bedroom ' : ''}${template.title} to rent`,
+                    price: price,
+                    type: 'rent',
+                    bedrooms: bedrooms,
+                    bathrooms: bathrooms,
+                    area: area,
+                    location: `${country}, Downtown`,
+                    images: getRandomPropertyImages(),
+                    featured: Math.random() < 0.1, // 10% chance to be featured
+                    date: dates[Math.floor(Math.random() * dates.length)]
+                });
+            });
+        });
+
+        return properties;
+    }
+
+    let properties = generateProperties();
+
+    // Initialize some liked properties for demonstration
+    function initializeLikedProperties() {
+        const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        if (likedProperties.length === 0) {
+            // Add some random properties as liked for demonstration
+            const likedIds = [];
+            for (let i = 0; i < 50; i++) {
+                const randomIndex = Math.floor(Math.random() * properties.length);
+                const randomId = properties[randomIndex].id;
+                if (!likedIds.includes(randomId)) {
+                    likedIds.push(randomId);
+                }
+            }
+            localStorage.setItem('likedProperties', JSON.stringify(likedIds));
+        }
+    }
+
+    initializeLikedProperties();
+
+    let filteredProperties = [...properties];
+    let currentCategory = 'all';
+    let displayedProperties = [];
+    let currentPage = 1;
+    const propertiesPerPage = 20;
+
+    function renderProperties(props, append = false) {
+        if (!propertyList) return; // nothing to render if container missing
+        const startIndex = (currentPage - 1) * propertiesPerPage;
+        const endIndex = startIndex + propertiesPerPage;
+        const propertiesToShow = props.slice(startIndex, endIndex);
+
+        if (!append) {
+            propertyList.innerHTML = '';
+            displayedProperties = [];
+        }
+
+        propertiesToShow.forEach(property => {
+            const card = document.createElement('div');
+            card.classList.add('property-card');
+            if (property.featured) {
+                card.classList.add('featured');
+            }
+            const mainImage = property.images ? property.images[0] : property.image;
+            const additionalImages = property.images ? property.images.length - 1 : 0;
+            const imageCountIndicator = additionalImages > 0 ? `<div class="image-count">+${additionalImages}</div>` : '';
+            card.innerHTML = `
+                <div class="property-image-container">
+                    <img src="${mainImage}" alt="${property.title}" class="property-image" loading="lazy" onload="this.setAttribute('loaded', '')" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg=='; this.setAttribute('loaded', '')">
+                    ${imageCountIndicator}
+                </div>
+                <button class="like-btn" data-id="${property.id}">♥</button>
+                <div class="property-info">
+                    <div class="property-price">€${property.price.toLocaleString()}</div>
+                    <div class="property-title">${property.title}</div>
+                    <div class="property-details">
+                        <span>${property.bedrooms} bed${property.bedrooms !== 1 ? 's' : ''}</span>
+                        <span>${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}</span>
+                        <span>${property.area} m²</span>
+                    </div>
+                    <div class="property-location">${property.location} • ${property.date}</div>
+                </div>
+            `;
+            propertyList.appendChild(card);
+            displayedProperties.push(property);
+        });
+
+        // Add event listeners for like buttons
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
+                const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                if (liked.includes(id)) {
+                    const index = liked.indexOf(id);
+                    liked.splice(index, 1);
+                    this.classList.remove('liked');
+                } else {
+                    liked.push(id);
+                    this.classList.add('liked');
+                }
+                localStorage.setItem('likedProperties', JSON.stringify(liked));
+            });
+        });
+
+        // Load liked state
+        const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            const id = parseInt(btn.dataset.id);
+            if (liked.includes(id)) {
+                btn.classList.add('liked');
+            }
+        });
+
+        // Update load more button visibility
+        updateLoadMoreButton(props.length);
+    }
+
+    function updateLoadMoreButton(totalProperties) {
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        if (loadMoreBtn) {
+            const totalDisplayed = currentPage * propertiesPerPage;
+            if (totalDisplayed >= totalProperties) {
+                loadMoreBtn.style.display = 'none';
+            } else {
+                loadMoreBtn.style.display = 'block';
+            }
+        }
+    }
+
+    function renderFeaturedProperties() {
+        const featuredList = document.getElementById('featured-list');
+        if (!featuredList) return;
+
+        const featuredProperties = properties.filter(property => property.featured).slice(0, 6); // Show up to 6 featured properties
+
+        featuredList.innerHTML = '';
+
+        if (featuredProperties.length === 0) {
+            featuredList.innerHTML = '<p style="text-align: center; grid-column: 1 / -1; color: white;">No featured properties available at the moment.</p>';
+            return;
+        }
+
+        featuredProperties.forEach(property => {
+            const card = document.createElement('div');
+            card.classList.add('property-card', 'featured');
+            const mainImage = property.images ? property.images[0] : property.image;
+            const additionalImages = property.images ? property.images.length - 1 : 0;
+            const imageCountIndicator = additionalImages > 0 ? `<div class="image-count">+${additionalImages}</div>` : '';
+            card.innerHTML = `
+                <div class="property-image-container">
+                    <img src="${mainImage}" alt="${property.title}" class="property-image" loading="lazy" onload="this.setAttribute('loaded', '')" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg=='; this.setAttribute('loaded', '')">
+                    ${imageCountIndicator}
+                </div>
+                <button class="like-btn" data-id="${property.id}">♥</button>
+                <div class="property-info">
+                    <div class="property-price">€${property.price.toLocaleString()}</div>
+                    <div class="property-title">${property.title}</div>
+                    <div class="property-details">
+                        <span>${property.bedrooms} bed${property.bedrooms !== 1 ? 's' : ''}</span>
+                        <span>${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}</span>
+                        <span>${property.area} m²</span>
+                    </div>
+                    <div class="property-location">${property.location} • ${property.date}</div>
+                </div>
+            `;
+            featuredList.appendChild(card);
+        });
+
+        // Add event listeners for like buttons in featured section
+        document.querySelectorAll('#featured-list .like-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
+                const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                if (liked.includes(id)) {
+                    const index = liked.indexOf(id);
+                    liked.splice(index, 1);
+                    this.classList.remove('liked');
+                } else {
+                    liked.push(id);
+                    this.classList.add('liked');
+                }
+                localStorage.setItem('likedProperties', JSON.stringify(liked));
+            });
+        });
+
+        // Initialize liked state for featured properties
+        document.querySelectorAll('#featured-list .like-btn').forEach(btn => {
+            const id = parseInt(btn.dataset.id);
+            const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            if (liked.includes(id)) {
+                btn.classList.add('liked');
+            }
+        });
+    }
+
+    // Render hot properties: 2 horizontal rows, 25 posts each
+    function renderHotProperties() {
+        console.log('renderHotProperties called, properties length:', properties ? properties.length : 'undefined');
+        const row1 = document.getElementById('hot-row-1');
+        const row2 = document.getElementById('hot-row-2');
+        if (!row1 || !row2 || !properties || properties.length === 0) {
+            console.log('Missing elements or no properties');
+            return;
+        }
+
+        // Shuffle copy of properties and pick up to 50
+        const shuffled = properties.slice().sort(() => Math.random() - 0.5);
+        const count = Math.min(50, shuffled.length);
+        const selected = shuffled.slice(0, count);
+
+        // Clear rows
+        row1.innerHTML = '';
+        row2.innerHTML = '';
+
+        selected.forEach((property, idx) => {
+            const card = document.createElement('div');
+            card.className = 'hot-card';
+            const img = property.images && property.images.length ? property.images[0] : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
+            card.innerHTML = `
+                <div class="hot-image-container">
+                    <img src="${img}" alt="${property.title}" class="property-image" loading="lazy" onload="this.setAttribute('loaded', '')" onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0i
+                </div>
+                <div class="hot-info">
+                    <div class="hot-title">${property.title}</div>
+                    <div class="hot-price">€${property.price.toLocaleString()}</div>
+                    <div class="hot-details">
+                        <span>${property.bedrooms} bed${property.bedrooms !== 1 ? 's' : ''}</span>
+                        <span>${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}</span>
+                        <span>${property.area} m²</span>
+                    </div>
+                    <div class="hot-location">${property.location}</div>
+                </div>
+            `;
+
+            if (idx < 25) row1.appendChild(card);
+            else row2.appendChild(card);
+        });
+    }
+
+    function filterProperties() {
+        const searchTerm = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : '';
+        // Removed advanced filters
+        const minPrice = 0;
+        const maxPrice = Infinity;
+        const bedrooms = '';
+        const location = '';
+        const sortBy = 'date';
+
+        let filtered = properties.filter(property => {
+            let typeMatch = true;
+            let locationMatch = true;
+            let priceMatch = true;
+            let searchMatch = true;
+
+            // Handle property type filtering
+            if (currentCategory !== 'all') {
+                if (currentCategory === 'favorites') {
+                    const likedIds = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                    typeMatch = likedIds.includes(property.id);
+                } else if (currentCategory === 'land') {
+                    typeMatch = property.type === 'sale' && property.title.toLowerCase().includes('land');
+                } else if (currentCategory === 'house') {
+                    typeMatch = property.type === 'sale' && (property.title.toLowerCase().includes('house') || property.title.toLowerCase().includes('villa'));
+                } else if (currentCategory === 'rent') {
+                    typeMatch = property.type === 'rent';
+                } else {
+                    typeMatch = property.type === currentCategory;
+                }
+            }
+
+            // Handle location filtering
+            if (location !== '' && location !== 'all') {
+                locationMatch = property.location.toLowerCase().includes(location.toLowerCase());
+            }
+
+            // Handle price filtering
+            if (minPrice > 0) {
+                priceMatch = priceMatch && property.price >= minPrice;
+            }
+            if (maxPrice < Infinity) {
+                priceMatch = priceMatch && property.price <= maxPrice;
+            }
+
+            // Handle bedrooms filtering
+            if (bedrooms !== '') {
+                const bedroomCount = parseInt(bedrooms);
+                if (bedroomCount === 3) {
+                    priceMatch = priceMatch && property.bedrooms >= bedroomCount;
+                } else {
+                    priceMatch = priceMatch && property.bedrooms === bedroomCount;
+                }
+            }
+
+            // Handle search term
+            if (searchTerm !== '') {
+                searchMatch = property.title.toLowerCase().includes(searchTerm) ||
+                             property.location.toLowerCase().includes(searchTerm);
+            }
+
+            return typeMatch && locationMatch && priceMatch && searchMatch;
+        });
+
+        // For "All Locations" or "All", show mixed properties from 50 random countries
+        if ((location === '' || location === 'all') && currentCategory === 'all') {
+            const randomCountries = getRandomCountries(50);
+            filtered = filtered.filter(property => {
+                const country = property.location.split(',')[0].trim();
+                return randomCountries.includes(country);
+            });
+        }
+
+        // Sort
+        if (sortBy === 'price-low') {
+            filtered.sort((a, b) => a.price - b.price);
+        } else if (sortBy === 'price-high') {
+            filtered.sort((a, b) => b.price - a.price);
+        } else {
+            // Default sort by date (newest first, assuming date is string)
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        filteredProperties = filtered;
+        currentPage = 1; // Reset to first page when filtering
+        renderProperties(filteredProperties);
+    }
+
+    function getRandomCountries(count) {
+        const shuffled = [...countries].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
+    }
+
+    // Initial render - show mixed properties from 50 random countries
+    function initializeDisplay() {
+        const randomCountries = getRandomCountries(50);
+        const initialProperties = properties.filter(property => {
+            const country = property.location.split(',')[0].trim();
+            return randomCountries.includes(country);
+        });
+        filteredProperties = initialProperties;
+        currentPage = 1;
+        renderProperties(filteredProperties);
+    }
+
+    initializeDisplay();
+
+    // Property valuation: accept a valuation request (min/max) and acknowledge submission
+    const valuationForm = document.getElementById('valuation-form');
+    if (valuationForm) {
+        valuationForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const propertyType = document.getElementById('property-type') ? document.getElementById('property-type').value : '';
+            const location = document.getElementById('location') ? document.getElementById('location').value : '';
+            const minPrice = document.getElementById('min-price') ? document.getElementById('min-price').value : '';
+            const maxPrice = document.getElementById('max-price') ? document.getElementById('max-price').value : '';
+
+            // Simple acknowledgement flow: notify user we'll respond soon
+            showNotification('Thank you — we received your valuation request. Our team will contact you soon.');
+
+            // Optionally show a brief inline confirmation on the page if area exists
+            const valResultEl = document.getElementById('valuation-result');
+            if (valResultEl) {
+                valResultEl.innerHTML = `\n+                    <h3>Request Received</h3>\n+                    <p>Thanks — your valuation request for <strong>${propertyType || 'property'}</strong> in <strong>${location || 'your chosen location'}</strong> has been received.</p>\n+                    <p>Requested price range: <strong>€${minPrice || '—'} - €${maxPrice || '—'}</strong></p>\n+                    <p>Our agents will review and get back to you shortly.</p>`;
+                valResultEl.style.display = 'block';
+            }
+
+            valuationForm.reset();
+        });
+    }
+    const mortgageForm = document.getElementById('mortgage-form');
+    if (mortgageForm) {
+        mortgageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const loanAmount = parseFloat(document.getElementById('loan-amount').value) || 0;
+            const interestRateAnnual = parseFloat(document.getElementById('interest-rate').value) || 0;
+            const interestRate = interestRateAnnual / 100 / 12;
+            const loanTermMonths = (parseFloat(document.getElementById('loan-term').value) || 0) * 12;
+
+            if (loanAmount <= 0 || interestRate <= 0 || loanTermMonths <= 0) {
+                showNotification('Please enter valid loan amount, interest rate and term.');
+                return;
+            }
+
+            const monthlyPayment = (loanAmount * interestRate * Math.pow(1 + interestRate, loanTermMonths)) / (Math.pow(1 + interestRate, loanTermMonths) - 1);
+            const totalPayment = monthlyPayment * loanTermMonths;
+            const totalInterest = totalPayment - loanAmount;
+
+            // Write numeric-only values into the result spans
+            const monthlyEl = document.getElementById('monthly-payment');
+            const totalEl = document.getElementById('total-payment');
+            const interestEl = document.getElementById('total-interest');
+            const incomeEl = document.getElementById('required-income');
+
+            if (monthlyEl) monthlyEl.textContent = `€${monthlyPayment.toFixed(2)}`;
+            if (totalEl) totalEl.textContent = `€${totalPayment.toFixed(2)}`;
+            if (interestEl) interestEl.textContent = `€${totalInterest.toFixed(2)}`;
+
+            // Approximate required annual income assuming 30% of gross monthly income goes to mortgage
+            if (incomeEl) {
+                const requiredAnnual = Math.round((monthlyPayment / 0.30) * 12);
+                incomeEl.textContent = `€${requiredAnnual.toLocaleString()}`;
+            }
+
+            const resultsEl = document.getElementById('results');
+            if (resultsEl) resultsEl.style.display = 'block';
+        });
+
+        // Reset button
+        const resetBtn = document.getElementById('reset-calc');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                mortgageForm.reset();
+                const resultsEl = document.getElementById('results');
+                if (resultsEl) resultsEl.style.display = 'none';
+            });
+        }
+    }
+    const newsletterForm = document.getElementById('newsletter-form');
+    if (newsletterForm) {
+        newsletterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            showNotification('Thank you for subscribing to our newsletter!');
+            newsletterForm.reset();
+        });
+    }
+    const backToTopBtn = document.getElementById('back-to-top');
+    if (backToTopBtn) {
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopBtn.style.display = 'block';
+            } else {
+                backToTopBtn.style.display = 'none';
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+    const contactForm = document.getElementById('contact-form');
+    if (contactForm) {
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            showNotification('Thank you for your message! We\'ll get back to you soon.');
+            contactForm.reset();
+        });
+    }
+    const postAdModal = document.getElementById('post-ad-modal');
+    const chatModal = document.getElementById('chat-modal');
+    const postAdBtn = document.getElementById('post-ad-btn');
+    const chatBtn = document.getElementById('chat-btn');
+    const closeBtns = document.querySelectorAll('.close');
+
+    if (postAdBtn && postAdModal) {
+        postAdBtn.addEventListener('click', () => {
+            postAdModal.style.display = 'block';
+        });
+    }
+
+    if (chatBtn && chatModal) {
+        chatBtn.addEventListener('click', () => {
+            chatModal.style.display = 'block';
+            if (typeof loadChatMessages === 'function') loadChatMessages();
+        });
+    }
+
+
+    const notificationBtn = document.getElementById('notification-btn');
+    const walletBtn = document.getElementById('wallet-btn');
+    const notificationsModal = document.getElementById('notifications-modal');
+    const transactionsModal = document.getElementById('transactions-modal');
+
+    if (notificationBtn && notificationsModal) {
+        notificationBtn.addEventListener('click', () => {
+            notificationsModal.style.display = 'block';
+        });
+    }
+
+    if (walletBtn && transactionsModal) {
+        walletBtn.addEventListener('click', () => {
+            transactionsModal.style.display = 'block';
+        });
+    }
+
+    if (closeBtns && closeBtns.length) {
+        closeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (postAdModal) postAdModal.style.display = 'none';
+                if (chatModal) chatModal.style.display = 'none';
+                if (notificationsModal) notificationsModal.style.display = 'none';
+                if (transactionsModal) transactionsModal.style.display = 'none';
+            });
+        });
+    }
+
+    window.addEventListener('click', (event) => {
+        if (postAdModal && event.target === postAdModal) {
+            postAdModal.style.display = 'none';
+        }
+        if (chatModal && event.target === chatModal) {
+            chatModal.style.display = 'none';
+        }
+        if (notificationsModal && event.target === notificationsModal) {
+            notificationsModal.style.display = 'none';
+        }
+        if (transactionsModal && event.target === transactionsModal) {
+            transactionsModal.style.display = 'none';
+        }
+    });
+
+    // Post ad form
+    const postAdForm = document.getElementById('post-ad-form');
+    if (postAdForm) postAdForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newProperty = {
+            id: Date.now(),
+            title: document.getElementById('ad-title').value,
+            price: parseInt(document.getElementById('ad-price').value),
+            type: document.getElementById('ad-type').value,
+            bedrooms: parseInt(document.getElementById('ad-bedrooms').value),
+            bathrooms: parseInt(document.getElementById('ad-bathrooms').value),
+            area: parseInt(document.getElementById('ad-area').value),
+            location: document.getElementById('ad-location').value,
+            images: [document.getElementById('ad-image').value || getRandomPropertyImage()],
+            date: 'Just now'
+        };
+        properties.push(newProperty);
+        renderProperties(filteredProperties);
+        postAdForm.reset();
+        postAdModal.style.display = 'none';
+        showNotification('Property posted successfully!');
+    });
+
+    function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.backgroundColor = '#4CAF50';
+        notification.style.color = 'white';
+        notification.style.padding = '10px 20px';
+        notification.style.borderRadius = '4px';
+        notification.style.zIndex = '1001';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
+    }
+
+    // Chat functionality
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendChatBtn = document.getElementById('send-chat');
+
+    function loadChatMessages() {
+        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+        chatMessages.innerHTML = '';
+        messages.forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.textContent = `${msg.timestamp}: ${msg.text}`;
+            chatMessages.appendChild(msgDiv);
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function sendMessage(text) {
+        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+        const newMsg = {
+            text: text,
+            timestamp: new Date().toLocaleString()
+        };
+        messages.push(newMsg);
+        localStorage.setItem('chatMessages', JSON.stringify(messages));
+        loadChatMessages();
+    }
+
+    if (sendChatBtn) {
+        sendChatBtn.addEventListener('click', () => {
+            const text = chatInput && chatInput.value ? chatInput.value.trim() : '';
+            if (text) {
+                sendMessage(text);
+                if (chatInput) chatInput.value = '';
+            }
+        });
+    }
+
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && sendChatBtn) {
+                sendChatBtn.click();
+            }
+        });
+    }
+
+    // Search functionality
+    if (searchBtn) searchBtn.addEventListener('click', filterProperties);
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                filterProperties();
+            }
+        });
+    }
+
+    // Category filtering
+    categoryLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            categoryLinks.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            currentCategory = this.dataset.category;
+            currentPage = 1; // Reset to first page
+            filterProperties();
+        });
+    });
+
+    // Apply filters
+    // applyFiltersBtn.addEventListener('click', filterProperties);
+
+    // Clear filters
+    // document.getElementById('clear-filters').addEventListener('click', () => {
+    //     document.getElementById('price-min').value = '';
+    //     document.getElementById('price-max').value = '';
+    //     document.getElementById('bedrooms').value = '';
+    //     document.getElementById('location').value = '';
+    //     document.getElementById('sort').value = 'date';
+    //     currentPage = 1; // Reset pagination
+    //     filterProperties();
+    // });
+
+    // Quick search functionality
+    const quickSearchForm = document.getElementById('quick-search-form');
+    if (quickSearchForm) {
+        quickSearchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const propertyType = document.getElementById('quick-type').value;
+            const location = document.getElementById('quick-location').value;
+            const minPrice = document.getElementById('quick-min-price').value;
+            const maxPrice = document.getElementById('quick-max-price').value;
+
+            // TODO: Connect to real DB - Replace with API call
+            // fetch('/api/properties/search', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ type: propertyType, location, minPrice, maxPrice })
+            // }).then(response => response.json()).then(data => {
+            //     filteredProperties = data;
+            //     renderProperties(filteredProperties);
+            // });
+
+            // For now, filter existing properties
+            let filtered = properties.filter(property => {
+                let typeMatch = true;
+                let locationMatch = true;
+                let priceMatch = true;
+
+                // Handle property type filtering
+                if (propertyType !== '') {
+                    if (propertyType === 'favorites') {
+                        const likedIds = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                        typeMatch = likedIds.includes(property.id);
+                    } else if (propertyType === 'land') {
+                        typeMatch = property.type === 'sale' && property.title.toLowerCase().includes('land');
+                    } else if (propertyType === 'house') {
+                        typeMatch = property.type === 'sale' && (property.title.toLowerCase().includes('house') || property.title.toLowerCase().includes('villa'));
+                    } else if (propertyType === 'rent') {
+                        typeMatch = property.type === 'rent';
+                    } else {
+                        typeMatch = property.type === propertyType;
+                    }
+                }
+
+                // Handle location filtering
+                if (location !== '' && location !== 'all') {
+                    locationMatch = property.location.toLowerCase().includes(location.toLowerCase());
+                }
+
+                // Handle price filtering
+                if (minPrice !== '') {
+                    priceMatch = priceMatch && property.price >= parseInt(minPrice);
+                }
+                if (maxPrice !== '') {
+                    priceMatch = priceMatch && property.price <= parseInt(maxPrice);
+                }
+
+                return typeMatch && locationMatch && priceMatch;
+            });
+            filteredProperties = filtered;
+            currentPage = 1; // Reset to first page
+            renderProperties(filteredProperties);
+            // Scroll to listings
+            document.querySelector('.listings').scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
+    // Load more properties
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', () => {
+            currentPage++;
+            renderProperties(filteredProperties, true); // Append mode
+        });
+    }
+
+    // Testimonials slider (simple auto-scroll)
+    const testimonialSlider = document.querySelector('.testimonial-slider');
+    if (testimonialSlider) {
+        setInterval(() => {
+            testimonialSlider.scrollBy({ left: 320, behavior: 'smooth' });
+            if (testimonialSlider.scrollLeft + testimonialSlider.clientWidth >= testimonialSlider.scrollWidth) {
+                testimonialSlider.scrollTo({ left: 0, behavior: 'smooth' });
+            }
+        }, 5000);
+    }
+
+    // CTA button
+    const ctaBtn = document.querySelector('.cta .btn');
+    if (ctaBtn) {
+        ctaBtn.addEventListener('click', () => {
+            document.getElementById('post-ad-modal').style.display = 'block';
+        });
+    }
+
+    // Update data loading functions to use API endpoints
+    function loadProperties() {
+        // TODO: Connect to real DB - Load properties from API
+        // return fetch('/api/properties').then(response => response.json()).then(data => {
+        //     properties = data;
+        //     filteredProperties = [...properties];
+        //     renderProperties(filteredProperties);
+        // });
+
+        // Prefer persisted properties in localStorage so front-end editors (admin.html) show changes
+        try {
+            const stored = localStorage.getItem('properties');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length) {
+                    properties = parsed;
+                    filteredProperties = [...properties];
+                    return Promise.resolve(properties);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to parse stored properties, falling back to generated data', e);
+        }
+
+        // For now, use existing hardcoded generated data
+        // persist a copy to localStorage so editors can pick it up later
+        try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+        return Promise.resolve(properties);
+    }
+
+    function saveProperty(property) {
+        // TODO: Connect to real DB - Save property via API
+        // return fetch('/api/properties', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(property)
+        // }).then(response => response.json());
+
+        // For now, add to local array
+        properties.push(property);
+        localStorage.setItem('properties', JSON.stringify(properties));
+        return Promise.resolve(property);
+    }
+
+    function loadLikedProperties() {
+        // TODO: Connect to real DB - Load user liked properties from API
+        // return fetch('/api/user/liked-properties').then(response => response.json());
+
+        // For now, use localStorage
+        return Promise.resolve(JSON.parse(localStorage.getItem('likedProperties') || '[]'));
+    }
+
+    function saveLikedProperties(liked) {
+        // TODO: Connect to real DB - Save liked properties via API
+        // return fetch('/api/user/liked-properties', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ liked })
+        // });
+
+        // For now, use localStorage
+        localStorage.setItem('likedProperties', JSON.stringify(liked));
+        return Promise.resolve(liked);
+    }
+
+    function loadChatMessages() {
+        // TODO: Connect to real DB - Load chat messages from API
+        // return fetch('/api/chat/messages').then(response => response.json());
+
+        // For now, use localStorage
+        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+        chatMessages.innerHTML = '';
+        messages.forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.textContent = `${msg.timestamp}: ${msg.text}`;
+            chatMessages.appendChild(msgDiv);
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function sendChatMessage(text) {
+        // TODO: Connect to real DB - Send chat message via API
+        // return fetch('/api/chat/send', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ message: text })
+        // }).then(() => loadChatMessages());
+
+        // For now, use localStorage
+        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+        const newMsg = {
+            text: text,
+            timestamp: new Date().toLocaleString()
+        };
+        messages.push(newMsg);
+        localStorage.setItem('chatMessages', JSON.stringify(messages));
+        loadChatMessages();
+    }
+
+    // Update existing functions to use new API-ready functions
+    // In postAdForm submit:
+    // Replace: properties.push(newProperty);
+    // With: saveProperty(newProperty).then(() => renderProperties(filteredProperties));
+
+    // In like button click:
+    // Replace: localStorage.setItem('likedProperties', JSON.stringify(liked));
+    // With: saveLikedProperties(liked);
+
+    // In load liked state:
+    // Replace: const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+    // With: loadLikedProperties().then(liked => { ... });
+
+    // In sendChatBtn click:
+    // Replace: sendMessage(text);
+    // With: sendChatMessage(text);
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initial load
+    loadProperties().then((loadedProperties) => {
+        properties = loadedProperties;
+        filteredProperties = [...properties];
+        renderHotProperties();
+        renderFeaturedProperties();
+        renderProperties(filteredProperties);
+    });
+});
+
+// Hamburger menu functionality consolidated in the IIFE below
+
+
+
+// Hamburger menu — single robust handler
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.getElementById('hamburgerMenuContainer');
+  if (!container) return;
+  const btn = container.querySelector('.hamburger-btn');
+  const dropdown = container.querySelector('.hamburger-dropdown');
+  if (!btn || !dropdown) return;
+
+  // ensure ARIA defaults
+  dropdown.setAttribute('aria-hidden', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Toggle visual state
+        dropdown.classList.toggle('show');
+        const isOpen = dropdown.classList.contains('show');
+        dropdown.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        // animate button (rotate) by toggling active class
+        btn.classList.toggle('active', isOpen);
+    });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) {
+      dropdown.classList.remove('show');
+      dropdown.setAttribute('aria-hidden', 'true');
+      btn.setAttribute('aria-expanded', 'false');
+      dropdown.style.display = '';
+    }
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      dropdown.classList.remove('show');
+      dropdown.setAttribute('aria-hidden', 'true');
+      btn.setAttribute('aria-expanded', 'false');
+      dropdown.style.display = '';
+    }
+  });
+
+    // Optional: hook menu items (links/buttons) and handle button actions
+    container.querySelectorAll('.hamburger-dropdown a, .hamburger-dropdown button').forEach(item => {
+        item.addEventListener('click', (e) => {
+            try {
+                if (item.tagName === 'BUTTON') {
+                    if (item.classList.contains('chat-btn')) {
+                        window.location.href = 'contact.html';
+                    } else if (item.classList.contains('wallet-btn')) {
+                        window.location.href = 'wallet.html';
+                    } else if (item.classList.contains('post-ad-btn')) {
+                        const modal = document.getElementById('post-ad-modal');
+                        if (modal) modal.style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                console.warn('Error handling menu item action', err);
+            }
+
+            // close after action; anchors will navigate naturally
+            dropdown.classList.remove('show');
+            dropdown.setAttribute('aria-hidden', 'true');
+            btn.setAttribute('aria-expanded', 'false');
+            dropdown.style.display = '';
+        });
+    });
+});
+
+// Populate #quick-location with all countries (single placeholder, no duplicates)
+(function populateLocationDropdown(){
+    const quickLocation = document.getElementById('quick-location');
+
+    if (quickLocation) {
+        if (quickLocation.tagName === 'SELECT') {
+            // Reset to exactly one placeholder option
+            quickLocation.innerHTML = '<option value="">Location</option>';
+            // Append all countries from the `countries` array
+            countries.forEach(country => {
+                const opt = document.createElement('option');
+                opt.value = country;
+                opt.textContent = country;
+                quickLocation.appendChild(opt);
+            });
+        } else if (quickLocation.tagName === 'INPUT') {
+            // Populate a datalist so the dropdown width matches the input
+            let list = document.getElementById('countries-list');
+            if (!list) {
+                list = document.createElement('datalist');
+                list.id = 'countries-list';
+                quickLocation.insertAdjacentElement('afterend', list);
+            }
+            list.innerHTML = '';
+            countries.forEach(country => {
+                const opt = document.createElement('option');
+                opt.value = country;
+                list.appendChild(opt);
+            });
+        }
+    }
+
+    // Also populate any standalone datalist with id 'countries-list' (for pages using `id="location"`)
+    const standaloneList = document.getElementById('countries-list');
+    if (standaloneList) {
+        standaloneList.innerHTML = '';
+        countries.forEach(country => {
+            const opt = document.createElement('option');
+            opt.value = country;
+            standaloneList.appendChild(opt);
+        });
+    }
+})();

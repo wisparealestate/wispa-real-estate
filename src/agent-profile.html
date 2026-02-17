@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Agent Profile - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .profile-container { max-width: 480px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px 28px; text-align: center; }
+        .profile-avatar { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; margin-bottom: 18px; }
+        .profile-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+        .profile-role { color: #3498db; font-size: 1.1rem; margin-bottom: 18px; }
+        .profile-info { color: #444; font-size: 1.05rem; margin-bottom: 10px; }
+        .profile-actions { margin-top: 24px; }
+        .profile-actions button { background: #3498db; color: #fff; border: none; padding: 10px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .profile-actions button:hover { background: #217dbb; }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <img src="https://ui-avatars.com/api/?name=Agent&background=3498db&color=fff" alt="Agent" class="profile-avatar" id="agentAvatar">
+        <div class="profile-title" id="agentName">Agent Name</div>
+        <div class="profile-role" id="agentRole">Real Estate Agent</div>
+        <div class="profile-info" id="agentEmail">Email: agent@email.com</div>
+        <div class="profile-info" id="agentPhone">Phone: </div>
+        <div class="profile-info" id="agentBio">Bio: </div>
+        <div class="profile-actions">
+            <button onclick="window.location.href='admin-chat.html'">Back to Chat</button>
+        </div>
+    </div>
+    <script>
+    // Optionally load agent data from localStorage if available
+    try {
+        const agent = JSON.parse(localStorage.getItem('agentProfile'));
+        if (agent) {
+            document.getElementById('agentName').textContent = agent.username || 'Agent Name';
+            document.getElementById('agentRole').textContent = agent.role || 'Real Estate Agent';
+            document.getElementById('agentEmail').textContent = 'Email: ' + (agent.email || '');
+            document.getElementById('agentPhone').textContent = 'Phone: ' + (agent.phone || '');
+            document.getElementById('agentBio').textContent = 'Bio: ' + (agent.bio || '');
+            document.getElementById('agentAvatar').src = agent.avatar || 'https://ui-avatars.com/api/?name=Agent&background=3498db&color=fff';
+        }
+    } catch(e){}
+    </script>
+</body>
+</html>

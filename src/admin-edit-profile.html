@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Edit Admin Profile - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .edit-profile-container { max-width: 480px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px 28px; }
+        @media (max-width: 600px) {
+            .edit-profile-container {
+                max-width: 100vw;
+                margin: 0;
+                padding: 18px 4vw;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            body {
+                align-items: flex-start;
+            }
+        }
+        .edit-profile-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 18px; text-align: center; }
+        .edit-profile-form { display: flex; flex-direction: column; gap: 18px; }
+        .edit-profile-form label { font-weight: 600; margin-bottom: 6px; }
+        .edit-profile-form input, .edit-profile-form textarea, .edit-profile-form select {
+            padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem;
+        }
+        .edit-profile-form textarea { resize: vertical; min-height: 60px; }
+        .edit-profile-actions { margin-top: 24px; text-align: center; }
+        .edit-profile-actions button { background: #3498db; color: #fff; border: none; padding: 10px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .edit-profile-actions button:hover { background: #217dbb; }
+    </style>
+</head>
+<body>
+    <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px; position:fixed; top:0; left:0; width:100vw; z-index:1002; box-sizing:border-box;">
+        <style>
+        .admin-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            z-index: 1002;
+            box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+            .admin-header { padding: 10px 5vw !important; }
+        }
+        </style>
+        <div class="header-left" style="display:flex; flex-direction:column;">
+            <span style="font-size:25px; font-weight:500; color:black; margin-right: 30px; font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;">ADMIN PANEL</span>
+        </div>
+        <div class="header-right" style="display:flex; align-items:center; gap:18px; position:relative;">
+            <span title="Search" id="header-search" class="header-icon" style="font-size:22px; cursor:pointer;">🔍</span>
+            <span title="Notifications" id="header-notification" class="header-icon" style="font-size:22px; cursor:pointer;">🔔</span>
+            <span title="Chat" id="header-chat" class="header-icon" style="font-size:22px; cursor:pointer;">💬</span>
+            <div class="hamburger-menu" style="position:relative;">
+                <input type="checkbox" id="hamburger-toggle" style="display:none;">
+                <label for="hamburger-toggle" style="cursor:pointer; display:inline-block;">
+                    <span style="font-size:28px;">☰</span>
+                </label>
+                <div class="menu-dropdown" style="display:none; position:absolute; top:40px; right:0; background:var(--white); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); min-width:180px; z-index:100;">
+                    <a href="admin.html#overview" class="menu-link" data-page="overview" id="navOverview" style="display:block; padding:12px 18px; text-decoration:none;">Overview</a>
+                    <a href="admin-profile.html" class="menu-link" id="navProfile" style="display:block; padding:12px 18px; text-decoration:none;">Profile</a>
+                    <a href="admin.html#properties" class="menu-link" data-page="properties" id="navProperties" style="display:block; padding:12px 18px; text-decoration:none;">Properties</a>
+                    <a href="admin.html#users" class="menu-link" data-page="users" id="navUsers" style="display:block; padding:12px 18px; text-decoration:none;">Users</a>
+                    <a href="admin.html#agents" class="menu-link" data-page="agents" id="navAgents" style="display:block; padding:12px 18px; text-decoration:none;">Agents</a>
+                    <a href="admin.html#analytics" class="menu-link" data-page="analytics" id="navAnalytics" style="display:block; padding:12px 18px; text-decoration:none;">Analytics</a>
+                    <a href="admin.html#documents" class="menu-link" data-page="documents" id="navDocuments" style="display:block; padding:12px 18px; text-decoration:none;">Documents</a>
+                    <a href="admin.html#settings" class="menu-link" data-page="settings" id="navSettings" style="display:block; padding:12px 18px; text-decoration:none;">Settings</a>
+                </div>
+            </div>
+        </div>
+        <script>
+            // Highlight active nav in hamburger menu with green style
+            function setActiveNav() {
+                var navs = [
+                    {id: 'navOverview', match: /admin.html(#overview)?$/},
+                    {id: 'navProfile', match: /admin-profile.html$/},
+                    {id: 'navProperties', match: /admin.html#properties$/},
+                    {id: 'navUsers', match: /admin.html#users$/},
+                    {id: 'navAgents', match: /admin.html#agents$/},
+                    {id: 'navAnalytics', match: /admin.html#analytics$/},
+                    {id: 'navDocuments', match: /admin.html#documents$/},
+                    {id: 'navSettings', match: /admin.html#settings$/}
+                ];
+                var path = (window.location.pathname.split('/').pop() + window.location.hash).replace(/\/$/, '');
+                navs.forEach(function(nav) {
+                    var el = document.getElementById(nav.id);
+                    if(el && nav.match.test(path)) {
+                        el.classList.add('active');
+                    } else if(el) {
+                        el.classList.remove('active');
+                    }
+                });
+            }
+            document.addEventListener('DOMContentLoaded', setActiveNav);
+            document.getElementById('hamburger-toggle').addEventListener('change', setActiveNav);
+            // Hamburger menu dropdown toggle and header icon wiring
+            document.addEventListener('DOMContentLoaded', function() {
+                var toggle = document.getElementById('hamburger-toggle');
+                var dropdown = document.querySelector('.menu-dropdown');
+                var label = document.querySelector('label[for="hamburger-toggle"]');
+                if(toggle && dropdown && label) {
+                    toggle.addEventListener('change', function() {
+                        dropdown.style.display = toggle.checked ? 'block' : 'none';
+                    });
+                    label.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        toggle.checked = !toggle.checked;
+                        dropdown.style.display = toggle.checked ? 'block' : 'none';
+                    });
+                }
+            });
+        </script>
+    </header>
+    <div class="edit-profile-container" style="margin-top:90px;">
+        <div class="edit-profile-title">Edit Admin Profile</div>
+        <form class="edit-profile-form" id="adminEditProfileForm">
+            <div>
+                <label for="adminName">Name</label>
+                <input type="text" id="adminName" name="adminName" required>
+            </div>
+            <div>
+                <label for="adminEmail">Email</label>
+                <input type="email" id="adminEmail" name="adminEmail" required>
+            </div>
+            <div>
+                <label for="adminLocation">Location</label>
+                <input type="text" id="adminLocation" name="adminLocation">
+            </div>
+            <div>
+                <label for="adminBio">Bio</label>
+                <textarea id="adminBio" name="adminBio"></textarea>
+            </div>
+            <div>
+                <label for="adminGender">Gender</label>
+                <select id="adminGender" name="adminGender">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label for="adminPhone">Phone Number</label>
+                <input type="tel" id="adminPhone" name="adminPhone">
+            </div>
+            <div class="edit-profile-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" onclick="window.location.href='admin-chat.html'" style="margin-left:12px;background:#e5e7eb;color:#333;">Cancel</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        // Load and save admin profile from localStorage
+        const form = document.getElementById('adminEditProfileForm');
+        const fields = ['adminName','adminEmail','adminLocation','adminBio','adminGender','adminPhone'];
+        function loadProfile(){
+            let profile = {};
+            try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+            fields.forEach(f => {
+                if(form.elements[f]) form.elements[f].value = profile[f] || '';
+            });
+        }
+        form.addEventListener('submit', function(e){
+            e.preventDefault();
+            let profile = {};
+            fields.forEach(f => {
+                profile[f] = form.elements[f].value;
+            });
+            localStorage.setItem('adminProfile', JSON.stringify(profile));
+            alert('Profile updated!');
+            window.location.href = 'admin-profile.html';
+        });
+        loadProfile();
+    </script>
+</body>
+</html>

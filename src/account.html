@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Information - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .account-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: #fff;
+            padding: 40px 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .page-header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .page-header p {
+            margin: 0;
+            opacity: 0.95;
+            font-size: 15px;
+        }
+
+        .form-section {
+            background: #fff;
+            padding: 28px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        .form-section h3 {
+            margin: 0 0 20px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--light);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 11px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--lighter);
+            border-color: var(--text-light);
+        }
+
+        .back-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .back-nav:hover {
+            background: var(--lighter);
+            border-color: var(--text-light);
+        }
+
+        .info-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 15px;
+            color: var(--text);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="main-container">
+            <a href="profile.html" class="back-nav">← Back to Dashboard</a>
+
+            <div class="account-page">
+                <div class="page-header">
+                    <h1>Account Information</h1>
+                    <p>Manage your personal profile details and account information.</p>
+                </div>
+
+                <div class="form-section">
+                    <h3>Personal Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="displayName">Full Name</label>
+                            <input id="displayName" type="text" placeholder="Your full name">
+                        </div>
+                        <div class="form-group">
+                            <label for="displayEmail">Email Address</label>
+                            <input id="displayEmail" type="email" placeholder="your@email.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="bioInput">Bio / About You</label>
+                        <textarea id="bioInput" placeholder="Tell us about yourself and what you're looking for..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phoneInput">Phone Number</label>
+                            <input id="phoneInput" type="text" placeholder="+1 (555) 123-4567">
+                        </div>
+                        <div class="form-group">
+                            <label for="locationInput">Preferred Location</label>
+                            <input id="locationInput" type="text" placeholder="City, State">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-secondary" id="cancelBtn">Cancel</button>
+                        <button class="btn-primary" id="saveBtn">Save Changes</button>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Account Details</h3>
+                    <div class="info-item">
+                        <div class="info-label">Member Since</div>
+                        <div class="info-value" id="joinedAt">—</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Account Status</div>
+                        <div class="info-value">Active ✓</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Updated</div>
+                        <div class="info-value" id="lastUpdated">Today</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function safeParse(key) {
+            try { 
+                return JSON.parse(localStorage.getItem(key)); 
+            } catch(e) { 
+                return null; 
+            }
+        }
+
+        const defaultUser = { 
+            username: 'User', 
+            email: '', 
+            bio: '', 
+            phone: '',
+            location: '',
+            joined: (new Date()).toISOString() 
+        };
+        const stored = safeParse('wispaUser');
+        const user = stored && stored.username ? stored : defaultUser;
+
+        if(!user || !user.username) {
+            window.location.href = 'login.html';
+        }
+
+        const displayNameInput = document.getElementById('displayName');
+        const displayEmailInput = document.getElementById('displayEmail');
+        const bioInput = document.getElementById('bioInput');
+        const phoneInput = document.getElementById('phoneInput');
+        const locationInput = document.getElementById('locationInput');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const joinedAtEl = document.getElementById('joinedAt');
+        const lastUpdated = document.getElementById('lastUpdated');
+
+        function initializeUI() {
+            displayNameInput.value = user.username || '';
+            displayEmailInput.value = user.email || '';
+            bioInput.value = user.bio || '';
+            phoneInput.value = user.phone || '';
+            locationInput.value = user.location || '';
+            joinedAtEl.textContent = user.joined ? new Date(user.joined).toLocaleDateString() : '—';
+            lastUpdated.textContent = 'Today';
+        }
+
+        saveBtn.addEventListener('click', function() {
+            user.username = displayNameInput.value.trim() || user.username;
+            user.email = displayEmailInput.value.trim() || user.email;
+            user.bio = bioInput.value.trim() || '';
+            user.phone = phoneInput.value.trim() || '';
+            user.location = locationInput.value.trim() || '';
+
+            localStorage.setItem('wispaUser', JSON.stringify(user));
+            alert('Account information saved successfully! ✓');
+        });
+
+        cancelBtn.addEventListener('click', function() {
+            initializeUI();
+            alert('Changes cancelled.');
+        });
+
+        initializeUI();
+    </script>
+</body>
+</html>

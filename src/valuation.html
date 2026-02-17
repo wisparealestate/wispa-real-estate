@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Valuation - Wispa Real Estate</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header and navigation removed -->
+
+    <main>
+        <div class="main-container">
+            <section class="services-hero valuation-hero">
+                <div class="hero-content">
+                    <p class="eyebrow">Request a Valuation</p>
+                    <h1>Property Valuation Request</h1>
+                    <p class="lead">Tell us about the property and your target price range — our experts will review and contact you shortly.</p>
+                </div>
+            </section>
+
+            <section class="valuation-section">
+                <div class="valuation-panel">
+                    <form id="valuation-form" class="valuation-form">
+                        <div class="form-row">
+                            <label for="property-type">Property Type</label>
+                            <select id="property-type" class="form-control" required>
+                                <option value="">Select Type</option>
+                                <option value="apartment">Apartment</option>
+                                <option value="house">House</option>
+                                <option value="villa">Villa</option>
+                                <option value="land">Land</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="location">Location</label>
+                            <input id="location" list="countries-list" class="form-control" placeholder="Country or city" required>
+                            <datalist id="countries-list">
+                                <option value=""></option>
+                            </datalist>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="min-price">Minimum Price (€)</label>
+                            <input type="number" id="min-price" class="form-control" placeholder="100000">
+                        </div>
+
+                        <div class="form-row">
+                            <label for="max-price">Maximum Price (€)</label>
+                            <input type="number" id="max-price" class="form-control" placeholder="500000">
+                        </div>
+
+                        <div class="form-row actions-row">
+                            <button type="submit" class="btn view-btn">Submit Request</button>
+                            <button type="reset" class="btn">Reset</button>
+                        </div>
+                    </form>
+
+                    <div id="valuation-result" class="valuation-result" style="display:none;">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <p style="text-align: center;">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
