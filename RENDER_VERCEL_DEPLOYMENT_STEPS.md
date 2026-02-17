@@ -1,3 +1,26 @@
+## Render Web Service Configuration
+
+**Service Name:** wispa-real-estate
+**Region:** Oregon (US West)
+**Instance Type:** Free (0.1 CPU, 512 MB RAM)
+**Repository:** https://github.com/vizikolyte8-prog/wispa-real-estate
+**Branch:** main
+**Root Directory:** (leave blank unless your backend is in a subfolder)
+**Dockerfile Path:** (leave blank or set if using Docker; otherwise, use Web Service auto-detect)
+**Auto-Deploy:** On Commit
+**Render Subdomain:** https://wispa-real-estate.onrender.com
+
+**Environment Variables:**
+  - Key: `DATABASE_URL`
+  - Value: `postgresql://wispa:vfeaLtDzgjPtIdBzfIYiZe1wM5brKzHr@dpg-d6acunfgi27c73d1sgsg-a.oregon-postgres.render.com/wispa`
+
+**Health Check Path:** (optional, e.g., `/health` if your backend exposes a health endpoint)
+
+**Notes:**
+- If you are not using Docker, select "Web Service" and let Render auto-detect build settings.
+- If your backend is in a subfolder, set the Root Directory accordingly.
+- For static content, use Render Static Site or Vercel.
+
 # Full Deployment Steps: Render + PostgreSQL + Vercel
 
 This guide outlines the complete steps to deploy your project using Render (backend & database), PostgreSQL, and Vercel (frontend) until your application is live.
@@ -38,12 +61,14 @@ Set environment variables (e.g., `DATABASE_URL` with your PostgreSQL connection 
    - `PGPASSWORD=vfeaLtDzgjPtIdBzfIYiZe1wM5brKzHr psql -h dpg-d6acunfgi27c73d1sgsg-a.oregon-postgres.render.com -U wispa wispa`
 - Deploy the backend and ensure it connects to the database.
 ## 3. Deploy Frontend to Vercel
-- Push your frontend code to GitHub/GitLab/Bitbucket.
-- In Vercel, import your repository as a new project.
-- Select the correct framework preset (e.g., Vue.js, React, etc.).
-- Set environment variables (e.g., `API_URL` pointing to your Render backend endpoint).
-- Configure build and output directories as needed.
-- Deploy the frontend and verify the site is live.
+  To set environment variables in Vercel:
+  1. Go to your project dashboard on Vercel.
+  2. Click on "Settings" > "Environment Variables".
+  3. Add a new variable:
+     - Key: `API_URL`
+     - Value: The URL of your Render backend (e.g., `https://your-backend.onrender.com`)
+  4. Save the variable and redeploy your project if needed.
+  Your frontend code can now access the API URL using `process.env.API_URL` (for frameworks like Next.js, Vue.js, etc.).
 
 ## 4. Connect Frontend and Backend
 - Ensure frontend API calls use the correct backend URL (hosted on Render).
