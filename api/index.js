@@ -1,8 +1,9 @@
-const express = require("express");
-const pkg = require("pg");
-const bcrypt = require("bcrypt");
-const bodyParser = require("body-parser");
-const cors = require("cors");
+
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
 
 const { Pool } = pkg;
 const app = express();
