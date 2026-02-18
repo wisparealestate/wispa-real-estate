@@ -1,5 +1,5 @@
 // ...existing code...
-import pkg from "pg";
+// ...existing code...
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import cors from "cors";
