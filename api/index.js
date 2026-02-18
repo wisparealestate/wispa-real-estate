@@ -8,10 +8,11 @@ app.post("/api/signup", async (req, res) => {
   if (!username || !email || !password) return res.status(400).json({ error: "Missing fields" });
   try {
     const hash = await bcrypt.hash(password, 10);
-    import express from "express";
-    import pkg from "pg";
-    import bcrypt from "bcrypt";
-    import bodyParser from "body-parser";
+
+    const express = require("express");
+    const pkg = require("pg");
+    const bcrypt = require("bcrypt");
+    const bodyParser = require("body-parser");
 
     const { Pool } = pkg;
     const app = express();
