@@ -1,3 +1,17 @@
+import { addPropertyWithPhotos } from "./property.js";
+// Property upload endpoint
+app.post("/api/properties", async (req, res) => {
+  const { property, photoUrls } = req.body;
+  if (!property || !photoUrls || !Array.isArray(photoUrls)) {
+    return res.status(400).json({ error: "Missing property or photo URLs" });
+  }
+  try {
+    const propertyId = await addPropertyWithPhotos(property, photoUrls);
+    res.json({ propertyId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 import express from "express";
 import pkg from "pg";

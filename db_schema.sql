@@ -1,3 +1,10 @@
+-- Table for property photos
+CREATE TABLE property_photos (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES properties(id) ON DELETE CASCADE,
+    photo_url TEXT NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- Users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
