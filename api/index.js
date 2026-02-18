@@ -13,10 +13,15 @@ app.post("/api/signup", async (req, res) => {
     const pkg = require("pg");
     const bcrypt = require("bcrypt");
     const bodyParser = require("body-parser");
+    const cors = require("cors");
 
     const { Pool } = pkg;
     const app = express();
     app.use(bodyParser.json());
+    app.use(cors({
+      origin: [process.env.FRONTEND_URL || "https://wispa-real-estate.vercel.app"],
+      credentials: true,
+    }));
     const port = process.env.PORT || 3001;
 
     // PostgreSQL connection
