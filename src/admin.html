@@ -3157,71 +3157,38 @@ reports@wispa.com | +EU-SUPPORT-LINE
                         }
                     }
 
-                    let savedProperty = null;
-                    if(id){
-                        const prop = props.find(x => String(x.id) === String(id));
-                        if(prop) {
-                            const postToVal = form['postTo'].value;
-                            Object.assign(prop, {
-                                title: form['title'].value,
-                                price: Number(form['price'].value),
-                                description: form['description'] ? form['description'].value : (prop.description || ''),
-                                type: form['type'].value,
-                                saleRent: form['saleRent'].value,
-                                location: form['location'].value,
-                                area: form['area'].value ? Number(form['area'].value) : null,
-                                bedrooms: form['bedrooms'] && form['bedrooms'].value !== '' ? Number(form['bedrooms'].value) : null,
-                                bathrooms: form['bathrooms'] && form['bathrooms'].value !== '' ? Number(form['bathrooms'].value) : null,
-                                postTo: postToVal,
-                                featured: postToVal === 'featured',
-                                hot: postToVal === 'hot',
-                                mediaCount: mediaFiles
-                            });
-
-                            // replace images/media only if new files uploaded
-                            if(mediaEntries.length > 0){
-                                // store only data URLs (src) for backward compatibility
-                                prop.images = mediaEntries.map(m => m.src);
-                            }
-                            savedProperty = prop;
+                    // Prepare property object for backend
+                    const property = {
+                        user_id: 1, // TODO: Use actual admin/user id
+                        title: form['title'].value,
+                        description: form['description'] ? form['description'].value : '',
+                        price: Number(form['price'].value),
+                        address: form['location'].value,
+                        city: '', // Add city field if available
+                        state: '', // Add state field if available
+                        zip_code: '', // Add zip field if available
+                        image_url: mediaEntries.length > 0 ? mediaEntries[0].src : null
+                    };
+                    const photoUrls = mediaEntries.map(m => m.src);
+                    const API_URL = window.API_URL || 'https://real-estate-project-pyha.onrender.com';
+                    try {
+                        const resp = await fetch(API_URL + '/api/properties', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ property, photoUrls })
+                        });
+                        const data = await resp.json();
+                        if (data.propertyId) {
+                            alert(`✅ Property saved with ${mediaFiles} file(s) + document generated!`);
+                        } else {
+                            alert('❌ Failed to save property: ' + (data.error || 'Unknown error'));
                         }
-                    } else {
-                        const newId = String(Date.now()).slice(-8);
-                        const postToVal = form['postTo'].value;
-                        const newProperty = {
-                            id: newId,
-                            title: form['title'].value,
-                            description: form['description'] ? form['description'].value : '',
-                            price: Number(form['price'].value),
-                            type: form['type'].value,
-                            saleRent: form['saleRent'].value,
-                            location: form['location'].value,
-                            area: form['area'].value ? Number(form['area'].value) : null,
-                            bedrooms: form['bedrooms'] && form['bedrooms'].value !== '' ? Number(form['bedrooms'].value) : null,
-                            bathrooms: form['bathrooms'] && form['bathrooms'].value !== '' ? Number(form['bathrooms'].value) : null,
-                            postTo: postToVal,
-                            featured: postToVal === 'featured',
-                            hot: postToVal === 'hot',
-                            images: mediaEntries.length > 0 ? mediaEntries.map(m => m.src) : [getRandomPropertyImage()],
-                            date: 'Today',
-                            status: 'Active',
-                            mediaCount: mediaFiles
-                        };
-                        props.unshift(newProperty);
-                        savedProperty = newProperty;
+                    } catch (err) {
+                        alert('❌ Failed to save property: ' + err.message);
                     }
-                    saveProperties(props);
-
-                    // Generate property document
-                    if(savedProperty){
-                        generatePropertyDocument(savedProperty);
-                    }
-
-                    renderPropertiesTable();
                     closeModal('addProperty');
                     form.reset();
                     form['property-id'].value = '';
-                    alert(mediaFiles > 0 ? `✅ Property saved with ${mediaFiles} file(s) + document generated!` : '✅ Property saved + document generated!');
                 });
             }
 
