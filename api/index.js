@@ -27,6 +27,7 @@ import pkg from "pg";
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
 
 const { Pool } = pkg;
 const app = express();
@@ -48,6 +49,30 @@ const port = process.env.PORT || 3001;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+});
+
+// Get all user messages for admin chat
+app.get("/api/admin/messages", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM messages ORDER BY sent_at DESC");
+    res.json({ messages: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Property upload endpoint
+app.post("/api/properties", async (req, res) => {
+  const { property, photoUrls } = req.body;
+  if (!property || !photoUrls || !Array.isArray(photoUrls)) {
+    return res.status(400).json({ error: "Missing property or photo URLs" });
+  }
+  try {
+    const propertyId = await addPropertyWithPhotos(property, photoUrls);
+    res.json({ propertyId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // User signup
