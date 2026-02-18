@@ -1,7 +1,6 @@
+
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
-
-app.use(bodyParser.json());
 
 // User signup
 app.post("/api/signup", async (req, res) => {
@@ -50,12 +49,14 @@ app.post("/api/admin-login", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 import express from "express";
 import pkg from "pg";
 
 const { Pool } = pkg;
 
 const app = express();
+app.use(bodyParser.json());
 const port = process.env.PORT || 3001;
 
 // PostgreSQL connection
