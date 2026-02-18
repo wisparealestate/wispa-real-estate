@@ -4,6 +4,7 @@
 **Region:** Oregon (US West)
 **Instance Type:** Free (0.1 CPU, 512 MB RAM)
 **Repository:** https://github.com/deuarmy112/real-estate-project
+**Push all project changes to this repository on every commit.**
 **Branch:** main
 **Root Directory:** (leave blank unless your backend is in a subfolder)
 **Dockerfile Path:** (leave blank or set if using Docker; otherwise, use Web Service auto-detect)
