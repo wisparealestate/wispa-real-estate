@@ -333,36 +333,25 @@
                 return;
             }
 
-            // For demo purposes, check against all users in wispaUsers array
-            let users = [];
-            try { users = JSON.parse(localStorage.getItem('wispaUsers') || '[]'); } catch(e) { users = []; }
-            if (!users.length) {
-                showError('No account found. Please sign up first.');
-                return;
-            }
-            // Find user by identifier
-            const identifierLower = identifier.toLowerCase();
-            const userData = users.find(u =>
-                (u.username && u.username.toLowerCase() === identifierLower) ||
-                (u.email && u.email.toLowerCase() === identifierLower) ||
-                (u.id === identifier)
-            );
-            if (!userData) {
-                showError('Username, email, or user ID not found.');
-                return;
-            }
-            // Validate password
-            if (!userData.password || userData.password !== password) {
-                showError('Incorrect password. Please try again.');
-                return;
-            }
-            // Set as current user
-            localStorage.setItem('wispaUser', JSON.stringify(userData));
-            // Login successful
-            showSuccess('Login successful! Redirecting...');
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1500);
+            // Use backend API for login
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: identifier, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    localStorage.setItem('wispaUser', JSON.stringify(data.user));
+                    showSuccess('Login successful! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                }
+            })
+            .catch(() => showError('Login failed. Please try again.'));
         });
 
         function showError(message) {

@@ -39,22 +39,31 @@
         </form>
     </div>
     <script>
-        // System admin credentials (hardcoded for demo)
-        const SYSTEM_ADMIN_EMAIL = 'admin@wispa.com';
-        const SYSTEM_ADMIN_PASSWORD = 'admin123'; // Change as needed
         const form = document.getElementById('adminLoginForm');
         const errorDiv = document.getElementById('adminLoginError');
         form.addEventListener('submit', function(e){
             e.preventDefault();
             const email = form.adminEmail.value.trim();
             const password = form.adminPassword.value;
-            if(email === SYSTEM_ADMIN_EMAIL && password === SYSTEM_ADMIN_PASSWORD) {
-                // Optionally set session flag here
-                window.location.href = 'admin.html#overview';
-            } else {
-                errorDiv.textContent = 'Invalid email or password.';
+            fetch('/api/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: email, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    errorDiv.textContent = data.error;
+                    errorDiv.style.display = 'block';
+                } else {
+                    localStorage.setItem('wispaAdmin', JSON.stringify(data.admin));
+                    window.location.href = 'admin.html#overview';
+                }
+            })
+            .catch(() => {
+                errorDiv.textContent = 'Login failed. Please try again.';
                 errorDiv.style.display = 'block';
-            }
+            });
         });
     </script>
 </body>

@@ -513,59 +513,23 @@
                 return;
             }
 
-            try {
-                // Generate unique user ID
-                const userId = 'WISPA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-
-                // Store user data
-                const userData = {
-                    id: userId,
-                    username: name,
-                    email: email,
-                    phone: phone,
-                    password: password,
-                    location: location,
-                    referral: referral || null,
-                    profilePicture: profilePreview.src || null,
-                    createdAt: new Date().toISOString(),
-                    agreementsAccepted: false
-                };
-
-                // Save to wispaUsers array
-                let users = [];
-                try { users = JSON.parse(localStorage.getItem('wispaUsers') || '[]'); } catch(e) { users = []; }
-                users.push(userData);
-                localStorage.setItem('wispaUsers', JSON.stringify(users));
-                // Also set as current user
-                localStorage.setItem('wispaUser', JSON.stringify(userData));
-
-                // Initialize user-specific data
-                // Create welcome notification for new user
-                const welcomeNotification = {
-                    id: Date.now(),
-                    type: 'system',
-                    title: 'Welcome to Wispa Real Estate!',
-                    message: 'Welcome ' + name + '! You\'ve successfully created your account. Start browsing properties and connecting with agents.',
-                    timestamp: new Date().toISOString(),
-                    read: false,
-                    icon: '🎉'
-                };
-                const userNotifications = [welcomeNotification];
-                localStorage.setItem('notifications_' + userId, JSON.stringify(userNotifications));
-                // Initialize empty user-specific data
-                localStorage.setItem('likedProperties_' + userId, JSON.stringify([]));
-                localStorage.setItem('conversations_' + userId, JSON.stringify([]));
-                localStorage.setItem('activityLog_' + userId, JSON.stringify([]));
-                localStorage.setItem('purchases_' + userId, JSON.stringify([]));
-
-                // Show success message
-                successMessage.style.display = 'block';
-                // Redirect to home page
-                window.location.href = 'index.html';
-            } catch(error) {
-                console.error('Error during signup:', error);
-                alert('An error occurred during signup. Please try again.');
-            }
+            // Use backend API for signup
+            fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: name, email, password, full_name: name })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    localStorage.setItem('wispaUser', JSON.stringify(data.user));
+                    successMessage.style.display = 'block';
+                    window.location.href = 'index.html';
+                }
+            })
+            .catch(() => alert('An error occurred during signup. Please try again.'));
         });
         });
     </script>
