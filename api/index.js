@@ -9,9 +9,16 @@ const { Pool } = pkg;
 const app = express();
 app.use(bodyParser.json());
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || "https://wispa-real-estate.vercel.app"],
+  origin: [
+    "https://real-estate-project-five-bice.vercel.app",
+    "https://wispa-real-estate.vercel.app",
+    process.env.FRONTEND_URL
+  ],
   credentials: true,
 }));
+
+// Handle preflight requests for all routes
+app.options("*", cors());
 const port = process.env.PORT || 3001;
 
 // PostgreSQL connection
