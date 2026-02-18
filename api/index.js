@@ -7,7 +7,6 @@ app.get("/api/admin/messages", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-import { addPropertyWithPhotos } from "./property.js";
 // Property upload endpoint
 app.post("/api/properties", async (req, res) => {
   const { property, photoUrls } = req.body;
