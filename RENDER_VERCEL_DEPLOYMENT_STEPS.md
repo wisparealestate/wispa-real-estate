@@ -3,7 +3,7 @@
 **Service Name:** wispa-real-estate
 **Region:** Oregon (US West)
 **Instance Type:** Free (0.1 CPU, 512 MB RAM)
-**Repository:** https://github.com/vizikolyte8-prog/real-estate
+**Repository:** https://github.com/deuarmy112/real-estate-project
 **Branch:** main
 **Root Directory:** (leave blank unless your backend is in a subfolder)
 **Dockerfile Path:** (leave blank or set if using Docker; otherwise, use Web Service auto-detect)
@@ -41,6 +41,8 @@ This guide outlines the complete steps to deploy your project using Render (back
 
 ## 2. Deploy Backend to Render
 > **Note:** The default branch on GitHub is typically `main` (not `master`). Ensure you select the correct branch when connecting your repository in Render or Vercel.
+
+**Repository for this project:** https://github.com/deuarmy112/real-estate-project
 
 Set environment variables (e.g., `DATABASE_URL` with your PostgreSQL connection string).
 
