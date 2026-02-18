@@ -3,7 +3,7 @@
 **Service Name:** wispa-real-estate
 **Region:** Oregon (US West)
 **Instance Type:** Free (0.1 CPU, 512 MB RAM)
-**Repository:** https://github.com/vizikolyte8-prog/wispa-real-estate
+**Repository:** https://github.com/vizikolyte8-prog/real-estate
 **Branch:** main
 **Root Directory:** (leave blank unless your backend is in a subfolder)
 **Dockerfile Path:** (leave blank or set if using Docker; otherwise, use Web Service auto-detect)
