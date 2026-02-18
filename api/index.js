@@ -1,3 +1,12 @@
+// Get all user messages for admin chat
+app.get("/api/admin/messages", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM messages ORDER BY sent_at DESC");
+    res.json({ messages: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 import { addPropertyWithPhotos } from "./property.js";
 // Property upload endpoint
 app.post("/api/properties", async (req, res) => {
