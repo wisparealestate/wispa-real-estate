@@ -45,7 +45,8 @@
             e.preventDefault();
             const email = form.adminEmail.value.trim();
             const password = form.adminPassword.value;
-            fetch('/api/admin-login', {
+            const API_URL = (window.API_URL || 'https://real-estate-project-pyha.onrender.com');
+            fetch(API_URL + '/api/admin-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: email, password })

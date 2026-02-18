@@ -334,7 +334,8 @@
             }
 
             // Use backend API for login
-            fetch('/api/login', {
+            const API_URL = (window.API_URL || 'https://real-estate-project-pyha.onrender.com');
+            fetch(API_URL + '/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: identifier, password })
