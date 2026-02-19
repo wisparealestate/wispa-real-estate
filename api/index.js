@@ -1,8 +1,3 @@
-
-// CORS test endpoint (must be after app and CORS middleware)
-app.get("/cors-test", (req, res) => {
-  res.json({ message: "CORS is working!", origin: req.headers.origin || null });
-});
 import express from "express";
 import pkg from "pg";
 import bcrypt from "bcrypt";
@@ -21,6 +16,11 @@ const port = process.env.PORT || 3001;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+});
+
+// CORS test endpoint (must be after app and CORS middleware)
+app.get("/cors-test", (req, res) => {
+  res.json({ message: "CORS is working!", origin: req.headers.origin || null });
 });
 
 // Get all user messages for admin chat
