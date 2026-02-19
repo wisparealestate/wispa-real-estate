@@ -185,6 +185,14 @@
             <script>
                 // Hamburger menu dropdown toggle and header icon wiring
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Fallback: If no tab is visible, show overview
+                    setTimeout(function() {
+                        var visibleTab = Array.from(document.querySelectorAll('.admin-tab')).find(tab => tab.style.display === 'block');
+                        if (!visibleTab) {
+                            switchTab('overview');
+                            window.location.hash = '#overview';
+                        }
+                    }, 100);
                     // Always show overview tab by default
                     setTimeout(function() { switchTab('overview'); }, 50);
                     window.location.hash = '#overview';
