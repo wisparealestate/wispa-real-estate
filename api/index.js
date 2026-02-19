@@ -9,12 +9,7 @@ const { Pool } = pkg;
 const app = express();
 app.use(bodyParser.json());
 app.use(cors({
-  origin: [
-    "https://wispa-real-estate-one.vercel.app",
-    "https://wispa-real-estate-7be396p0g-wispas-projects-c5d60130.vercel.app",
-    process.env.FRONTEND_URL,
-    "*"
-  ],
+  origin: "*",
   credentials: true,
 }));
 // Handle preflight requests for all routes
