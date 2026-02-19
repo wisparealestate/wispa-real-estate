@@ -185,16 +185,9 @@
             <script>
                 // Hamburger menu dropdown toggle and header icon wiring
                 document.addEventListener('DOMContentLoaded', function() {
-                            // Restore last opened tab from localStorage
-                            if (window.location.pathname.endsWith('admin.html')) {
-                                var savedTab = '';
-                                try { savedTab = localStorage.getItem('adminCurrentTab'); } catch(e){}
-                                if (savedTab && document.getElementById(savedTab)) {
-                                    setTimeout(function() { switchTab(savedTab); }, 50);
-                                    // Update hash for consistency
-                                    window.location.hash = '#' + savedTab;
-                                }
-                            }
+                    // Always show overview tab by default
+                    setTimeout(function() { switchTab('overview'); }, 50);
+                    window.location.hash = '#overview';
                     var toggle = document.getElementById('hamburger-toggle');
                     var dropdown = document.querySelector('.menu-dropdown');
                     var label = document.querySelector('label[for="hamburger-toggle"]');
