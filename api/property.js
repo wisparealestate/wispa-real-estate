@@ -1,9 +1,6 @@
-import pkg from "pg";
-const { Pool } = pkg;
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-});
+
+// The pool will be imported from index.js
+import { pool } from "./index.js";
 
 // Add property with photos
 export async function addPropertyWithPhotos(property, photoUrls) {
