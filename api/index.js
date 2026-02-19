@@ -7,9 +7,31 @@ import { addPropertyWithPhotos } from "./property.js";
 
 const { Pool } = pkg;
 const app = express();
-app.use(cors());
+const allowedOrigins = ["https://wispa-real-estate-one.vercel.app"];
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 // Handle preflight requests for all routes
-app.options('*', cors());
+app.options('*', cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(bodyParser.json());
 const port = process.env.PORT || 3001;
 // PostgreSQL connection
