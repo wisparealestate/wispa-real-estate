@@ -1,14 +1,14 @@
 const bcrypt = require('bcrypt');
 const { Client } = require('pg');
 
-const password = 'WispaAdmin2026!'; // Choose a strong password
-const username = 'admin'; // Preferred admin username
-const email = 'admin@wispa.com';
+const password = 'Admin@Wispa2026'; // Admin password
+const username = 'admin'; // Admin username
+const email = 'admin@wispa.com'; // Admin email
 
 bcrypt.hash(password, 10, async (err, hash) => {
   if (err) throw err;
   const client = new Client({
-    connectionString: 'postgresql://wispa:vfeaLtDzgjPtIdBzfIYiZe1wM5brKzHr@dpg-d6acunfgi27c73d1sgsg-a.oregon-postgres.render.com/wispa', // Your DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
   await client.connect();
