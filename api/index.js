@@ -1,3 +1,39 @@
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
+import upload from "./upload.js";
+import path from "path";
+
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
+import upload from "./upload.js";
+import path from "path";
+
+const { Pool } = pkg;
+const app = express();
+app.use(cors({
+  origin: "https://wispa-real-estate-one.vercel.app"
+}));
+app.use(bodyParser.json());
+const port = process.env.PORT || 3001;
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Profile image upload endpoint
+app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  // Return the public URL to the uploaded image
+  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  res.json({ imageUrl });
+});
 // Update user's avatar_url after image upload
 app.post('/api/update-avatar-url', async (req, res) => {
   const { userId, avatarUrl } = req.body;
@@ -11,33 +47,6 @@ app.post('/api/update-avatar-url', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-import upload from "./upload.js";
-import path from "path";
-// Serve uploaded images statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-// Profile image upload endpoint
-app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  // Return the public URL to the uploaded image
-  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  res.json({ imageUrl });
-});
-
-const { Pool } = pkg;
-const app = express();
-app.use(cors({
-  origin: "https://wispa-real-estate-one.vercel.app"
-}));
-app.use(bodyParser.json());
-const port = process.env.PORT || 3001;
 // PostgreSQL connection
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
