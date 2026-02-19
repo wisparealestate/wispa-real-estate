@@ -22,6 +22,17 @@ app.get("/api/admin/messages", async (req, res) => {
     const app = express();
 
     app.use(bodyParser.json());
+
+    import express from "express";
+    import pkg from "pg";
+    import bcrypt from "bcrypt";
+    import bodyParser from "body-parser";
+    import cors from "cors";
+    import { addPropertyWithPhotos } from "./property.js";
+
+    const { Pool } = pkg;
+    const app = express();
+    app.use(bodyParser.json());
     app.use(cors({
       origin: [
         "https://real-estate-project-five-bice.vercel.app",
@@ -40,41 +51,6 @@ app.get("/api/admin/messages", async (req, res) => {
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
     });
-
-    // Get all user messages for admin chat
-  }
-  try {
-    const propertyId = await addPropertyWithPhotos(property, photoUrls);
-    res.json({ propertyId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-
-const { Pool } = pkg;
-const app = express();
-app.use(bodyParser.json());
-app.use(cors({
-  origin: [
-    "https://real-estate-project-five-bice.vercel.app",
-    "https://wispa-real-estate.vercel.app",
-    process.env.FRONTEND_URL
-  ],
-  credentials: true,
-}));
-
-// Handle preflight requests for all routes
-app.options("*", cors());
-const port = process.env.PORT || 3001;
-
-// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
