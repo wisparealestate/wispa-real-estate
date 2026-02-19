@@ -1,3 +1,7 @@
+// CORS test endpoint
+app.get("/cors-test", (req, res) => {
+  res.json({ message: "CORS is working!", origin: req.headers.origin || null });
+});
 import express from "express";
 import pkg from "pg";
 import bcrypt from "bcrypt";
