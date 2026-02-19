@@ -1,11 +1,3 @@
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-import upload from "./upload.js";
-import path from "path";
 
 import express from "express";
 import pkg from "pg";
