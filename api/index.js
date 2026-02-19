@@ -12,7 +12,8 @@ app.use(cors({
   origin: [
     "https://wispa-real-estate-one.vercel.app",
     "https://wispa-real-estate-7be396p0g-wispas-projects-c5d60130.vercel.app",
-    process.env.FRONTEND_URL
+    process.env.FRONTEND_URL,
+    "*"
   ],
   credentials: true,
 }));
