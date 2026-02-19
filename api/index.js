@@ -1,4 +1,5 @@
-// CORS test endpoint
+
+// CORS test endpoint (must be after app and CORS middleware)
 app.get("/cors-test", (req, res) => {
   res.json({ message: "CORS is working!", origin: req.headers.origin || null });
 });
