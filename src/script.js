@@ -1,4 +1,9 @@
 // ...existing code...
+
+// Always sync window.properties from localStorage on page load
+document.addEventListener('DOMContentLoaded', function() {
+    window.properties = JSON.parse(localStorage.getItem('properties') || '[]');
+});
 // Render admin chat list in the chat tab
 
 // Open chat conversation in fullview
