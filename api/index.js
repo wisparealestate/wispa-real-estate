@@ -7,12 +7,10 @@ import { addPropertyWithPhotos } from "./property.js";
 
 const { Pool } = pkg;
 const app = express();
-app.use(bodyParser.json());
 app.use(cors());
-// Handle preflight requests for all /api/* routes
-app.options('/api/*', cors());
-// Optionally, keep the global handler for other routes
+// Handle preflight requests for all routes
 app.options('*', cors());
+app.use(bodyParser.json());
 const port = process.env.PORT || 3001;
 // PostgreSQL connection
 export const pool = new Pool({
