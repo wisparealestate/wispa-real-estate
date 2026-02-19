@@ -40,31 +40,9 @@
     </div>
     <script>
         const form = document.getElementById('adminLoginForm');
-        const errorDiv = document.getElementById('adminLoginError');
         form.addEventListener('submit', function(e){
             e.preventDefault();
-            const email = form.adminEmail.value.trim();
-            const password = form.adminPassword.value;
-            const API_URL = (window.API_URL || 'https://wispa-real-estate-2ew3.onrender.com');
-            fetch(API_URL + '/api/admin-login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: email, password })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    errorDiv.textContent = data.error;
-                    errorDiv.style.display = 'block';
-                } else {
-                    localStorage.setItem('wispaAdmin', JSON.stringify(data.admin));
-                    window.location.href = 'admin.html';
-                }
-            })
-            .catch(() => {
-                errorDiv.textContent = 'Login failed. Please try again.';
-                errorDiv.style.display = 'block';
-            });
+            window.location.href = 'index.html';
         });
     </script>
 </body>
