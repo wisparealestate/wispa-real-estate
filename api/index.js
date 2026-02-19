@@ -1,9 +1,7 @@
 // ...existing code...
 // ...existing code...
 // ...removed duplicate import of bcrypt...
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
+
 
 const { Pool } = pkg;
 const app = express();
