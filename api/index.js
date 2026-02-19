@@ -1,3 +1,16 @@
+// Update user's avatar_url after image upload
+app.post('/api/update-avatar-url', async (req, res) => {
+  const { userId, avatarUrl } = req.body;
+  if (!userId || !avatarUrl) {
+    return res.status(400).json({ error: 'Missing userId or avatarUrl' });
+  }
+  try {
+    await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 import express from "express";
 import pkg from "pg";
 import bcrypt from "bcrypt";
