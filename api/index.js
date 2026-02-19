@@ -10,7 +10,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors({
   origin: "*",
-  credentials: true,
+  credentials: false,
 }));
 // Handle preflight requests for all routes
 app.options("*", cors());
