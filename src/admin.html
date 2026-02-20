@@ -520,14 +520,23 @@
                     async function renderRecentPropertiesUnified() {
                         const tbody = document.getElementById('recent-properties-tbody');
                         if (!tbody) return;
+                        // local helpers to match main properties table
+                        function formatEightId(id){
+                            const s = String(id || '');
+                            if (s.length >= 8) return s.slice(-8);
+                            return s.padStart(8, '0');
+                        }
+                        function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>\"]+/g, function(ch){ switch(ch){ case '&': return '&amp;'; case '<': return '&lt;'; case '>': return '&gt;'; case '"': return '&quot;'; } return ch; }); }
+
                         let props = [];
                         try {
                             const r = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
-                            if (r && r.ok) {
-                                const j = await r.json();
-                                props = j.properties || [];
-                            }
+                            if (!r) throw new Error('No response');
+                            let data = null;
+                            if (typeof r.json === 'function') data = await r.json(); else data = r;
+                            if (Array.isArray(data)) props = data; else if (data && Array.isArray(data.properties)) props = data.properties; else props = [];
                         } catch (e) { props = []; }
+
                         props.sort((a, b) => new Date(b.posted || b.created || b.date || 0) - new Date(a.posted || a.created || a.date || 0));
                         const recent = props.slice(0, 5);
                         tbody.innerHTML = '';
@@ -536,18 +545,25 @@
                             return;
                         }
                         recent.forEach(p => {
+                            const displayId = formatEightId(p.id || p.propertyId || Date.now());
+                            const title = p.title || p.name || 'Untitled';
+                            const type = p.type || p.postTo || '';
+                            const price = p.price ? Number(p.price) : 0;
+                            const location = p.location || p.address || '';
+                            const status = p.status || (p.active ? 'Active' : 'Active');
+
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
-                                <td>#${p.id}</td>
-                                <td>${p.title || p.name || 'Untitled'}</td>
-                                <td>${p.type || ''}</td>
-                                <td>€${(p.price||0).toLocaleString()}</td>
-                                <td>${p.location || ''}</td>
-                                <td><span class="badge active">${p.status||'Active'}</span></td>
+                                <td>#${displayId}</td>
+                                <td>${escapeHtml(title)}</td>
+                                <td>${escapeHtml(type)}</td>
+                                <td>€${price.toLocaleString()}</td>
+                                <td>${escapeHtml(location)}</td>
+                                <td><span class="badge active">${escapeHtml(status)}</span></td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="btn-sm edit" data-id="${p.id}" onclick="viewProperty('${p.id}')">View</button>
-                                        <button class="btn-sm" style="background:#2ecc71;color:white;font-size:11px;" onclick="openPropertyDoc('${p.id}')">📄</button>
+                                        <button class="btn-sm edit" data-id="${displayId}" onclick="viewProperty('${p.id || displayId}')">View</button>
+                                        <button class="btn-sm" style="background:#2ecc71;color:white;font-size:11px;" onclick="openPropertyDoc('${p.id || displayId}')">📄</button>
                                     </div>
                                 </td>
                             `;
