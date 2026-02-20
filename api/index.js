@@ -303,8 +303,11 @@ app.post("/api/properties", async (req, res) => {
   }
 
   try {
-    const propertyId = await addPropertyWithPhotos(property, photoUrls);
-    res.json({ propertyId });
+    const resObj = await addPropertyWithPhotos(property, photoUrls);
+    // resObj contains { property, propertyId }
+    if (resObj && resObj.property) return res.json({ property: resObj.property, propertyId: resObj.propertyId });
+    if (resObj && resObj.propertyId) return res.json({ propertyId: resObj.propertyId });
+    return res.json({ propertyId: resObj });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

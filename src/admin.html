@@ -3172,9 +3172,14 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             // apiFetch may return parsed JSON
                             let data;
                             if (res && typeof res.json === 'function') data = await res.json(); else data = res;
-                            if (data && data.propertyId) {
-                                // mark as synced with server id to avoid duplicate posts
-                                props[idx]._serverId = data.propertyId;
+                            if (data) {
+                                // If server returned full property object, merge it into local props
+                                if (data.property) {
+                                    props[idx] = Object.assign({}, props[idx] || {}, data.property);
+                                    props[idx]._serverId = data.propertyId || data.property.id || props[idx]._serverId;
+                                } else if (data.propertyId) {
+                                    props[idx]._serverId = data.propertyId;
+                                }
                                 try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
                             }
                         } catch (e) {
