@@ -526,6 +526,26 @@
                             if (s.length >= 8) return s.slice(-8);
                             return s.padStart(8, '0');
                         }
+
+                        // Normalize property shape from different backends/fallbacks
+                        function normalizeProperty(raw){
+                            if(!raw) return {};
+                            // if wrapped like { property: { ... }, propertyId }
+                            let p = raw.property || raw;
+                            // if nested further (e.g., { property: { property: {...} } })
+                            if (p && p.property) p = p.property;
+                            const out = {};
+                            out.id = p.id || raw.id || raw.propertyId || p.propertyId || String(Date.now()).slice(-8);
+                            out.title = p.title || p.name || p.headline || p.description || '';
+                            out.type = p.type || p.postTo || p.property_type || p.saleRent || p.category || '';
+                            out.price = (p.price !== undefined && p.price !== null) ? Number(p.price) : (p.list_price || 0);
+                            out.location = p.location || p.address || (p.city ? (p.city + (p.state ? ', ' + p.state : '')) : '') || p.location_string || '';
+                            out.status = p.status || (p.active ? 'Active' : (p.state || 'Active'));
+                            out.images = p.images || p.photos || (p.image_url ? [p.image_url] : (p.image ? [p.image] : []));
+                            out.bedrooms = p.bedrooms || p.beds || null;
+                            out.bathrooms = p.bathrooms || p.baths || null;
+                            return out;
+                        }
                         function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>\"]+/g, function(ch){ switch(ch){ case '&': return '&amp;'; case '<': return '&lt;'; case '>': return '&gt;'; case '"': return '&quot;'; } return ch; }); }
 
                         let props = [];
@@ -545,12 +565,13 @@
                             return;
                         }
                         recent.forEach(p => {
-                            const displayId = formatEightId(p.id || p.propertyId || Date.now());
-                            const title = p.title || p.name || 'Untitled';
-                            const type = p.type || p.postTo || p.property_type || p.saleRent || '';
-                            const price = p.price ? Number(p.price) : 0;
-                            const location = p.location || p.address || ((p.city || '') + (p.state ? ', ' + p.state : '')) || p.location_string || '';
-                            const status = p.status || (p.active ? 'Active' : 'Active');
+                            const np = normalizeProperty(p);
+                            const displayId = formatEightId(np.id);
+                            const title = np.title || 'Untitled';
+                            const type = np.type || '';
+                            const price = np.price || 0;
+                            const location = np.location || '';
+                            const status = np.status || 'Active';
 
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
@@ -621,6 +642,24 @@
                         </table>
                         <script>
                         // Fetch and render properties from backend API
+                        // Normalize property shape (duplicate of recent renderer) so both views behave the same
+                        function normalizeProperty(raw){
+                            if(!raw) return {};
+                            let p = raw.property || raw;
+                            if (p && p.property) p = p.property;
+                            const out = {};
+                            out.id = p.id || raw.id || raw.propertyId || p.propertyId || String(Date.now()).slice(-8);
+                            out.title = p.title || p.name || p.headline || p.description || '';
+                            out.type = p.type || p.postTo || p.property_type || p.saleRent || p.category || '';
+                            out.price = (p.price !== undefined && p.price !== null) ? Number(p.price) : (p.list_price || 0);
+                            out.location = p.location || p.address || (p.city ? (p.city + (p.state ? ', ' + p.state : '')) : '') || p.location_string || '';
+                            out.status = p.status || (p.active ? 'Active' : (p.state || 'Active'));
+                            out.images = p.images || p.photos || (p.image_url ? [p.image_url] : (p.image ? [p.image] : []));
+                            out.bedrooms = p.bedrooms || p.beds || null;
+                            out.bathrooms = p.bathrooms || p.baths || null;
+                            return out;
+                        }
+
                         function formatEightId(id){
                             const s = String(id || '');
                             if (s.length >= 8) return s.slice(-8);
