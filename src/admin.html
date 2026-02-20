@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!-- Admin access restriction removed for now -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wispa Real Estate Admin Panel</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
             <!-- Mobile navigation buttons required by script.js -->
@@ -975,18 +981,77 @@
                     // Render All Alerts (combines sent and received)
                     function renderAllAlerts() {
                         const sent = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]');
-                        const received = getReceivedAlerts();
-                        const all = [
-                            ...sent.map(s => ({
-                                type: 'Sent',
-                                source: s.recipient || s.to || 'User',
-                                title: s.title || s.message || 'Alert',
-                                date: s.sentAt || s.date || '',
-                                status: s.status || 'Sent',
+                        const received = [];
+                        // Combine received from various sources
+                        try {
+                            const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                            chats.forEach(c => received.push({
+                                type: 'Chat',
+                                source: c.userName || c.participantName || c.participantId || 'User',
+                                title: c.conversationTitle || 'Chat Message',
+                                date: c.lastMessageDate || c.timestamp || c.date || '',
+                                status: c.read ? 'Read' : 'Unread',
                                 actions: ''
-                            })),
-                            ...received
-                        ];
+                            }));
+                            const reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
+                            reactions.forEach(r => received.push({
+                                type: 'Reaction',
+                                source: r.user || 'User',
+                                title: r.message || 'Post Reaction',
+                                date: r.date || '',
+                                status: r.read ? 'Read' : 'Unread',
+                                actions: ''
+                            }));
+                            const requests = JSON.parse(localStorage.getItem('propertyRequests') || '[]');
+                            requests.forEach(req => received.push({
+                                type: 'Property Request',
+                                source: req.user || req.email || 'User',
+                                title: req.message || req.request || 'Request',
+                                date: req.date || '',
+                                status: req.read ? 'Read' : 'Unread',
+                                actions: ''
+                            }));
+                            const contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+                            contacts.forEach(msg => received.push({
+                                type: 'Contact',
+                                source: msg.name || msg.email || 'User',
+                                title: msg.message || msg.subject || 'Contact Message',
+                                date: msg.date || '',
+                                status: msg.read ? 'Read' : 'Unread',
+                                actions: ''
+                            }));
+                            const attackers = JSON.parse(localStorage.getItem('systemAttackers') || '[]');
+                            attackers.forEach(a => received.push({
+                                type: 'Attacker',
+                                source: a.ip || a.user || 'Unknown',
+                                title: a.reason || 'Attack Attempt',
+                                date: a.date || '',
+                                status: a.status || 'Blocked',
+                                actions: ''
+                            }));
+                            // Simulate document generation
+                            const docs = JSON.parse(localStorage.getItem('propertyDocs') || '[]');
+                            docs.forEach(doc => received.push({
+                                type: 'Property Document',
+                                source: doc.propertyId,
+                                title: doc.propertyTitle,
+                                date: doc.generated,
+                                status: 'Generated',
+                                actions: ''
+                            }));
+                        } catch(e) {}
+                        // Combine sent and received
+                        const all = [];
+                        sent.forEach(s => all.push({
+                            type: 'Sent',
+                            source: s.recipient || s.to || 'User',
+                            title: s.title || s.message || 'Alert',
+                            date: s.sentAt || s.date || '',
+                            status: s.status || 'Sent',
+                            actions: ''
+                        }));
+                        received.forEach(r => all.push(r));
+                        // Sort by date descending if possible
                         all.sort((a, b) => new Date(b.date) - new Date(a.date));
                         const tbody = document.getElementById('all-alerts-tbody');
                         if (!tbody) return;
@@ -1221,6 +1286,16 @@ function renderAllAlerts() {
             status: a.status || 'Blocked',
             actions: ''
         }));
+        // Simulate document generation
+        const docs = JSON.parse(localStorage.getItem('propertyDocs') || '[]');
+        docs.forEach(doc => received.push({
+            type: 'Property Document',
+            source: doc.propertyId,
+            title: doc.propertyTitle,
+            date: doc.generated,
+            status: 'Generated',
+            actions: ''
+        }));
     } catch(e) {}
     // Combine sent and received
     const all = [];
@@ -1308,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         <div id="create-content" class="notif-tab-content" style="display:none;">
                             <div class="admin-section" style="text-align:center;">
                                 <h2>Create & Send Alert</h2>
-                                <button class="btn-primary" onclick="openModal('sendMessage')" style="font-size:1.2rem;padding:18px 36px;margin-top:24px;">Open Send Notification Page</button>
+                                <button class="btn-primary" onclick="openModal('sendMessage')">Open Send Notify Page</button>
                             </div>
                         </div>
 
@@ -1483,7 +1558,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     <label for="user-search-input">Search User (Email, Username, or ID)</label>
                     <div style="position:relative;">
                         <input type="text" id="user-search-input" name="user-search-input" placeholder="e.g., john@email.com or john_doe or user#123" autocomplete="off">
-                        <div id="user-search-results" style="position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;max-height:200px;overflow-y:auto;display:none;z-index:100;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                        <div id="user-search-results" style="position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-top:none;max-height:200px;overflow-y:auto;display:none;z-index:100;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
                         </div>
                     </div>
                     <label for="selected-user-id" style="display:none;">Selected User ID</label>
@@ -2304,8 +2379,8 @@ document.addEventListener('DOMContentLoaded', function(){
                     originalData: reaction
                 }));
 
-                const sentNotifications = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]');
-                sentNotifications.filter(s => s.notificationType === 'property' || s.notificationType === 'post').forEach(notif => notifications.push({
+                const sentNotifications = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]').filter(s => s.notificationType === 'property' || s.notificationType === 'post');
+                sentNotifications.forEach(notif => notifications.push({
                     type: '📰 Post Notification',
                     source: 'Admin Post',
                     description: notif.title || notif.message || 'Post action',
@@ -2316,18 +2391,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 try{
                     const activity = JSON.parse(localStorage.getItem('activityLog') || '[]');
-                    activity.forEach(a => {
-                        if(a && typeof a.type === 'string' && /post|property|admin-post|post-created|post-edit/i.test(a.type)){
-                            notifications.push({
-                                type: '📰 Post Activity',
-                                source: 'Activity Log',
-                                description: a.title || a.details || a.type,
-                                date: a.timestamp || a.date || new Date().toISOString(),
-                                status: a.read ? '✓ Read' : '⚠ Unread',
-                                originalData: a
-                            });
-                        }
-                    });
+                    activity.filter(a => a && typeof a.type === 'string' && /post|property|admin-post|post-created|post-edit/i.test(a.type)).forEach(n => notifications.push(Object.assign({ _type: 'activity', date: n.timestamp || n.date }, n)));
                 }catch(e){}
             }
 
@@ -3001,7 +3065,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
                     let props = loadProperties();
                     const id = form['property-id'].value;
                     const files = Array.from(form['media'].files || []);
-                    const mediaFiles = files.length;
+                    const mediaFiles = files.length
 
                     // helper to read a File to data URL
                     function fileToDataURL(file){
@@ -3094,10 +3158,10 @@ reports@wispa.com | +EU-SUPPORT-LINE
                     tr.innerHTML = `
                         <td><span style="color:${statusColor};font-size:18px;">${statusIcon}</span></td>
                         <td><strong>${msg.name}</strong></td>
-                        <td><a href="mailto:${msg.email}" style="color:var(--primary);text-decoration:none;">${msg.email}</a></td>
+                        <td>${msg.email}</td>
                         <td>${msg.phone}</td>
                         <td>${msg.subject}</td>
-                        <td style="font-size:14px;color:var(--text-light);">${msg.timestamp}</td>
+                        <td style="font-size:14px;color:var(--text-light);">${new Date(msg.timestamp).toLocaleDateString()}</td>
                         <td>
                             <div class="action-buttons">
                                 <button class="btn-sm edit" onclick="viewMessage('${msg.id}')" style="background:#3498db;color:white;padding:6px 10px;font-size:12px;">View</button>
@@ -3201,7 +3265,6 @@ reports@wispa.com | +EU-SUPPORT-LINE
 
             // === ADMIN NOTIFICATIONS MANAGEMENT ===
             function switchNotificationTab(tabName) {
-                            // ...existing code...
                 // Ensure switchNotificationTab is globally available for inline onclick
                 if (typeof window !== 'undefined') window.switchNotificationTab = switchNotificationTab;
                 // Hide all tabs
@@ -4348,4 +4411,3 @@ reports@wispa.com | +EU-SUPPORT-LINE
     </script>
 </body>
 </html>
-                  
