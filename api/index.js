@@ -175,10 +175,7 @@ app.post('/api/admin/sync', async (req, res) => {
   }
 });
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  // Return the public URL to the uploaded image
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
   res.json({ imageUrl });
 });
@@ -188,7 +185,6 @@ app.post('/api/notifications', async (req, res) => {
   const { userId, notification } = req.body || {};
   if (!userId || !notification) return res.status(400).json({ error: 'Missing userId or notification' });
   try {
-    // Try DB insert first
     try {
       const result = await pool.query(
         'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
@@ -196,7 +192,6 @@ app.post('/api/notifications', async (req, res) => {
       );
       return res.json({ notification: result.rows[0] });
     } catch (e) {
-      // Fallback to file
       const all = await readJson('notifications.json');
       all.unshift(Object.assign({ userId: userId }, notification));
       await writeJson('notifications.json', all);
@@ -213,16 +208,13 @@ app.post('/api/conversations/messages', async (req, res) => {
   if (!convId || !message) return res.status(400).json({ error: 'Missing convId or message' });
   try {
     try {
-      // If a messages table exists, insert into it
       const result = await pool.query(
         'INSERT INTO messages (conversation_id, sender, body, meta, sent_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
         [convId, message.sender || null, message.text || message.body || null, JSON.stringify(message || {}), message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]
       );
       return res.json({ message: result.rows[0] });
     } catch (e) {
-      // Fallback: store conversation object in conversations.json
       const all = await readJson('conversations.json');
-      // Find conversation array entry
       let conv = all.find(c => c.id === convId);
       if (!conv) {
         conv = { id: convId, messages: [] };
@@ -238,36 +230,12 @@ app.post('/api/conversations/messages', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // Update user's avatar_url after image upload
 app.post('/api/update-avatar-url', async (req, res) => {
   const { userId, avatarUrl } = req.body;
-  if (!userId || !avatarUrl) {
-    return res.status(400).json({ error: 'Missing userId or avatarUrl' });
-  }
+  if (!userId || !avatarUrl) return res.status(400).json({ error: 'Missing userId or avatarUrl' });
   try {
-// Get notifications for a user (real DB)
-app.get("/api/notifications", async (req, res) => {
-  const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "Missing userId" });
-  try {
-    const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-    res.json({ notifications: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get conversations for a user (real DB)
-app.get("/api/conversations", async (req, res) => {
-  const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "Missing userId" });
-  try {
-    const result = await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId]);
-    res.json({ conversations: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
     await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, userId]);
     res.json({ success: true });
   } catch (err) {
@@ -276,8 +244,8 @@ app.get("/api/conversations", async (req, res) => {
 });
 
 // CORS test endpoint (must be after app and CORS middleware)
-app.get("/cors-test", (req, res) => {
-  res.json({ message: "CORS is working!", origin: req.headers.origin || null });
+app.get('/cors-test', (req, res) => {
+  res.json({ message: 'CORS is working!', origin: req.headers.origin || null });
 });
 
 // Get all user messages for admin chat
@@ -387,27 +355,7 @@ app.get("/api/properties", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-    const result = await pool.query("SELECT * FROM properties ORDER BY created_at DESC");
-    res.json({ properties: result.rows });
-  } catch (err) {
-  try {
-    try {
-      const propertyId = await addPropertyWithPhotos(property, photoUrls);
-      return res.json({ propertyId });
-    } catch (e) {
-      // Fallback: store to data/properties.json
-      const all = await readJson('properties.json');
-      // Assign a synthetic id if none
-      const newId = (all.length ? Math.max(...all.map(p => Number(p.id) || 0)) + 1 : Date.now());
-      const entry = Object.assign({ id: newId, created_at: new Date().toISOString() }, property);
-      if (photoUrls && photoUrls.length) entry.images = photoUrls;
-      all.unshift(entry);
-      await writeJson('properties.json', all);
-      return res.json({ propertyId: newId, fallback: true });
-    }
-    res.status(500).json({ error: err.message });
-  }
-});
+ 
 
 // Delete a property by id (DB-first, fallback to file)
 app.delete('/api/properties/:id', async (req, res) => {
