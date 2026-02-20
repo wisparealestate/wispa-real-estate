@@ -923,7 +923,11 @@
                         priceRow.className = 'property-price-row';
 
                         // Insert priceRow before the priceElem and move priceElem into it
-                        propertyInfo.insertBefore(priceRow, priceElem);
+                        if (priceElem && priceElem.parentElement === propertyInfo) {
+                            propertyInfo.insertBefore(priceRow, priceElem);
+                        } else {
+                            propertyInfo.appendChild(priceRow);
+                        }
                         priceRow.appendChild(priceElem);
 
                         // We removed the like button for index page; keep price row without it
@@ -976,13 +980,17 @@
                     const locDiv = card.querySelector('.location-with-like');
                     if (locDiv) {
                         const locTextElem = locDiv.querySelector('.location');
-                        if (locTextElem) {
-                            const newLoc = document.createElement('p');
-                            newLoc.className = 'location';
-                            newLoc.textContent = locTextElem.textContent;
-                            // insert before footer
-                            propertyInfo.insertBefore(newLoc, footer);
-                        }
+                            if (locTextElem) {
+                                const newLoc = document.createElement('p');
+                                newLoc.className = 'location';
+                                newLoc.textContent = locTextElem.textContent;
+                                // insert before footer if footer is still a child, otherwise append
+                                if (footer && footer.parentElement === propertyInfo) {
+                                    propertyInfo.insertBefore(newLoc, footer);
+                                } else {
+                                    propertyInfo.appendChild(newLoc);
+                                }
+                            }
                         // remove original location-with-like container
                         locDiv.remove();
                     }
