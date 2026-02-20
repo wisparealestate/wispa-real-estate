@@ -1,3 +1,5 @@
+/* Always show hamburger menu and header-right in admin header */
+.admin-header .header-right, .admin-header .hamburger-menu { display: flex !important; visibility: visible !important; opacity: 1 !important; }
 /* Force admin header and hamburger menu always visible */
 .admin-header, .hamburger-menu, .header-right { display: flex !important; visibility: visible !important; opacity: 1 !important; }
 /* ==================================================
