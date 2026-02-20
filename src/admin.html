@@ -1670,12 +1670,12 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             <form>
                 <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" placeholder="Agent Name" required>
+                    <label for="agentName">Full Name</label>
+                    <input type="text" id="agentName" name="agentName" placeholder="Agent Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" placeholder="agent@wispa.com" required>
+                    <label for="agentEmail">Email</label>
+                    <input type="email" id="agentEmail" name="agentEmail" placeholder="agent@wispa.com" required>
                 </div>
                 <button class="btn-primary" type="submit">Add Agent</button>
             </form>
