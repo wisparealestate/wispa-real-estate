@@ -1,4 +1,3 @@
-import pkg from "pg";
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import cors from "cors";
