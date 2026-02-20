@@ -1539,11 +1539,19 @@ if (typeof propertyImageIds === 'undefined') {
         // Try to persist message to server; fallback to localStorage
         (async function(){
             try {
-                await fetch('/api/conversations/messages', {
+                const opts = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ convId: convId, message: msg })
-                });
+                };
+                try {
+                    const poster = window.apiFetch ? window.apiFetch : fetch;
+                    const r = await poster('/api/conversations/messages', opts);
+                    if (!r || !r.ok) throw new Error('Post failed');
+                } catch (e) {
+                    // fallback to localStorage
+                    try { localStorage.setItem(key, JSON.stringify(list)); } catch(err){}
+                }
             } catch (e) {
                 // fallback to localStorage
                 try { localStorage.setItem(key, JSON.stringify(list)); } catch(err){}
