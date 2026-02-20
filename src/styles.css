@@ -1,3 +1,5 @@
+/* Force admin header and hamburger menu always visible */
+.admin-header, .hamburger-menu, .header-right { display: flex !important; visibility: visible !important; opacity: 1 !important; }
 /* ==================================================
      ADMIN DASHBOARD LAYOUT & COMPONENTS
      ================================================== */
