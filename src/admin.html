@@ -3153,11 +3153,19 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                 photoUrls: Array.isArray(p.images) ? p.images : (p.photos || [])
                             };
 
+                            console.debug('admin.saveProperties: posting property to API', body);
                             const res = await poster('/api/properties', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(body)
                             });
+                            // If the response is a Response and not ok, capture text for debugging
+                            if (res && typeof res.ok === 'boolean' && !res.ok) {
+                                try {
+                                    const t = await res.text();
+                                    console.error('admin.saveProperties: API returned non-ok', res.status, t);
+                                } catch (e) { console.error('admin.saveProperties: API returned non-ok and text read failed', e); }
+                            }
                             // apiFetch may return parsed JSON
                             let data;
                             if (res && typeof res.json === 'function') data = await res.json(); else data = res;
