@@ -1419,6 +1419,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         </div>
 
                         <div style="width:100%;">
+                            <label for="admin-chat-search" style="font-size:13px;color:var(--text-light);margin-bottom:4px;display:block;">Search Users or Emails</label>
                             <input id="admin-chat-search" placeholder="Search users or emails..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;" oninput="adminSearchUsers(this.value)">
                             <div id="admin-chat-search-results" style="display:none;background:var(--white);border:1px solid var(--border);border-top:none;max-height:220px;overflow:auto;margin-top:6px;border-radius:6px;position:relative;z-index:50;"></div>
                         </div>
@@ -1437,6 +1438,7 @@ document.addEventListener('DOMContentLoaded', function(){
                             </div>
                             <div id="chat-full-messages" style="background:var(--lighter);padding:12px;border-radius:8px;min-height:240px;max-height:56vh;overflow:auto;margin-bottom:8px;"></div>
                             <div style="display:flex;gap:8px;">
+                                <label for="chat-full-input" style="font-size:13px;color:var(--text-light);margin-right:8px;">Write a Message</label>
                                 <input id="chat-full-input" placeholder="Write a message..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;" disabled>
                                 <button class="btn-primary" onclick="sendAdminMessage()">Send</button>
                             </div>
