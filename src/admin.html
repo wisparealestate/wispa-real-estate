@@ -314,10 +314,28 @@
                 conversations: '/api/conversations'
             };
 
+            const API_BASE = window.WISPA_API_BASE || '';
+            // Try a relative fetch first, then fallback to configured API base if provided
+            async function apiFetch(url, opts) {
+                try {
+                    const r = await fetch(url, opts);
+                    if (r.ok) return r;
+                    // if 404 or other non-ok, fall through to try base
+                } catch (e) { /* ignore */ }
+                if (API_BASE) {
+                    try {
+                        const full = API_BASE.replace(/\/$/, '') + url;
+                        const r2 = await fetch(full, opts);
+                        return r2;
+                    } catch (e) { /* ignore */ }
+                }
+                return null;
+            }
+
             async function fetchAndStore(key, url) {
                 try {
-                    const res = await fetch(url);
-                    if (!res.ok) return;
+                    const res = await apiFetch(url);
+                    if (!res || !res.ok) return;
                     const data = await res.json();
                     try { localStorage.setItem(key, JSON.stringify(data)); } catch(e){}
                 } catch (e) { /* ignore */ }
@@ -606,7 +624,7 @@
                                             if (!tbody) return;
                                             let users = [];
                                             try {
-                                                const res = await fetch('/api/users');
+                                                const res = await (window.apiFetch ? window.apiFetch('/api/users') : fetch('/api/users'));
                                                 const data = await res.json();
                                                 users = data.users || [];
                                             } catch (e) {
