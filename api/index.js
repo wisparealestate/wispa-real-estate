@@ -130,6 +130,27 @@ app.post("/api/admin-login", async (req, res) => {
   }
 });
 
+
+// Get all users
+app.get("/api/users", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT id, username, email, full_name, role, created_at, avatar_url FROM users ORDER BY created_at DESC");
+    res.json({ users: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all properties
+app.get("/api/properties", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM properties ORDER BY created_at DESC");
+    res.json({ properties: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Wispa Real Estate Backend is running!");
 });
