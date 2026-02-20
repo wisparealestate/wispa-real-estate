@@ -261,10 +261,26 @@ app.get("/api/admin/messages", async (req, res) => {
 
 // Property upload endpoint
 app.post("/api/properties", async (req, res) => {
-  const { property, photoUrls } = req.body;
-  if (!property || !photoUrls || !Array.isArray(photoUrls)) {
-    return res.status(400).json({ error: "Missing property or photo URLs" });
+  // Accept multiple client shapes: { property, photoUrls },
+  // { property, photos }, { property, images }, or a top-level property object
+  const body = req.body || {};
+  let property = body.property || null;
+  let photoUrls = body.photoUrls || body.photos || body.images || null;
+
+  // If client sent top-level fields (title, price, etc.) treat body as property
+  if (!property && (body.title || body.price || body.address || body.city)) {
+    property = body;
+    // try to extract photos from common keys
+    photoUrls = photoUrls || body.photoUrls || body.photos || body.images || [];
   }
+
+  // Ensure photoUrls is an array (default to empty array)
+  if (!Array.isArray(photoUrls)) photoUrls = [];
+
+  if (!property || typeof property !== 'object') {
+    return res.status(400).json({ error: 'Missing or invalid property object', received: body });
+  }
+
   try {
     const propertyId = await addPropertyWithPhotos(property, photoUrls);
     res.json({ propertyId });
