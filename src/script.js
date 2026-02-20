@@ -1893,40 +1893,41 @@ if (typeof propertyImageIds === 'undefined') {
 
     // Update data loading functions to use API endpoints
     function loadProperties() {
-        // Prefer persisted properties in localStorage so front-end editors (admin.html) show changes
-        try {
-            const stored = localStorage.getItem('properties');
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    console.debug('loadProperties: parsed properties from localStorage, length=', Array.isArray(parsed) ? parsed.length : 'not-array');
-                    if (Array.isArray(parsed)) {
-                        properties = parsed;
-                        filteredProperties = [...properties];
-                        return Promise.resolve(properties);
-                    }
-                } catch (err) {
-                    console.warn('loadProperties: failed parsing localStorage properties', err);
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to parse stored properties', e);
-        }
-
-        // If not found in localStorage, fetch from API
-        return fetch('/api/properties')
-            .then(response => response.json())
+        // Prefer server state: try API first, then fall back to localStorage when offline
+        const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+        return poster('/api/properties')
+            .then(resp => {
+                if (!resp || (resp.ok === false && typeof resp.json !== 'function')) throw new Error('API fetch failed');
+                // If using native fetch, resp may be a Response; otherwise apiFetch returns parsed json
+                if (typeof resp.json === 'function') return resp.json();
+                return resp;
+            })
             .then(data => {
                 properties = Array.isArray(data.properties) ? data.properties : [];
                 filteredProperties = [...properties];
+                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
                 renderProperties(filteredProperties);
                 return properties;
             })
             .catch(err => {
-                console.error('Failed to load properties from API', err);
+                // Fallback to localStorage for offline/editor use
+                try {
+                    const stored = localStorage.getItem('properties');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        if (Array.isArray(parsed)) {
+                            properties = parsed;
+                            filteredProperties = [...properties];
+                            renderProperties(filteredProperties);
+                            return Promise.resolve(properties);
+                        }
+                    }
+                } catch (e) { console.warn('loadProperties fallback failed', e); }
+                console.warn('Failed to load properties from API, using empty list', err);
                 properties = [];
                 filteredProperties = [];
-                return properties;
+                renderProperties(filteredProperties);
+                return Promise.resolve(properties);
             });
     }
 
@@ -1937,18 +1938,24 @@ if (typeof propertyImageIds === 'undefined') {
                 property: property,
                 photoUrls: Array.isArray(property.photoUrls) ? property.photoUrls : (property.photos || [])
             };
-            return fetch('/api/properties', {
+            const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+            return poster('/api/properties', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             })
             .then(async response => {
-                if (!response.ok) throw new Error('API save failed');
-                const data = await response.json();
-                // Add returned id to property and persist locally as well
-                if (data.propertyId) property.id = data.propertyId;
-                properties.push(property);
-                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+                // apiFetch may return parsed JSON or a Response
+                let data;
+                if (!response) throw new Error('No response from API');
+                if (typeof response.json === 'function') {
+                    if (!response.ok) throw new Error('API save failed');
+                    data = await response.json();
+                } else {
+                    data = response;
+                }
+                // After a successful save, refresh server state so all devices sync
+                try { await loadProperties(); } catch(e) { /* ignore */ }
                 return property;
             })
             .catch(err => {
@@ -1964,6 +1971,11 @@ if (typeof propertyImageIds === 'undefined') {
             return Promise.resolve(property);
         }
     }
+
+    // Refresh properties from server when tab/window gains focus so different devices converge
+    window.addEventListener('focus', () => {
+        try { loadProperties(); } catch(e) {}
+    });
 
     function loadLikedProperties() {
         // Try to load from localStorage first
