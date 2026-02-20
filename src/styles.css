@@ -1,3 +1,152 @@
+/* ==================================================
+     ADMIN DASHBOARD LAYOUT & COMPONENTS
+     ================================================== */
+.admin-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 16px;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.admin-sidebar {
+    width: 240px;
+    background: var(--lighter);
+    border-radius: 10px;
+    padding: 24px 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.admin-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.admin-tab {
+    padding: 10px 22px;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    color: var(--text-light);
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+}
+.admin-tab.active {
+    background: var(--white);
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+}
+
+.admin-section {
+    background: var(--lighter);
+    border-radius: 8px;
+    padding: 24px 18px;
+    box-shadow: var(--shadow);
+    margin-bottom: 18px;
+}
+
+.stat-cards {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+.stat-card {
+    flex: 1;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 18px 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+.stat-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    color: var(--primary);
+}
+.stat-card p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 16px;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.quick-actions button {
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.quick-actions button:hover {
+    background: var(--primary-dark);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+.admin-table th, .admin-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+.admin-table th {
+    background: var(--lighter);
+    color: var(--primary);
+    font-weight: 600;
+}
+.admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+@media (max-width: 900px) {
+    .admin-layout {
+        flex-direction: column;
+        padding: 16px 4px;
+    }
+    .admin-sidebar {
+        width: 100%;
+        flex-direction: row;
+        gap: 10px;
+        padding: 12px 4px;
+        margin-bottom: 12px;
+    }
+    .admin-main {
+        padding: 0;
+    }
+    .stat-cards {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
 /* =============================
      ICON ANIMATION FOR OPENED STATE
      ============================= */
