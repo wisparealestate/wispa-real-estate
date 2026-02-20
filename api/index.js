@@ -1,3 +1,39 @@
+// Get all properties
+app.get("/api/properties", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM properties ORDER BY id DESC");
+    res.json({ properties: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update a property
+app.put("/api/properties/:id", async (req, res) => {
+  const { id } = req.params;
+  const { property } = req.body;
+  if (!property) return res.status(400).json({ error: "Missing property data" });
+  try {
+    await pool.query(
+      "UPDATE properties SET title=$1, description=$2, price=$3, address=$4, city=$5, state=$6, zip_code=$7, image_url=$8 WHERE id=$9",
+      [property.title, property.description, property.price, property.address, property.city, property.state, property.zip_code, property.image_url || null, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a property
+app.delete("/api/properties/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM properties WHERE id = $1", [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 import express from "express";
 import pkg from "pg";
