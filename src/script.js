@@ -1904,6 +1904,18 @@ if (typeof propertyImageIds === 'undefined') {
             })
             .then(data => {
                 properties = Array.isArray(data.properties) ? data.properties : [];
+                // Normalize backend fields to frontend shape so images display correctly
+                properties = properties.map(p => {
+                    const prop = Object.assign({}, p);
+                    if (prop.image_url && !prop.image) prop.image = prop.image_url;
+                    if (prop.image_url && (!prop.images || !Array.isArray(prop.images) || prop.images.length === 0)) prop.images = [prop.image_url];
+                    // Ensure numeric price
+                    if (prop.price && typeof prop.price === 'string') {
+                        const num = Number(prop.price);
+                        if (!Number.isNaN(num)) prop.price = num;
+                    }
+                    return prop;
+                });
                 filteredProperties = [...properties];
                 try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
                 renderProperties(filteredProperties);
