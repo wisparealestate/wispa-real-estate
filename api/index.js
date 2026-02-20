@@ -280,7 +280,13 @@ app.get("/api/admin/messages", async (req, res) => {
 app.post("/api/properties", async (req, res) => {
   // Accept multiple client shapes: { property, photoUrls },
   // { property, photos }, { property, images }, or a top-level property object
-  const body = req.body || {};
+  let body = req.body || {};
+  // Accept array payloads (some clients send [propertyObj]) — use first element
+  if (Array.isArray(body)) {
+    console.debug('/api/properties received an array payload, using first element');
+    if (body.length === 0) return res.status(400).json({ error: 'Empty array payload' });
+    body = body[0];
+  }
   console.debug('/api/properties received body:', body);
   let property = body.property || null;
   let photoUrls = body.photoUrls || body.photos || body.images || null;
