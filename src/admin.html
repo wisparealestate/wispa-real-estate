@@ -3113,6 +3113,9 @@ reports@wispa.com | +EU-SUPPORT-LINE
                     const poster = window.apiFetch ? window.apiFetch : fetch;
                     props.forEach(async (p, idx) => {
                         try {
+                            // If already synced to server, skip
+                            if (p._serverId) return;
+
                             // build backend shape
                             const body = {
                                 property: {
@@ -3129,9 +3132,6 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                 photoUrls: Array.isArray(p.images) ? p.images : (p.photos || [])
                             };
 
-                            // If property already has an id, skip creation (could be update path later)
-                            if (p.id) return;
-
                             const res = await poster('/api/properties', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -3141,8 +3141,8 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             let data;
                             if (res && typeof res.json === 'function') data = await res.json(); else data = res;
                             if (data && data.propertyId) {
-                                // update local property id so it doesn't get re-posted
-                                props[idx].id = data.propertyId;
+                                // mark as synced with server id to avoid duplicate posts
+                                props[idx]._serverId = data.propertyId;
                                 try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
                             }
                         } catch (e) {
