@@ -1,4 +1,3 @@
-import express from "express";
 import pkg from "pg";
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
