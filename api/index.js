@@ -38,14 +38,15 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 const port = process.env.PORT || 3001;
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-});
-
-// Profile image upload endpoint
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
+import upload from "./upload.js";
+import path from "path";
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -61,6 +62,29 @@ app.post('/api/update-avatar-url', async (req, res) => {
     return res.status(400).json({ error: 'Missing userId or avatarUrl' });
   }
   try {
+// Get notifications for a user (real DB)
+app.get("/api/notifications", async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    res.json({ notifications: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get conversations for a user (real DB)
+app.get("/api/conversations", async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const result = await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId]);
+    res.json({ conversations: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
     await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, userId]);
     res.json({ success: true });
   } catch (err) {
