@@ -67,6 +67,10 @@ if (!window.apiFetch) {
         localStorage.setItem = function(key, value){
             if (window._serverStorageCache && key in window._serverStorageCache) {
                 window._serverStorageCache[key] = value;
+                // Avoid auto-forwarding the full `properties` array back to the POST /api/properties
+                // endpoint — that was causing duplicate inserts when code stored the entire
+                // properties list. Only forward other mapped keys (best-effort).
+                if (key === 'properties') return;
                 // try to forward to server (best-effort)
                 try {
                     const parsed = JSON.parse(value);
