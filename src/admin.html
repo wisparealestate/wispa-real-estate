@@ -464,16 +464,20 @@
                             <tbody id="properties-tbody"></tbody>
                         </table>
                         <script>
-                        // Add a "Generate Document" button for each property row
-                        function renderPropertiesWithDocButton() {
+                        // Fetch and render properties from backend API
+                        async function renderPropertiesWithDocButton() {
                             const tbody = document.getElementById('properties-tbody');
                             if (!tbody) return;
+                            tbody.innerHTML = '';
                             let props = [];
                             try {
-                                props = JSON.parse(localStorage.getItem('properties') || '[]');
-                            } catch (e) { props = []; }
-                            tbody.innerHTML = '';
-                            if (props.length === 0) {
+                                const res = await fetch('/api/properties');
+                                props = await res.json();
+                            } catch (e) {
+                                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;">Failed to load properties</td></tr>';
+                                return;
+                            }
+                            if (!Array.isArray(props) || props.length === 0) {
                                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;">No properties found</td></tr>';
                                 return;
                             }
@@ -483,7 +487,7 @@
                                     <td>#${p.id}</td>
                                     <td>${p.title || p.name || 'Untitled'}</td>
                                     <td>${p.type || ''}</td>
-                                    <td>€${(p.price||0).toLocaleString()}</td>
+                                    <td>€${p.price ? Number(p.price).toLocaleString() : '0'}</td>
                                     <td>${p.location || ''}</td>
                                     <td><span class="badge active">${p.status||'Active'}</span></td>
                                     <td>
@@ -498,27 +502,25 @@
                             });
                         }
                         function editProperty(id) { alert('Edit property: ' + id); }
-                        function deleteProperty(id) {
+                        async function deleteProperty(id) {
                             if (!confirm('Delete this property?')) return;
-                            let props = [];
-                            try { props = JSON.parse(localStorage.getItem('properties') || '[]'); } catch (e) { props = []; }
-                            props = props.filter(p => String(p.id) !== String(id));
-                            localStorage.setItem('properties', JSON.stringify(props));
-                            renderPropertiesWithDocButton();
-                            if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
+                            try {
+                                await fetch(`/api/properties/${id}`, { method: 'DELETE' });
+                                renderPropertiesWithDocButton();
+                                if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
+                            } catch (e) {
+                                alert('Failed to delete property');
+                            }
                         }
-                        function generatePropertyDocument(id) {
-                            let props = [];
-                            try { props = JSON.parse(localStorage.getItem('properties') || '[]'); } catch (e) { props = []; }
-                            const idx = props.findIndex(p => String(p.id) === String(id));
-                            if (idx === -1) return alert('Property not found');
-                            // Simulate document generation
-                            props[idx].document = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
-                            props[idx].documentFormat = 'PDF';
-                            localStorage.setItem('properties', JSON.stringify(props));
-                            alert('Document generated for property #' + id);
-                            renderPropertiesWithDocButton();
-                            if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
+                        async function generatePropertyDocument(id) {
+                            try {
+                                await fetch(`/api/properties/${id}/generate-document`, { method: 'POST' });
+                                alert('Document generated for property #' + id);
+                                renderPropertiesWithDocButton();
+                                if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
+                            } catch (e) {
+                                alert('Failed to generate document');
+                            }
                         }
                         document.addEventListener('DOMContentLoaded', renderPropertiesWithDocButton);
                         </script>
@@ -549,15 +551,19 @@
                             </thead>
                             <tbody id="users-tbody"></tbody>
                                         <script>
-                                        // Render admin accounts from localStorage
-                                        function renderAdminAccounts() {
+                                        // Fetch and render users from backend API
+                                        async function renderAdminAccounts() {
                                             const tbody = document.getElementById('users-tbody');
                                             if (!tbody) return;
                                             let users = [];
                                             try {
-                                                users = JSON.parse(localStorage.getItem('users') || '[]');
-                                            } catch (e) { users = []; }
-                                            tbody.innerHTML = users.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:#aaa;">No user accounts found</td></tr>' :
+                                                const res = await fetch('/api/users');
+                                                users = await res.json();
+                                            } catch (e) {
+                                                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;">Failed to load users</td></tr>';
+                                                return;
+                                            }
+                                            tbody.innerHTML = (!Array.isArray(users) || users.length === 0) ? '<tr><td colspan="6" style="text-align:center;color:#aaa;">No user accounts found</td></tr>' :
                                                 users.map(user => `
                                                     <tr>
                                                         <td>${user.name || user.username || 'Unknown'}</td>
