@@ -43,15 +43,16 @@ async function writeJson(name, data){
 // Get notifications for a user (real DB)
 app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
-    // Try DB first, fallback to file storage
+    // Try DB first, fallback to file storage. If userId is missing, return all notifications.
     try {
-      const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+      const result = userId
+        ? await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId])
+        : await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
       return res.json({ notifications: result.rows });
     } catch (err) {
       const all = await readJson('notifications.json');
-      const filtered = all.filter(n => String(n.userId) === String(userId));
+      const filtered = userId ? all.filter(n => String(n.userId) === String(userId)) : all;
       return res.json({ notifications: filtered });
     }
   } catch (err) {
@@ -62,14 +63,16 @@ app.get("/api/notifications", async (req, res) => {
 // Get conversations for a user (real DB)
 app.get("/api/conversations", async (req, res) => {
   const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
+    // DB-first, fallback to file. Return all if userId not provided.
     try {
-      const result = await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId]);
+      const result = userId
+        ? await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId])
+        : await pool.query('SELECT * FROM conversations ORDER BY updated DESC');
       return res.json({ conversations: result.rows });
     } catch (err) {
       const all = await readJson('conversations.json');
-      const filtered = all.filter(c => String(c.userId) === String(userId));
+      const filtered = userId ? all.filter(c => String(c.userId) === String(userId)) : all;
       return res.json({ conversations: filtered });
     }
   } catch (err) {
