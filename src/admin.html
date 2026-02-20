@@ -154,14 +154,15 @@
             const _origFetch = window.fetch.bind(window);
             window.fetch = async function(input, init) {
                 if (typeof input === 'string' && input.startsWith('/api/')) {
+                    const API_BASE = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+                    if (API_BASE) {
+                        try { return await _origFetch(API_BASE + input, init); } catch(e){}
+                        return new Response(null, { status: 502 });
+                    }
                     try {
                         const r = await _origFetch(input, init);
                         if (r && r.ok) return r;
                     } catch (e) {}
-                    const API_BASE = (window.WISPA_API_BASE || '').replace(/\/$/, '');
-                    if (API_BASE) {
-                        try { return await _origFetch(API_BASE + input, init); } catch(e){}
-                    }
                     return new Response(null, { status: 404 });
                 }
                 return _origFetch(input, init);
