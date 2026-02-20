@@ -289,6 +289,13 @@ app.post("/api/properties", async (req, res) => {
   }
   console.debug('/api/properties received body:', body);
   let property = body.property || null;
+  // If the client sent an array under `property` or `properties`, use the first element
+  if (Array.isArray(property)) {
+    property = property[0];
+  }
+  if (!property && Array.isArray(body.properties)) {
+    property = body.properties[0];
+  }
   let photoUrls = body.photoUrls || body.photos || body.images || null;
 
   // If client sent top-level fields (title, price, etc.) treat body as property
