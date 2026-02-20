@@ -7,6 +7,7 @@ import cors from "cors";
 import { addPropertyWithPhotos } from "./property.js";
 import upload from "./upload.js";
 import path from "path";
+import fs from 'fs/promises';
 
 const { Pool } = pkg;
 export const pool = new Pool({
@@ -21,13 +22,38 @@ app.use(cors({
 app.use(bodyParser.json());
 const port = process.env.PORT || 3001;
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+const dataDir = path.join(process.cwd(), 'data');
+async function ensureDataDir(){
+  try{ await fs.mkdir(dataDir, { recursive: true }); }catch(e){}
+}
+async function readJson(name){
+  try{
+    await ensureDataDir();
+    const p = path.join(dataDir, name);
+    const raw = await fs.readFile(p, 'utf8');
+    return JSON.parse(raw || '[]');
+  }catch(e){ return []; }
+}
+async function writeJson(name, data){
+  await ensureDataDir();
+  const p = path.join(dataDir, name);
+  await fs.writeFile(p, JSON.stringify(data, null, 2), 'utf8');
+}
 // Get notifications for a user (real DB)
 app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
-    const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-    res.json({ notifications: result.rows });
+    // Try DB first, fallback to file storage
+    try {
+      const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+      return res.json({ notifications: result.rows });
+    } catch (err) {
+      const all = await readJson('notifications.json');
+      const filtered = all.filter(n => String(n.userId) === String(userId));
+      return res.json({ notifications: filtered });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -38,11 +64,88 @@ app.get("/api/conversations", async (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
-    const result = await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId]);
-    res.json({ conversations: result.rows });
+    try {
+      const result = await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId]);
+      return res.json({ conversations: result.rows });
+    } catch (err) {
+      const all = await readJson('conversations.json');
+      const filtered = all.filter(c => String(c.userId) === String(userId));
+      return res.json({ conversations: filtered });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// File-backed admin endpoints (notifications/chat/sent-notifs/profile/requests/contacts/reactions/alerts)
+app.get('/api/admin/sent-notifications', async (req, res) => {
+  const arr = await readJson('adminSentNotifications.json');
+  res.json({ sent: arr });
+});
+app.post('/api/admin/sent-notifications', async (req, res) => {
+  const note = req.body;
+  const arr = await readJson('adminSentNotifications.json');
+  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, note));
+  await writeJson('adminSentNotifications.json', arr);
+  res.json({ success: true });
+});
+
+app.get('/api/admin/profile', async (req, res) => {
+  const p = await readJson('adminProfile.json');
+  res.json({ profile: p[0] || {} });
+});
+app.post('/api/admin/profile', async (req, res) => {
+  const profile = req.body;
+  await writeJson('adminProfile.json', [profile]);
+  res.json({ success: true });
+});
+
+app.get('/api/property-requests', async (req, res) => {
+  const arr = await readJson('propertyRequests.json');
+  res.json({ requests: arr });
+});
+app.post('/api/property-requests', async (req, res) => {
+  const obj = req.body;
+  const arr = await readJson('propertyRequests.json');
+  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
+  await writeJson('propertyRequests.json', arr);
+  res.json({ success: true });
+});
+
+app.get('/api/contact-messages', async (req, res) => {
+  const arr = await readJson('contactMessages.json');
+  res.json({ contacts: arr });
+});
+app.post('/api/contact-messages', async (req, res) => {
+  const obj = req.body;
+  const arr = await readJson('contactMessages.json');
+  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
+  await writeJson('contactMessages.json', arr);
+  res.json({ success: true });
+});
+
+app.get('/api/notification-reactions', async (req, res) => {
+  const arr = await readJson('notificationReactions.json');
+  res.json({ reactions: arr });
+});
+app.post('/api/notification-reactions', async (req, res) => {
+  const obj = req.body;
+  const arr = await readJson('notificationReactions.json');
+  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
+  await writeJson('notificationReactions.json', arr);
+  res.json({ success: true });
+});
+
+app.get('/api/system-alerts', async (req, res) => {
+  const arr = await readJson('systemAlerts.json');
+  res.json({ alerts: arr });
+});
+app.post('/api/system-alerts', async (req, res) => {
+  const obj = req.body;
+  const arr = await readJson('systemAlerts.json');
+  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
+  await writeJson('systemAlerts.json', arr);
+  res.json({ success: true });
 });
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) {
