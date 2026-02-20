@@ -5,12 +5,13 @@
     display: flex;
     flex-direction: row;
     gap: 32px;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px 16px;
+    width: 100vw;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
     background: var(--white);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .admin-sidebar {
@@ -29,6 +30,9 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    min-height: 100vh;
+    width: 100vw;
+    box-sizing: border-box;
 }
 
 .admin-tabs {
@@ -38,6 +42,9 @@
 }
 
 .admin-tab {
+    min-height: calc(100vh - 80px); /* header height */
+    width: 100vw;
+    box-sizing: border-box;
     padding: 10px 22px;
     background: var(--light);
     border: 1px solid var(--border);
