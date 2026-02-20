@@ -558,7 +558,8 @@
                                             let users = [];
                                             try {
                                                 const res = await fetch('/api/users');
-                                                users = await res.json();
+                                                const data = await res.json();
+                                                users = data.users || [];
                                             } catch (e) {
                                                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;">Failed to load users</td></tr>';
                                                 return;
@@ -566,10 +567,10 @@
                                             tbody.innerHTML = (!Array.isArray(users) || users.length === 0) ? '<tr><td colspan="6" style="text-align:center;color:#aaa;">No user accounts found</td></tr>' :
                                                 users.map(user => `
                                                     <tr>
-                                                        <td>${user.name || user.username || 'Unknown'}</td>
+                                                        <td>${user.full_name || user.username || 'Unknown'}</td>
                                                         <td>${user.email || 'N/A'}</td>
                                                         <td>${user.role || 'User'}</td>
-                                                        <td>${user.joined ? new Date(user.joined).toLocaleDateString() : 'N/A'}</td>
+                                                        <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
                                                         <td>${user.status || 'Active'}</td>
                                                         <td><button class="btn-sm edit" onclick="editUser('${user.id}')">Edit</button></td>
                                                     </tr>

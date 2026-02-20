@@ -1,3 +1,27 @@
+
+// Get notifications for a user (real DB)
+app.get("/api/notifications", async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    res.json({ notifications: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get conversations for a user (real DB)
+app.get("/api/conversations", async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const result = await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId]);
+    res.json({ conversations: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 import express from "express";
 import pkg from "pg";
 import bcrypt from "bcrypt";

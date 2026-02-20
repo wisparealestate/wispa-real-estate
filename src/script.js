@@ -1803,38 +1803,41 @@ if (typeof propertyImageIds === 'undefined') {
 
     // Update data loading functions to use API endpoints
     function loadProperties() {
-        // TODO: Connect to real DB - Load properties from API
-        // return fetch('/api/properties').then(response => response.json()).then(data => {
-        //     properties = data;
-        //     filteredProperties = [...properties];
-        //     renderProperties(filteredProperties);
-        // });
-
         // Prefer persisted properties in localStorage so front-end editors (admin.html) show changes
         try {
             const stored = localStorage.getItem('properties');
             if (stored) {
-                    try {
-                        const parsed = JSON.parse(stored);
-                        console.debug('loadProperties: parsed properties from localStorage, length=', Array.isArray(parsed) ? parsed.length : 'not-array');
-                        if (Array.isArray(parsed)) {
-                            properties = parsed;
-                            filteredProperties = [...properties];
-                            return Promise.resolve(properties);
-                        }
-                    } catch (err) {
-                        console.warn('loadProperties: failed parsing localStorage properties', err);
+                try {
+                    const parsed = JSON.parse(stored);
+                    console.debug('loadProperties: parsed properties from localStorage, length=', Array.isArray(parsed) ? parsed.length : 'not-array');
+                    if (Array.isArray(parsed)) {
+                        properties = parsed;
+                        filteredProperties = [...properties];
+                        return Promise.resolve(properties);
                     }
+                } catch (err) {
+                    console.warn('loadProperties: failed parsing localStorage properties', err);
                 }
+            }
         } catch (e) {
             console.warn('Failed to parse stored properties', e);
         }
 
-        // No admin-saved properties found. Use an empty list so the homepage
-        // only displays admin-created posts when present.
-        properties = [];
-        filteredProperties = [];
-        return Promise.resolve(properties);
+        // If not found in localStorage, fetch from API
+        return fetch('/api/properties')
+            .then(response => response.json())
+            .then(data => {
+                properties = Array.isArray(data.properties) ? data.properties : [];
+                filteredProperties = [...properties];
+                renderProperties(filteredProperties);
+                return properties;
+            })
+            .catch(err => {
+                console.error('Failed to load properties from API', err);
+                properties = [];
+                filteredProperties = [];
+                return properties;
+            });
     }
 
     function saveProperty(property) {
@@ -1852,32 +1855,69 @@ if (typeof propertyImageIds === 'undefined') {
     }
 
     function loadLikedProperties() {
-        // TODO: Connect to real DB - Load user liked properties from API
-        // return fetch('/api/user/liked-properties').then(response => response.json());
-
-        // For now, use localStorage
-        return Promise.resolve(JSON.parse(localStorage.getItem('likedProperties') || '[]'));
+        // Try to load from localStorage first
+        try {
+            const stored = localStorage.getItem('likedProperties');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    return Promise.resolve(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to parse stored likedProperties', e);
+        }
+        // TODO: Implement /api/user/liked-properties endpoint in backend
+        // return fetch('/api/user/liked-properties')
+        //     .then(response => response.json())
+        //     .then(data => Array.isArray(data.liked) ? data.liked : [])
+        //     .catch(() => []);
+        return Promise.resolve([]);
     }
 
-    function saveLikedProperties(liked) {
-        // TODO: Connect to real DB - Save liked properties via API
-        // return fetch('/api/user/liked-properties', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ liked })
-        // });
-
-        // For now, use localStorage
-        localStorage.setItem('likedProperties', JSON.stringify(liked));
-        return Promise.resolve(liked);
+    function loadNotifications(userId) {
+        // Try to load from localStorage first
+        try {
+            const stored = localStorage.getItem('notifications_' + userId);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    return Promise.resolve(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to parse stored notifications', e);
+        }
+        // TODO: Implement /api/notifications?userId=... endpoint in backend
+        // return fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`)
+        //     .then(response => response.json())
+        //     .then(data => Array.isArray(data.notifications) ? data.notifications : [])
+        //     .catch(() => []);
+        return Promise.resolve([]);
     }
 
-    function loadChatMessages() {
-        // TODO: Connect to real DB - Load chat messages from API
-        // return fetch('/api/chat/messages').then(response => response.json());
+    function loadConversations(userId) {
+        // Try to load from localStorage first
+        try {
+            const stored = localStorage.getItem('conversations_' + userId);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    return Promise.resolve(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to parse stored conversations', e);
+        }
+        // TODO: Implement /api/conversations?userId=... endpoint in backend
+        // return fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`)
+        //     .then(response => response.json())
+        //     .then(data => Array.isArray(data.conversations) ? data.conversations : [])
+        //     .catch(() => []);
+        return Promise.resolve([]);
+    }
 
-        // For now, use localStorage
-        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+    function renderChatMessages(messages) {
         chatMessages.innerHTML = '';
         messages.forEach(msg => {
             const msgDiv = document.createElement('div');
