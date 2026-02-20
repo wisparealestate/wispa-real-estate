@@ -132,6 +132,24 @@
         // Use deployed backend API base provided by user
         window.WISPA_API_BASE = 'https://wispa-real-estate-2ew3.onrender.com';
     </script>
+    <script>
+        // Global API fetch wrapper: try same-origin then fallback to deployed backend
+        window.apiFetch = async function(url, opts) {
+            const API_BASE = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+            try {
+                const r = await fetch(url, opts);
+                if (r && r.ok) return r;
+            } catch (e) { /* ignore */ }
+            if (API_BASE) {
+                try {
+                    const full = API_BASE + url;
+                    const r2 = await fetch(full, opts);
+                    return r2;
+                } catch (e) { /* ignore */ }
+            }
+            return null;
+        };
+    </script>
     <!-- ADMIN HEADER -->
     <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px;">
         <style>
@@ -360,11 +378,7 @@
                         try {
                             let parsed = null;
                             try { parsed = JSON.parse(value); } catch(e) { parsed = value; }
-                            fetch('/api/admin/sync', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ key: key, value: parsed })
-                            }).catch(()=>{});
+                            try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: key, value: parsed }) }).catch(()=>{}); } catch(e){}
                         } catch(e){}
                     }
                 };
@@ -542,7 +556,8 @@
                             tbody.innerHTML = '';
                             let props = [];
                             try {
-                                const res = await fetch('/api/properties');
+                                const res = await window.apiFetch('/api/properties');
+                                if (!res || !res.ok) throw new Error('Failed');
                                 props = await res.json();
                             } catch (e) {
                                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;">Failed to load properties</td></tr>';
@@ -576,7 +591,8 @@
                         async function deleteProperty(id) {
                             if (!confirm('Delete this property?')) return;
                             try {
-                                await fetch(`/api/properties/${id}`, { method: 'DELETE' });
+                                const r = await window.apiFetch(`/api/properties/${id}`, { method: 'DELETE' });
+                                if (!r || !r.ok) throw new Error('Delete failed');
                                 renderPropertiesWithDocButton();
                                 if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
                             } catch (e) {
@@ -585,7 +601,8 @@
                         }
                         async function generatePropertyDocument(id) {
                             try {
-                                await fetch(`/api/properties/${id}/generate-document`, { method: 'POST' });
+                                const r = await window.apiFetch(`/api/properties/${id}/generate-document`, { method: 'POST' });
+                                if (!r || !r.ok) throw new Error('Generate failed');
                                 alert('Document generated for property #' + id);
                                 renderPropertiesWithDocButton();
                                 if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
@@ -3361,7 +3378,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
                 messages = messages.filter(m => m.id !== msgId);
                 // persist deletion to server (best-effort) by overwriting server copy
                 try {
-                    fetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{});
+                    try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{}); } catch(e){}
                 } catch(e){}
                 saveMessages(messages);
                 
@@ -3373,14 +3390,14 @@ reports@wispa.com | +EU-SUPPORT-LINE
             function markAllMessagesAsRead(){
                 const messages = loadMessages();
                 messages.forEach(msg => msg.read = true);
-                try { fetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{}); } catch(e){}
+                try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{}); } catch(e){}
                 saveMessages(messages);
                 renderMessagesTable();
             }
             
             function deleteAllMessages(){
                 if(!confirm('Delete all messages? This cannot be undone.')) return;
-                try { fetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: [] }) }).catch(()=>{}); } catch(e){}
+                try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: [] }) }).catch(()=>{}); } catch(e){}
                 localStorage.setItem('contactMessages', '[]');
                 renderMessagesTable();
             }
