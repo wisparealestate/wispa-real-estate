@@ -22,14 +22,6 @@ app.get("/api/conversations", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-import upload from "./upload.js";
-import path from "path";
 
 const { Pool } = pkg;
 const app = express();
