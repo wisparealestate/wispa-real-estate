@@ -547,9 +547,9 @@
                         recent.forEach(p => {
                             const displayId = formatEightId(p.id || p.propertyId || Date.now());
                             const title = p.title || p.name || 'Untitled';
-                            const type = p.type || p.postTo || '';
+                            const type = p.type || p.postTo || p.property_type || p.saleRent || '';
                             const price = p.price ? Number(p.price) : 0;
-                            const location = p.location || p.address || '';
+                            const location = p.location || p.address || ((p.city || '') + (p.state ? ', ' + p.state : '')) || p.location_string || '';
                             const status = p.status || (p.active ? 'Active' : 'Active');
 
                             const tr = document.createElement('tr');
@@ -657,9 +657,9 @@
                             props.forEach(p => {
                                 const displayId = formatEightId(p.id || p.propertyId || Date.now());
                                 const title = p.title || p.name || p.title || 'Untitled';
-                                const type = p.type || p.postTo || (p.property_type || '') || '';
+                                const type = p.type || p.postTo || p.property_type || p.saleRent || '';
                                 const price = p.price ? Number(p.price) : (p.price || 0);
-                                const location = p.location || p.address || '';
+                                const location = p.location || p.address || ((p.city || '') + (p.state ? ', ' + p.state : '')) || p.location_string || '';
                                 const status = p.status || (p.active ? 'Active' : 'Active');
 
                                 const tr = document.createElement('tr');
