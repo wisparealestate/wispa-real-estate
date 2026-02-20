@@ -411,6 +411,31 @@
 
         })();
         </script>
+        <script>
+        // Populate an in-memory cache from server and shim localStorage to use it (no browser localStorage persistence)
+        (async function(){
+            const keys = ['adminSentNotifications','adminProfile','propertyRequests','contactMessages','notificationReactions','systemAlerts','notifications','conversations','properties','postCreationStatus','chatNotifications','systemAttackers','agentProfile','wispaUser','adminChats','adminCurrentTab'];
+            window._adminCache = window._adminCache || {};
+            for (const k of keys) {
+                try {
+                    const v = (window.adminGet) ? await window.adminGet(k) : null;
+                    window._adminCache[k] = (v === undefined || v === null) ? null : JSON.stringify(v);
+                } catch (e) { window._adminCache[k] = null; }
+            }
+            try {
+                localStorage.getItem = function(key) { return window._adminCache[key] ?? null; };
+                localStorage.setItem = function(key, value) {
+                    window._adminCache[key] = value;
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (window.adminSet) window.adminSet(key, parsed).catch(()=>{});
+                    } catch (e) {
+                        if (window.adminSet) window.adminSet(key, value).catch(()=>{});
+                    }
+                };
+            } catch (e) { /* ignore */ }
+        })();
+        </script>
     <!-- MAIN ADMIN LAYOUT -->
     <div class="admin-layout">
         <!-- SIDEBAR -->
