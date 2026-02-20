@@ -375,9 +375,36 @@ app.get("/api/users", async (req, res) => {
 // Get all properties
 app.get("/api/properties", async (req, res) => {
   try {
+    try {
+      const result = await pool.query("SELECT * FROM properties ORDER BY created_at DESC");
+      return res.json({ properties: result.rows });
+    } catch (e) {
+      // Fallback to file-backed properties
+      const all = await readJson('properties.json');
+      return res.json({ properties: all });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
     const result = await pool.query("SELECT * FROM properties ORDER BY created_at DESC");
     res.json({ properties: result.rows });
   } catch (err) {
+  try {
+    try {
+      const propertyId = await addPropertyWithPhotos(property, photoUrls);
+      return res.json({ propertyId });
+    } catch (e) {
+      // Fallback: store to data/properties.json
+      const all = await readJson('properties.json');
+      // Assign a synthetic id if none
+      const newId = (all.length ? Math.max(...all.map(p => Number(p.id) || 0)) + 1 : Date.now());
+      const entry = Object.assign({ id: newId, created_at: new Date().toISOString() }, property);
+      if (photoUrls && photoUrls.length) entry.images = photoUrls;
+      all.unshift(entry);
+      await writeJson('properties.json', all);
+      return res.json({ propertyId: newId, fallback: true });
+    }
     res.status(500).json({ error: err.message });
   }
 });
