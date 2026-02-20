@@ -326,12 +326,25 @@
                 conversations: '/api/conversations'
             };
 
+            function extractPayload(data) {
+                if (Array.isArray(data)) return data;
+                if (!data || typeof data !== 'object') return data;
+                const picks = ['sent','profile','requests','contacts','reactions','alerts','notifications','conversations','users','properties','messages'];
+                for (const k of picks) {
+                    if (data[k] !== undefined) return data[k];
+                }
+                const keys = Object.keys(data);
+                if (keys.length === 1 && Array.isArray(data[keys[0]])) return data[keys[0]];
+                return data;
+            }
+
             async function fetchAndStore(key, url) {
                 try {
-                    const res = await fetch(url);
-                    if (!res.ok) return;
+                    const res = await window.apiFetch ? await window.apiFetch(url) : await fetch(url);
+                    if (!res || !res.ok) return;
                     const data = await res.json();
-                    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e){}
+                    const payload = extractPayload(data);
+                    try { localStorage.setItem(key, JSON.stringify(payload)); } catch(e){}
                 } catch (e) { /* ignore */ }
             }
 
