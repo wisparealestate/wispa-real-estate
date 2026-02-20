@@ -5,7 +5,6 @@ import { addPropertyWithPhotos } from "./property.js";
 import upload from "./upload.js";
 import path from "path";
 
-const { Pool } = pkg;
 const app = express();
 app.use(cors({
   origin: "https://wispa-real-estate-one.vercel.app"
