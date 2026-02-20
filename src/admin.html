@@ -1045,16 +1045,16 @@
                     <form id="alert-edit-form">
                         <input type="hidden" id="edit-alert-id" value="">
                         <div class="form-group">
-                            <label>Alert Title *</label>
+                            <label for="edit-alert-title">Alert Title *</label>
                             <input type="text" id="edit-alert-title" required>
                         </div>
                         <div class="form-group">
-                            <label>Alert Message *</label>
+                            <label for="edit-alert-message">Alert Message *</label>
                             <textarea id="edit-alert-message" required rows="4"></textarea>
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Type</label>
+                                <label for="edit-alert-type">Type</label>
                                 <select id="edit-alert-type">
                                     <option value="info">ℹ️ Info</option>
                                     <option value="success">✅ Success</option>
@@ -1063,7 +1063,7 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Priority</label>
+                                <label for="edit-alert-priority">Priority</label>
                                 <select id="edit-alert-priority">
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
@@ -1072,7 +1072,7 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Target</label>
+                                <label for="edit-alert-target">Target</label>
                                 <select id="edit-alert-target">
                                     <option value="all">All Users</option>
                                     <option value="agents">All Agents</option>
@@ -1083,7 +1083,7 @@
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Status</label>
+                                <label for="edit-alert-status">Status</label>
                                 <select id="edit-alert-status">
                                     <option value="active">Active</option>
                                     <option value="draft">Draft</option>
@@ -1091,7 +1091,7 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Expiry Date</label>
+                                <label for="edit-alert-expiry">Expiry Date</label>
                                 <input type="date" id="edit-alert-expiry">
                             </div>
                         </div>
@@ -1593,13 +1593,13 @@ document.addEventListener('DOMContentLoaded', function(){
             <form id="add-property-form">
                 <input type="hidden" name="property-id" value="">
                 <div class="form-group">
-                    <label>Property Title</label>
-                    <input type="text" name="title" placeholder="e.g., Modern Apartment" required>
+                    <label for="property-title">Property Title</label>
+                    <input id="property-title" type="text" name="title" placeholder="e.g., Modern Apartment" required>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Property Type</label>
-                        <select name="type" required>
+                        <label for="property-type">Property Type</label>
+                        <select id="property-type" name="type" required>
                             <option value="">Select type...</option>
                             <option>Apartment</option>
                             <option>House</option>
@@ -1607,8 +1607,8 @@ document.addEventListener('DOMContentLoaded', function(){
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>For</label>
-                        <select name="saleRent" required>
+                        <label for="property-saleRent">For</label>
+                        <select id="property-saleRent" name="saleRent" required>
                             <option value="sale">For Sale</option>
                             <option value="rent">For Rent</option>
                         </select>
@@ -1616,30 +1616,30 @@ document.addEventListener('DOMContentLoaded', function(){
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Price (€)</label>
-                        <input type="number" name="price" placeholder="500000" required>
+                        <label for="property-price">Price (€)</label>
+                        <input id="property-price" type="number" name="price" placeholder="500000" required>
                     </div>
                     <div class="form-group">
-                        <label>Location</label>
-                        <input type="text" name="location" placeholder="City, Country" required>
+                        <label for="property-location">Location</label>
+                        <input id="property-location" type="text" name="location" placeholder="City, Country" required>
                     </div>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Property Area (m²)</label>
-                        <input type="number" name="area" placeholder="e.g., 156" min="0">
+                        <label for="property-area">Property Area (m²)</label>
+                        <input id="property-area" type="number" name="area" placeholder="e.g., 156" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Bedrooms (optional)</label>
-                        <input type="number" name="bedrooms" placeholder="e.g., 3" min="0">
+                        <label for="property-bedrooms">Bedrooms (optional)</label>
+                        <input id="property-bedrooms" type="number" name="bedrooms" placeholder="e.g., 3" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Bathrooms (optional)</label>
-                        <input type="number" name="bathrooms" placeholder="e.g., 2" min="0">
+                        <label for="property-bathrooms">Bathrooms (optional)</label>
+                        <input id="property-bathrooms" type="number" name="bathrooms" placeholder="e.g., 2" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Post to</label>
-                        <select name="postTo">
+                        <label for="property-postTo">Post to</label>
+                        <select id="property-postTo" name="postTo">
                             <option value="available">✅ Available</option>
                             <option value="featured">⭐ Featured</option>
                             <option value="hot">🔥 Hot</option>
@@ -1647,14 +1647,14 @@ document.addEventListener('DOMContentLoaded', function(){
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Property Description</label>
-                    <textarea name="description" placeholder="Enter a detailed description for this property (shown on property detail page)" rows="5"></textarea>
+                    <label for="property-description">Property Description</label>
+                    <textarea id="property-description" name="description" placeholder="Enter a detailed description for this property (shown on property detail page)" rows="5"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Upload Photos & Videos</label>
+                    <label for="property-media">Upload Photos & Videos</label>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <input type="file" name="media" accept="image/*,video/*" multiple style="flex:1;min-width:200px;">
-                        <button type="button" class="btn-sm edit" onclick="document.querySelector('input[name=media]').click();" style="white-space:nowrap;">📸 Browse Files</button>
+                        <input id="property-media" type="file" name="media" accept="image/*,video/*" multiple style="flex:1;min-width:200px;">
+                        <button type="button" class="btn-sm edit" onclick="document.querySelector('#property-media').click();" style="white-space:nowrap;">📸 Browse Files</button>
                     </div>
                 </div>
                 <button class="btn-primary" type="submit">Save Property</button>
@@ -1691,7 +1691,7 @@ document.addEventListener('DOMContentLoaded', function(){
             <form id="send-notification-form" onsubmit="handleSendNotification(event)">
                 <!-- 1. Recipient Type Selection -->
                 <div class="form-group">
-                    <label>Select Recipients *</label>
+                    <label for="recipient-type">Select Recipients *</label>
                     <select id="recipient-type" onchange="updateRecipientOptions()" required style="padding:10px;border:1px solid var(--border);border-radius:4px;width:100%;font-size:14px;">
                         <option value="">-- Choose Recipient Type --</option>
                         <option value="all-users">👥 All Users</option>
@@ -1702,7 +1702,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 <!-- User Search (Only shown when "A User" is selected) -->
                 <div class="form-group" id="user-search-group" style="display:none;">
-                    <label>Search User (Email, Username, or ID)</label>
+                    <label for="user-search-input">Search User (Email, Username, or ID)</label>
                     <div style="position:relative;">
                         <input type="text" id="user-search-input" placeholder="e.g., john@email.com or john_doe or user#123" autocomplete="off">
                         <div id="user-search-results" style="position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;max-height:200px;overflow-y:auto;display:none;z-index:100;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
@@ -1717,7 +1717,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 <!-- 2. Notification Type Selection -->
                 <div class="form-group">
-                    <label>Notification Type *</label>
+                    <label for="notification-type">Notification Type *</label>
                     <select id="notification-type" onchange="updateNotificationContent()" required style="padding:10px;border:1px solid var(--border);border-radius:4px;width:100%;font-size:14px;">
                         <option value="">-- Select Notification Type --</option>
                         <option value="system">⚙️ System Update</option>
@@ -1732,14 +1732,14 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 <!-- 3. Message Content (Auto-populated) -->
                 <div class="form-group">
-                    <label>Message Content *</label>
+                    <label for="notif-message">Message Content *</label>
                     <textarea id="notif-message" placeholder="Message will auto-populate based on notification type and recipient..." style="min-height:150px;padding:10px;border:1px solid var(--border);border-radius:4px;font-size:14px;" disabled></textarea>
                     <small style="color:var(--text-light);display:block;margin-top:5px;">Message will be automatically personalized for each recipient with their name.</small>
                 </div>
 
                 <!-- Attachment (Optional) -->
                 <div class="form-group">
-                    <label>Attachment (Optional)</label>
+                    <label for="notif-file">Attachment (Optional)</label>
                     <input type="file" id="notif-file" accept=".pdf,.doc,.docx,.txt,.jpg,.png,.gif">
                     <small style="color:var(--text-light);">Maximum file size: 5MB</small>
                     <div id="file-preview" style="margin-top:8px;display:none;">
