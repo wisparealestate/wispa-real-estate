@@ -45,6 +45,25 @@ app.post('/api/update-avatar-url', async (req, res) => {
 });
 
 // CORS test endpoint (must be after app and CORS middleware)
+// Get all properties
+app.get("/api/properties", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM properties ORDER BY id DESC");
+    res.json({ properties: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all users
+app.get("/api/users", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT id, username, email, full_name, role, avatar_url, created_at FROM users ORDER BY id DESC");
+    res.json({ users: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.get("/cors-test", (req, res) => {
   res.json({ message: "CORS is working!", origin: req.headers.origin || null });
 });
