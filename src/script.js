@@ -1426,8 +1426,22 @@ if (typeof propertyImageIds === 'undefined') {
 
     // Post ad form
     const postAdForm = document.getElementById('post-ad-form');
-    if (postAdForm) postAdForm.addEventListener('submit', (e) => {
+    if (postAdForm) postAdForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        // If the user selected files via the new #ad-media input, read them as data URLs for preview/storage
+        const mediaInput = document.getElementById('ad-media');
+        let images = [];
+        if (mediaInput && mediaInput.files && mediaInput.files.length > 0) {
+            const files = Array.from(mediaInput.files);
+            const readFile = (file) => new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(String(r.result));
+                r.onerror = rej;
+                r.readAsDataURL(file);
+            });
+            try { images = await Promise.all(files.map(f => readFile(f))); } catch(e) { images = []; }
+        }
+
         const newProperty = {
             id: Date.now(),
             title: document.getElementById('ad-title').value,
@@ -1437,7 +1451,7 @@ if (typeof propertyImageIds === 'undefined') {
             bathrooms: parseInt(document.getElementById('ad-bathrooms').value),
             area: parseInt(document.getElementById('ad-area').value),
             location: document.getElementById('ad-location').value,
-            images: [document.getElementById('ad-image').value || getRandomPropertyImage()],
+            images: images.length ? images : [document.getElementById('ad-image').value || getRandomPropertyImage()],
             featured: (document.getElementById('ad-featured') ? document.getElementById('ad-featured').checked : false),
             date: 'Just now'
         };
