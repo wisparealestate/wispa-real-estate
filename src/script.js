@@ -20,6 +20,77 @@ if (!window.apiFetch) {
     };
 }
 
+// Server-backed storage shim: populate an in-memory cache from API and override localStorage
+(async function(){
+    const mapping = {
+        properties: '/api/properties',
+        adminChats: '/api/admin/messages',
+        adminProfile: '/api/admin/profile',
+        adminSentNotifications: '/api/admin/sent-notifications',
+        propertyRequests: '/api/property-requests',
+        contactMessages: '/api/contact-messages',
+        notificationReactions: '/api/notification-reactions',
+        systemAlerts: '/api/system-alerts',
+        notifications: '/api/notifications',
+        conversations: '/api/conversations',
+        chatNotifications: '/api/admin/messages'
+    };
+    window._serverStorageCache = window._serverStorageCache || {};
+    async function fetchKey(k){
+        const url = mapping[k];
+        if (!url) return null;
+        try {
+            const r = window.apiFetch ? await window.apiFetch(url) : await fetch((window.WISPA_API_BASE||'')+url);
+            if (!r || !r.ok) return null;
+            const j = await r.json();
+            // prefer common wrapper keys
+            const keys = ['properties','sent','profile','requests','contacts','reactions','alerts','notifications','conversations','messages','users'];
+            for (const kk of keys) if (j[kk] !== undefined) return j[kk];
+            // otherwise return whole body
+            return j;
+        } catch (e) { return null; }
+    }
+    // Fetch all mapped keys
+    const keys = Object.keys(mapping);
+    await Promise.all(keys.map(async k => {
+        try { const v = await fetchKey(k); window._serverStorageCache[k] = v === null || v === undefined ? null : JSON.stringify(v); } catch(e){ window._serverStorageCache[k]=null; }
+    }));
+
+    // Override localStorage getItem/setItem to use in-memory cache and forward to server
+    try {
+        const origGet = localStorage.getItem.bind(localStorage);
+        const origSet = localStorage.setItem.bind(localStorage);
+        localStorage.getItem = function(key){
+            if (window._serverStorageCache && key in window._serverStorageCache) return window._serverStorageCache[key];
+            return origGet(key);
+        };
+        localStorage.setItem = function(key, value){
+            if (window._serverStorageCache && key in window._serverStorageCache) {
+                window._serverStorageCache[key] = value;
+                // try to forward to server (best-effort)
+                try {
+                    const parsed = JSON.parse(value);
+                    // If mapped resource exists, POST to that endpoint
+                    const url = mapping[key] || '/api/admin/sync';
+                    const body = (url === '/api/admin/sync') ? { key, value: parsed } : parsed;
+                    const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+                    if (window.apiFetch) window.apiFetch(url, opts).catch(()=>{});
+                    else fetch((window.WISPA_API_BASE||'') + url, opts).catch(()=>{});
+                } catch(e){
+                    // non-json value: still forward as sync wrapper
+                    try {
+                        const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value }) };
+                        if (window.apiFetch) window.apiFetch('/api/admin/sync', opts).catch(()=>{});
+                        else fetch((window.WISPA_API_BASE||'') + '/api/admin/sync', opts).catch(()=>{});
+                    } catch(e){}
+                }
+                return;
+            }
+            return origSet(key, value);
+        };
+    } catch(e) { /* ignore shim failure */ }
+})();
+
 
 // Always sync window.properties from localStorage on page load
 document.addEventListener('DOMContentLoaded', function() {
