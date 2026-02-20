@@ -1442,24 +1442,43 @@ if (typeof propertyImageIds === 'undefined') {
             try { images = await Promise.all(files.map(f => readFile(f))); } catch(e) { images = []; }
         }
 
-        const newProperty = {
+        // Build a frontend display object (kept for immediate UI) and a backend-compatible object
+        const displayProperty = {
             id: Date.now(),
             title: document.getElementById('ad-title').value,
-            price: parseInt(document.getElementById('ad-price').value),
+            price: parseInt(document.getElementById('ad-price').value) || 0,
             type: document.getElementById('ad-type').value,
-            bedrooms: parseInt(document.getElementById('ad-bedrooms').value),
-            bathrooms: parseInt(document.getElementById('ad-bathrooms').value),
-            area: parseInt(document.getElementById('ad-area').value),
+            bedrooms: parseInt(document.getElementById('ad-bedrooms').value) || 0,
+            bathrooms: parseInt(document.getElementById('ad-bathrooms').value) || 0,
+            area: parseInt(document.getElementById('ad-area').value) || 0,
             location: document.getElementById('ad-location').value,
             images: images.length ? images : [document.getElementById('ad-image').value || getRandomPropertyImage()],
             featured: (document.getElementById('ad-featured') ? document.getElementById('ad-featured').checked : false),
             date: 'Just now'
         };
-        properties.push(newProperty);
 
-        // Ensure the new property appears in the available listings when appropriate:
-        // - If user is viewing "all" with no search input, show all properties including the new one
-        // - Otherwise, re-run filters so it appears where it should
+        // Map to backend shape expected by /api/properties / addPropertyWithPhotos
+        const backendProperty = {
+            user_id: _getUserId() || null,
+            title: displayProperty.title,
+            description: (document.getElementById('ad-description') ? document.getElementById('ad-description').value : (displayProperty.type || '')),
+            price: displayProperty.price,
+            address: displayProperty.location || '',
+            city: (document.getElementById('ad-city') ? document.getElementById('ad-city').value : ''),
+            state: (document.getElementById('ad-state') ? document.getElementById('ad-state').value : ''),
+            zip_code: (document.getElementById('ad-zip') ? document.getElementById('ad-zip').value : ''),
+            image_url: displayProperty.images && displayProperty.images.length ? displayProperty.images[0] : null
+        };
+
+        // Try to save via API (saveProperty handles API/localStorage fallback). Ensure photo URLs are passed.
+        try {
+            await saveProperty(Object.assign({}, backendProperty, { photos: displayProperty.images }));
+        } catch (err) {
+            // saveProperty already falls back to localStorage; ensure display state is updated
+            properties.push(displayProperty);
+        }
+
+        // Ensure the new property appears in the available listings when appropriate
         const searchTermNow = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
         if (currentCategory === 'all' && !searchTermNow) {
             filteredProperties = properties.slice();
@@ -1474,7 +1493,7 @@ if (typeof propertyImageIds === 'undefined') {
         if (document.getElementById('hot-properties-section')) renderHotProperties();
 
         postAdForm.reset();
-        postAdModal.style.display = 'none';
+        if (postAdModal) postAdModal.style.display = 'none';
         showNotification('Property posted successfully!');
     });
 
