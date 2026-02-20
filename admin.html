@@ -128,6 +128,18 @@
     </style>
 </head>
 <body>
+    <script>
+        // Use deployed backend API base for admin when hosted separately
+        window.WISPA_API_BASE = window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
+        window.apiFetch = async function(url, opts) {
+            const API_BASE = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+            try { const r = await fetch(url, opts); if (r && r.ok) return r; } catch(e){}
+            if (API_BASE) {
+                try { const r2 = await fetch(API_BASE + url, opts); return r2; } catch(e){}
+            }
+            return null;
+        };
+    </script>
     <!-- ADMIN HEADER -->
     <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px;">
         <style>
@@ -338,11 +350,7 @@
                         try {
                             let parsed = null;
                             try { parsed = JSON.parse(value); } catch(e) { parsed = value; }
-                            fetch('/api/admin/sync', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ key: key, value: parsed })
-                            }).catch(()=>{});
+                            try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: key, value: parsed }) }).catch(()=>{}); } catch(e){}
                         } catch(e){}
                     }
                 };
@@ -3339,7 +3347,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
                 messages = messages.filter(m => m.id !== msgId);
                 // persist deletion to server (best-effort) by overwriting server copy
                 try {
-                    fetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{});
+                    try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{}); } catch(e){}
                 } catch(e){}
                 saveMessages(messages);
                 
@@ -3351,14 +3359,14 @@ reports@wispa.com | +EU-SUPPORT-LINE
             function markAllMessagesAsRead(){
                 const messages = loadMessages();
                 messages.forEach(msg => msg.read = true);
-                try { fetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{}); } catch(e){}
+                try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: messages }) }).catch(()=>{}); } catch(e){}
                 saveMessages(messages);
                 renderMessagesTable();
             }
             
             function deleteAllMessages(){
                 if(!confirm('Delete all messages? This cannot be undone.')) return;
-                try { fetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: [] }) }).catch(()=>{}); } catch(e){}
+                try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'contactMessages', value: [] }) }).catch(()=>{}); } catch(e){}
                 localStorage.setItem('contactMessages', '[]');
                 renderMessagesTable();
             }
