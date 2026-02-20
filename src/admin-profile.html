@@ -72,10 +72,17 @@
             // For demo, just redirect to admin login page
             window.location.href = 'admin-login.html';
         }
-        // Load admin profile from localStorage
-        function updateProfile() {
+        // Load admin profile from server (adminGet) or fallback to localStorage
+        async function updateProfile() {
             let profile = {};
-            try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+            try {
+                if (window.adminGet) {
+                    const p = await window.adminGet('adminProfile');
+                    profile = p || {};
+                } else {
+                    profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+                }
+            } catch (e) { profile = {}; }
             document.getElementById('adminName').textContent = profile.adminName || 'Terry Franklin';
             document.getElementById('adminRole').textContent = profile.adminRole || 'Manager';
             document.getElementById('adminEmail').textContent = 'Email: ' + (profile.adminEmail || 'admin@wispa.com');
@@ -98,9 +105,15 @@
                 const reader = new FileReader();
                 reader.onload = function(evt){
                     let profile = {};
-                    try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+                    try {
+                        if (window.adminGet) profile = await window.adminGet('adminProfile') || {};
+                        else profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+                    } catch (e) { profile = {}; }
                     profile.adminAvatar = evt.target.result;
-                    localStorage.setItem('adminProfile', JSON.stringify(profile));
+                    try {
+                        if (window.adminSet) await window.adminSet('adminProfile', profile);
+                        else localStorage.setItem('adminProfile', JSON.stringify(profile));
+                    } catch (e) { try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch{} }
                     updateProfile();
                 };
                 reader.readAsDataURL(file);

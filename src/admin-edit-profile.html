@@ -72,12 +72,15 @@
         </form>
     </div>
     <script>
-        // Load and save admin profile from localStorage
+        // Load and save admin profile from server via adminGet/adminSet (fallback to localStorage)
         const form = document.getElementById('adminEditProfileForm');
         const fields = ['adminName','adminEmail','adminLocation','adminBio','adminGender','adminPhone'];
-        function loadProfile(){
+        async function loadProfile(){
             let profile = {};
-            try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+            try {
+                if (window.adminGet) profile = await window.adminGet('adminProfile') || {};
+                else profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+            } catch(e) { profile = {}; }
             fields.forEach(f => {
                 if(form.elements[f]) form.elements[f].value = profile[f] || '';
             });
@@ -87,23 +90,23 @@
             let profile = {};
             fields.forEach(f => {
                 profile[f] = form.elements[f].value;
-            });
             try {
                 await fetch('/api/admin/profile', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(profile)
                 });
-                // also update local cache
-                localStorage.setItem('adminProfile', JSON.stringify(profile));
+                // update server-backed cache
+                try { if (window.adminSet) await window.adminSet('adminProfile', profile); else localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e) { try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e){} }
                 alert('Profile updated!');
                 window.location.href = 'admin-profile.html';
             } catch (err) {
                 // fallback to localStorage
-                localStorage.setItem('adminProfile', JSON.stringify(profile));
+                try { if (window.adminSet) await window.adminSet('adminProfile', profile); else localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e) { try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e){} }
                 alert('Profile updated (offline fallback)');
                 window.location.href = 'admin-profile.html';
             }
+        loadProfile();
         });
         loadProfile();
     </script>

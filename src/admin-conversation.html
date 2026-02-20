@@ -43,6 +43,25 @@
     </footer>
     <script src="script.js"></script>
     <script>
+        // Populate in-memory cache for conversation page and shim localStorage to server-backed adminGet/adminSet
+        (async function(){
+            const keys = ['adminChats','properties','adminProfile','agentProfile','wispaUser'];
+            window._adminCache = window._adminCache || {};
+            for (const k of keys) {
+                try { const v = window.adminGet ? await window.adminGet(k) : null; window._adminCache[k] = v === null || v === undefined ? null : JSON.stringify(v); } catch(e){ window._adminCache[k] = null; }
+            }
+            try {
+                localStorage.getItem = function(key) { return window._adminCache[key] ?? null; };
+                localStorage.setItem = function(key, value) {
+                    window._adminCache[key] = value;
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (window.adminSet) window.adminSet(key, parsed).catch(()=>{});
+                    } catch(e) { if (window.adminSet) window.adminSet(key, value).catch(()=>{}); }
+                };
+            } catch(e) { /* ignore */ }
+        })();
+
         (function(){
             // Use all possible conversation key formats to find messages
             const urlParams = new URLSearchParams(window.location.search);
