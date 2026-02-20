@@ -4354,17 +4354,10 @@ reports@wispa.com | +EU-SUPPORT-LINE
         function openOrCreateFromSearch(participantId, participantName){
             const resultsEl = document.getElementById('admin-chat-search-results'); if(resultsEl){ resultsEl.style.display='none'; }
             const input = document.getElementById('admin-chat-search'); if(input){ input.value = ''; }
-            const chats = loadAdminChats();
-            let chat = chats.find(c => c.participantId === participantId || c.participantId === participantId.toLowerCase());
-            if(!chat){
-                const id = 'chat-' + Date.now();
-                chat = { id, participantId, participantName, messages: [], lastMessage: '', timestamp: new Date().toISOString(), unread: 0 };
-                chats.unshift(chat);
-                saveAdminChats(chats);
-            }
+            // API-driven: openOrCreateFromSearch should call backend to create/find chat
+            // For now, just reload chat list
             renderAdminChatList();
-            // open the conversation in its own page
-            window.location.href = 'admin-chat.html?chat=' + encodeURIComponent(chat.id);
+            window.location.href = 'admin-chat.html';
         }
 
         function sendAdminMessage(){
@@ -4373,55 +4366,14 @@ reports@wispa.com | +EU-SUPPORT-LINE
             const text = input.value.trim();
             if(!text) return;
             if(!currentAdminChatId){ alert('Select a conversation first or create a new one.'); return; }
-            const chats = loadAdminChats();
-            const chat = chats.find(c => c.id === currentAdminChatId);
-            if(!chat) return;
-            const msg = { id: 'm-' + Date.now(), from: 'Admin', text, timestamp: new Date().toISOString() };
-            chat.messages.push(msg);
-            chat.lastMessage = text;
-            chat.timestamp = new Date().toISOString();
-            chat.unread = 0;
-            saveAdminChats(chats);
-
-            // If this is a property chat, also update the user-property conversation in localStorage
-            if(chat.isProperty && chat.userId && chat.propertyId){
-                const key = 'wispaMessages_' + chat.userId + '_property-' + chat.propertyId;
-                let messages = [];
-                try { messages = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){}
-                messages.push({ sender: 'admin', text: text, ts: Date.now() });
-                localStorage.setItem(key, JSON.stringify(messages));
-                try { localStorage.setItem(key + '_backup', JSON.stringify(messages)); } catch(e){}
-            }
-
-            // refresh either full view or inline messages
-            if(document.getElementById('chat-full-messages')){
-                openChatFullView(chat.id);
-            } else {
-                renderAdminMessages(chat);
-            }
+            // API-driven: sendAdminMessage should call backend to send message
+            // For now, just reload chat list
             renderAdminChatList();
             input.value = '';
             input.focus();
-            updateChatNotificationsFor(chat, msg);
-            let activity = JSON.parse(localStorage.getItem('activityLog') || '[]');
-            activity.push({ type: 'admin-chat-sent', chatId: chat.id, to: chat.participantId, message: text, timestamp: new Date().toISOString() });
-            localStorage.setItem('activityLog', JSON.stringify(activity));
         }
 
-        function updateChatNotificationsFor(chat, latestMsg){
-            let list = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-            const idx = list.findIndex(c => c.id === chat.id);
-            const entry = {
-                id: chat.id,
-                userName: chat.participantName || chat.participantId,
-                conversationTitle: chat.participantName || chat.participantId,
-                lastMessage: latestMsg ? latestMsg.text : (chat.lastMessage || ''),
-                timestamp: chat.timestamp || new Date().toISOString(),
-                read: true
-            };
-            if(idx > -1) { list[idx] = entry; } else { list.unshift(entry); }
-            localStorage.setItem('chatNotifications', JSON.stringify(list));
-        }
+        // updateChatNotificationsFor removed: now API-driven
 
         function openChatFullView(chatId){
             // deprecated: open conversations in separate page now
@@ -4437,48 +4389,12 @@ reports@wispa.com | +EU-SUPPORT-LINE
         function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\'/g,'&#39;'); }
 
         // Listen for storage changes to update chats in real time
-        window.addEventListener('storage', (e) => { 
-            // Listen for admin chats, notifications, property message updates, and unread count changes
-            if(e.key === 'adminChats' || e.key === 'chatNotifications' || e.key === 'adminUnread' || e.key === 'adminChatUnreadUpdated' || (e.key && /^wispaMessages_[^_]+_property-/.test(e.key))){ 
-                renderAdminChatList(); 
-                const cur = loadAdminChats().find(c => c.id === currentAdminChatId); 
-                if(cur) renderAdminMessages(cur); 
-            } 
-        });
+        // Removed storage event listener for chat: now API-driven
         
         document.addEventListener('DOMContentLoaded', function(){ 
             // Initialize chats with a delay to ensure DOM is ready
             setTimeout(() => {
-                // Initialize with sample conversations if none exist
-                let adminChats = loadAdminChats();
-                if (!Array.isArray(adminChats) || adminChats.length === 0) {
-                    adminChats = [
-                        {
-                            id: 'sample-chat-1',
-                            participantId: 'john.doe@example.com',
-                            participantName: 'John Doe',
-                            messages: [
-                                { id: 'm-1', from: 'User', text: 'Hi, I have a question about the property listing', timestamp: new Date(Date.now() - 3600000).toISOString() },
-                                { id: 'm-2', from: 'Admin', text: 'Hello! I\'ll be happy to help. What would you like to know?', timestamp: new Date(Date.now() - 3500000).toISOString() }
-                            ],
-                            lastMessage: 'Hello! I\'ll be happy to help. What would you like to know?',
-                            timestamp: new Date(Date.now() - 3500000).toISOString(),
-                            unread: 0
-                        },
-                        {
-                            id: 'sample-chat-2',
-                            participantId: 'agent.smith@example.com',
-                            participantName: 'Smith Real Estate Agent',
-                            messages: [
-                                { id: 'm-3', from: 'User', text: 'Just checking in on the property status', timestamp: new Date(Date.now() - 7200000).toISOString() }
-                            ],
-                            lastMessage: 'Just checking in on the property status',
-                            timestamp: new Date(Date.now() - 7200000).toISOString(),
-                            unread: 1
-                        }
-                    ];
-                    saveAdminChats(adminChats);
-                }
+                // Removed sample conversation localStorage logic: now API-driven
                 renderAdminChatList();
             }, 50);
             setTimeout(() => {
