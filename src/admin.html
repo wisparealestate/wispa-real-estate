@@ -908,12 +908,12 @@
                     <form id="alert-edit-form">
                         <input type="hidden" id="edit-alert-id" value="">
                         <div class="form-group">
-                            <label>Alert Title *</label>
-                            <input type="text" id="edit-alert-title" required>
+                            <label for="edit-alert-title">Alert Title *</label>
+                            <input type="text" id="edit-alert-title" name="edit-alert-title" required>
                         </div>
                         <div class="form-group">
-                            <label>Alert Message *</label>
-                            <textarea id="edit-alert-message" required rows="4"></textarea>
+                            <label for="edit-alert-message">Alert Message *</label>
+                            <textarea id="edit-alert-message" name="edit-alert-message" required rows="4"></textarea>
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
@@ -1456,8 +1456,8 @@ document.addEventListener('DOMContentLoaded', function(){
             <form id="add-property-form">
                 <input type="hidden" name="property-id" value="">
                 <div class="form-group">
-                    <label>Property Title</label>
-                    <input type="text" name="title" placeholder="e.g., Modern Apartment" required>
+                    <label for="property-title">Property Title</label>
+                    <input type="text" id="property-title" name="title" placeholder="e.g., Modern Apartment" required>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
@@ -1533,12 +1533,12 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             <form>
                 <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" placeholder="Agent Name" required>
+                    <label for="agent-name">Full Name</label>
+                    <input type="text" id="agent-name" name="agent-name" placeholder="Agent Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" placeholder="agent@wispa.com" required>
+                    <label for="agent-email">Email</label>
+                    <input type="email" id="agent-email" name="agent-email" placeholder="agent@wispa.com" required>
                 </div>
                 <button class="btn-primary" type="submit">Add Agent</button>
             </form>
