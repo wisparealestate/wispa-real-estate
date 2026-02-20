@@ -1,3 +1,77 @@
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
+import upload from "./upload.js";
+import path from "path";
+
+const { Pool } = pkg;
+const app = express();
+app.use(cors({
+  origin: "https://wispa-real-estate-one.vercel.app"
+}));
+app.use(bodyParser.json());
+const port = process.env.PORT || 3001;
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// PostgreSQL connection
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+});
+
+// Get all users (admin)
+app.get("/api/users", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT id, username, email, full_name, role, avatar_url, created_at FROM users ORDER BY id DESC");
+    res.json({ users: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get user by id (admin)
+app.get("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("SELECT id, username, email, full_name, role, avatar_url, created_at FROM users WHERE id = $1", [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update user (admin)
+app.put("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { username, email, full_name, role } = req.body;
+  if (!username || !email) return res.status(400).json({ error: "Missing username or email" });
+  try {
+    await pool.query(
+      "UPDATE users SET username = $1, email = $2, full_name = $3, role = $4 WHERE id = $5",
+      [username, email, full_name || null, role || 'user', id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete user (admin)
+app.delete("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM users WHERE id = $1", [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get all properties
 app.get("/api/properties", async (req, res) => {
   try {
