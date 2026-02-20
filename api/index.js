@@ -19,7 +19,8 @@ const app = express();
 app.use(cors({
   origin: "https://wispa-real-estate-one.vercel.app"
 }));
-app.use(bodyParser.json());
+// Allow larger JSON payloads (but prefer file uploads for images)
+app.use(bodyParser.json({ limit: '10mb' }));
 const port = process.env.PORT || 3001;
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -183,6 +184,17 @@ app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
   res.json({ imageUrl });
+});
+
+// Upload multiple files for property photos
+app.post('/api/upload-photos', upload.array('files'), (req, res) => {
+  try {
+    if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
+    const urls = req.files.map(f => `${req.protocol}://${req.get('host')}/uploads/${f.filename}`);
+    res.json({ urls });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Create a notification for a user (DB first, fallback to file)

@@ -605,6 +605,12 @@
                         </table>
                         <script>
                         // Fetch and render properties from backend API
+                        function formatEightId(id){
+                            const s = String(id || '');
+                            if (s.length >= 8) return s.slice(-8);
+                            return s.padStart(8, '0');
+                        }
+
                         async function renderPropertiesWithDocButton() {
                             const tbody = document.getElementById('properties-tbody');
                             if (!tbody) return;
@@ -612,8 +618,18 @@
                             let props = [];
                             try {
                                 const res = await window.apiFetch('/api/properties');
-                                if (!res || !res.ok) throw new Error('Failed');
-                                props = await res.json();
+                                if (!res) throw new Error('No response');
+                                // apiFetch may return a Response or parsed JSON
+                                let data = null;
+                                if (typeof res.json === 'function') {
+                                    data = await res.json();
+                                } else {
+                                    data = res;
+                                }
+                                // support both { properties: [...] } and array responses
+                                if (Array.isArray(data)) props = data;
+                                else if (data && Array.isArray(data.properties)) props = data.properties;
+                                else props = [];
                             } catch (e) {
                                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;">Failed to load properties</td></tr>';
                                 return;
@@ -623,23 +639,39 @@
                                 return;
                             }
                             props.forEach(p => {
+                                const displayId = formatEightId(p.id || p.propertyId || Date.now());
+                                const title = p.title || p.name || p.title || 'Untitled';
+                                const type = p.type || p.postTo || (p.property_type || '') || '';
+                                const price = p.price ? Number(p.price) : (p.price || 0);
+                                const location = p.location || p.address || '';
+                                const status = p.status || (p.active ? 'Active' : 'Active');
+
                                 const tr = document.createElement('tr');
                                 tr.innerHTML = `
-                                    <td>#${p.id}</td>
-                                    <td>${p.title || p.name || 'Untitled'}</td>
-                                    <td>${p.type || ''}</td>
-                                    <td>€${p.price ? Number(p.price).toLocaleString() : '0'}</td>
-                                    <td>${p.location || ''}</td>
-                                    <td><span class="badge active">${p.status||'Active'}</span></td>
+                                    <td>#${displayId}</td>
+                                    <td>${escapeHtml(title)}</td>
+                                    <td>${escapeHtml(type)}</td>
+                                    <td>€${price.toLocaleString()}</td>
+                                    <td>${escapeHtml(location)}</td>
+                                    <td><span class="badge active">${escapeHtml(status)}</span></td>
                                     <td>
                                         <div class="action-buttons">
-                                            <button class="btn-sm edit" data-id="${p.id}" onclick="editProperty('${p.id}')">Edit</button>
-                                            <button class="btn-sm" style="background:#2ecc71;color:white;font-size:11px;" onclick="generatePropertyDocument('${p.id}')">📄 Generate Doc</button>
-                                            <button class="btn-sm delete" onclick="deleteProperty('${p.id}')">Delete</button>
+                                            <button class="btn-sm edit" data-id="${displayId}" onclick="editProperty('${displayId}')">Edit</button>
+                                            <button class="btn-sm" style="background:#2ecc71;color:white;font-size:11px;" onclick="generatePropertyDocument('${p.id || displayId}')">📄 Generate Doc</button>
+                                            <button class="btn-sm delete" onclick="deleteProperty('${p.id || displayId}')">Delete</button>
                                         </div>
                                     </td>
                                 `;
                                 tbody.appendChild(tr);
+                            });
+                        }
+
+                        // small helper to avoid injecting raw HTML
+                        function escapeHtml(s){
+                            if(s === null || s === undefined) return '';
+                            return String(s).replace(/[&<>\"]+/g, function(ch){
+                                switch(ch){ case '&': return '&amp;'; case '<': return '&lt;'; case '>': return '&gt;'; case '"': return '&quot;'; }
+                                return ch;
                             });
                         }
                         function editProperty(id) { alert('Edit property: ' + id); }
@@ -3138,6 +3170,46 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             if (p._serverId) return;
 
                             // build backend shape
+                            // If images contains data: URLs, convert to blobs and upload them first to avoid huge JSON bodies
+                            async function dataURLtoBlob(dataurl) {
+                                const parts = dataurl.split(',');
+                                const header = parts[0];
+                                const base64 = parts[1];
+                                const mime = header.match(/:(.*?);/)[1];
+                                const byteChars = atob(base64);
+                                const byteNumbers = new Array(byteChars.length);
+                                for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+                                return new Blob([new Uint8Array(byteNumbers)], { type: mime });
+                            }
+
+                            let photoUrls = Array.isArray(p.images) ? p.images.slice() : (p.photos ? p.photos.slice() : []);
+                            // detect data URLs
+                            const dataImgs = photoUrls.filter(u => typeof u === 'string' && u.startsWith('data:'));
+                            if (dataImgs.length) {
+                                try {
+                                    const form = new FormData();
+                                    for (let i = 0; i < dataImgs.length; i++){
+                                        const blob = await dataURLtoBlob(dataImgs[i]);
+                                        form.append('files', blob, 'upload-' + Date.now() + '-' + i + '.png');
+                                    }
+                                    const poster = window.apiFetch ? window.apiFetch : fetch;
+                                    const upRes = await poster('/api/upload-photos', { method: 'POST', body: form });
+                                    if (upRes && typeof upRes.json === 'function') {
+                                        const upJson = await upRes.json();
+                                        if (Array.isArray(upJson.urls) && upJson.urls.length) {
+                                            // replace data URLs with returned URLs (preserve non-data URLs)
+                                            const uploaded = upJson.urls;
+                                            let ui = 0;
+                                            photoUrls = photoUrls.map(u => (typeof u === 'string' && u.startsWith('data:')) ? (uploaded[ui++] || '') : u).filter(Boolean);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('admin.saveProperties: failed to upload embedded images', e);
+                                    // fall back to stripping data URLs to avoid huge POST
+                                    photoUrls = photoUrls.filter(u => !(typeof u === 'string' && u.startsWith('data:')));
+                                }
+                            }
+
                             const body = {
                                 property: {
                                     user_id: p.user_id || null,
@@ -3148,9 +3220,9 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                     city: p.city || '',
                                     state: p.state || '',
                                     zip_code: p.zip_code || p.postal || '',
-                                    image_url: (p.images && p.images[0]) || p.image || null
+                                    image_url: (photoUrls && photoUrls[0]) || p.image || null
                                 },
-                                photoUrls: Array.isArray(p.images) ? p.images : (p.photos || [])
+                                photoUrls: photoUrls
                             };
 
                             console.debug('admin.saveProperties: posting property to API', body);

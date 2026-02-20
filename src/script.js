@@ -1499,18 +1499,25 @@ if (typeof propertyImageIds === 'undefined') {
     const postAdForm = document.getElementById('post-ad-form');
     if (postAdForm) postAdForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        // If the user selected files via the new #ad-media input, read them as data URLs for preview/storage
+        // If the user selected files via the new #ad-media input, upload them to the server
         const mediaInput = document.getElementById('ad-media');
         let images = [];
         if (mediaInput && mediaInput.files && mediaInput.files.length > 0) {
             const files = Array.from(mediaInput.files);
-            const readFile = (file) => new Promise((res, rej) => {
-                const r = new FileReader();
-                r.onload = () => res(String(r.result));
-                r.onerror = rej;
-                r.readAsDataURL(file);
-            });
-            try { images = await Promise.all(files.map(f => readFile(f))); } catch(e) { images = []; }
+            try {
+                const form = new FormData();
+                files.forEach(f => form.append('files', f));
+                const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+                // poster may be apiFetch which forwards to API_BASE; it will return a Response
+                const resp = await poster('/api/upload-photos', { method: 'POST', body: form });
+                if (resp && typeof resp.json === 'function') {
+                    const j = await resp.json();
+                    if (Array.isArray(j.urls) && j.urls.length) images = j.urls;
+                }
+            } catch (e) {
+                console.warn('Image upload failed, falling back to using object URLs for preview', e);
+                images = Array.from(mediaInput.files).map(f => URL.createObjectURL(f));
+            }
         }
 
         // Build a frontend display object (kept for immediate UI) and a backend-compatible object

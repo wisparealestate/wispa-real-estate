@@ -24,7 +24,9 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     const photosRes = await client.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [propertyId]);
     const photos = photosRes.rows.map(r => r.photo_url);
     await client.query('COMMIT');
-    return { property: Object.assign({}, propertyRow, { images: photos }), propertyId };
+    // Merge provided property fields (e.g. type, bedrooms, bathrooms, location) into returned row
+    const merged = Object.assign({}, propertyRow, property || {}, { images: photos });
+    return { property: merged, propertyId };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
