@@ -20,14 +20,6 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-import upload from "./upload.js";
-import path from "path";
 
 const { Pool } = pkg;
 const app = express();
