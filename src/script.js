@@ -569,7 +569,7 @@ if (typeof propertyImageIds === 'undefined') {
                     try {
                         const reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
                         const prop = (typeof properties !== 'undefined' && Array.isArray(properties)) ? properties.find(p => String(p.id) === String(id)) : null;
-                        reactions.unshift({
+                        const reactionObj = {
                             id: 'react-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
                             userId: userId,
                             userName: userData.username || userData.email || userId,
@@ -580,9 +580,25 @@ if (typeof propertyImageIds === 'undefined') {
                             read: false,
                             reaction: 'like',
                             notificationTitle: `Like on ${prop ? (prop.title || 'your post') : 'your post'}`
-                        });
-                        localStorage.setItem('notificationReactions', JSON.stringify(reactions));
-                        try { localStorage.setItem('notificationReactions_signal', String(Date.now())); } catch(e){}
+                        };
+                        // Try to persist reaction to server, fallback to localStorage
+                        (async function(){
+                            try {
+                                await fetch('/api/notification-reactions', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(reactionObj)
+                                });
+                                // also update local copy for UI
+                                reactions.unshift(reactionObj);
+                                localStorage.setItem('notificationReactions', JSON.stringify(reactions));
+                                try { localStorage.setItem('notificationReactions_signal', String(Date.now())); } catch(e){}
+                            } catch (e) {
+                                reactions.unshift(reactionObj);
+                                localStorage.setItem('notificationReactions', JSON.stringify(reactions));
+                                try { localStorage.setItem('notificationReactions_signal', String(Date.now())); } catch(e){}
+                            }
+                        })();
                     } catch(e) { console.error('error saving reaction', e); }
                 }
                 localStorage.setItem('likedProperties_' + userId, JSON.stringify(liked));
@@ -1510,17 +1526,29 @@ if (typeof propertyImageIds === 'undefined') {
         
         // Capture user info if sender is 'user'
         const msg = { sender: sender, text: String(text), ts: now };
-        if(sender === 'user'){
-            try{
+        if (sender === 'user') {
+            try {
                 const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-                if(wispaUser.username) msg.userName = wispaUser.username;
-                if(wispaUser.email) msg.userEmail = wispaUser.email;
-                if(wispaUser.id) msg.userId = wispaUser.id;
-            }catch(e){}
+                if (wispaUser.username) msg.userName = wispaUser.username;
+                if (wispaUser.email) msg.userEmail = wispaUser.email;
+                if (wispaUser.id) msg.userId = wispaUser.id;
+            } catch (e) { /* ignore */ }
         }
-        
+
         list.push(msg);
-        localStorage.setItem(key, JSON.stringify(list));
+        // Try to persist message to server; fallback to localStorage
+        (async function(){
+            try {
+                await fetch('/api/conversations/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ convId: convId, message: msg })
+                });
+            } catch (e) {
+                // fallback to localStorage
+                try { localStorage.setItem(key, JSON.stringify(list)); } catch(err){}
+            }
+        })();
 
         // notify same-tab subscribers
         if (_convSubscribers[convId]) {
