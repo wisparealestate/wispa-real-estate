@@ -1,4 +1,26 @@
 
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
+import upload from "./upload.js";
+import path from "path";
+
+const { Pool } = pkg;
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+});
+
+const app = express();
+app.use(cors({
+  origin: "https://wispa-real-estate-one.vercel.app"
+}));
+app.use(bodyParser.json());
+const port = process.env.PORT || 3001;
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Get notifications for a user (real DB)
 app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
@@ -22,23 +44,6 @@ app.get("/api/conversations", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-const { Pool } = pkg;
-const app = express();
-app.use(cors({
-  origin: "https://wispa-real-estate-one.vercel.app"
-}));
-app.use(bodyParser.json());
-const port = process.env.PORT || 3001;
-
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-import upload from "./upload.js";
-import path from "path";
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
