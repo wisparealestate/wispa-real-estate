@@ -1,90 +1,25 @@
+import express from "express";
+import pkg from "pg";
+import bcrypt from "bcrypt";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { addPropertyWithPhotos } from "./property.js";
+import upload from "./upload.js";
+import path from "path";
 
-// PostgreSQL connection
+const { Pool } = pkg;
+const app = express();
+app.use(cors({
+  origin: "https://wispa-real-estate-one.vercel.app"
+}));
+app.use(bodyParser.json());
+const port = process.env.PORT || 3001;
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Get all users (admin)
-app.get("/api/users", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT id, username, email, full_name, role, avatar_url, created_at FROM users ORDER BY id DESC");
-    res.json({ users: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get user by id (admin)
-app.get("/api/users/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query("SELECT id, username, email, full_name, role, avatar_url, created_at FROM users WHERE id = $1", [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
-    res.json({ user: result.rows[0] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Update user (admin)
-app.put("/api/users/:id", async (req, res) => {
-  const { id } = req.params;
-  const { username, email, full_name, role } = req.body;
-  if (!username || !email) return res.status(400).json({ error: "Missing username or email" });
-  try {
-    await pool.query(
-      "UPDATE users SET username = $1, email = $2, full_name = $3, role = $4 WHERE id = $5",
-      [username, email, full_name || null, role || 'user', id]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete user (admin)
-app.delete("/api/users/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query("DELETE FROM users WHERE id = $1", [id]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get all properties
-app.get("/api/properties", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM properties ORDER BY id DESC");
-    res.json({ properties: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Update a property
-app.put("/api/properties/:id", async (req, res) => {
-  const { id } = req.params;
-  const { property } = req.body;
-  if (!property) return res.status(400).json({ error: "Missing property data" });
-  try {
-    await pool.query(
-      "UPDATE properties SET title=$1, description=$2, price=$3, address=$4, city=$5, state=$6, zip_code=$7, image_url=$8 WHERE id=$9",
-      [property.title, property.description, property.price, property.address, property.city, property.state, property.zip_code, property.image_url || null, id]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete a property
-app.delete("/api/properties/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query("DELETE FROM properties WHERE id = $1", [id]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
 import express from "express";
