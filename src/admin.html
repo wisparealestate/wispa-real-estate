@@ -342,9 +342,9 @@
         </div>
     </header>
         <script>
-        // Sync admin data from server into localStorage on page load
+        // Admin API helpers — use server-backed storage, not localStorage
         (function(){
-            const syncKeys = {
+            const mapping = {
                 adminSentNotifications: '/api/admin/sent-notifications',
                 adminProfile: '/api/admin/profile',
                 propertyRequests: '/api/property-requests',
@@ -355,68 +355,60 @@
                 conversations: '/api/conversations'
             };
 
-            const API_BASE = window.WISPA_API_BASE || '';
-            // Try a relative fetch first, then fallback to configured API base if provided
-            async function apiFetch(url, opts) {
+            function extractPayload(data) {
+                if (!data) return data;
+                if (Array.isArray(data)) return data;
+                if (data.sent) return data.sent;
+                if (data.profile) return data.profile;
+                if (data.requests) return data.requests;
+                if (data.contacts) return data.contacts;
+                if (data.reactions) return data.reactions;
+                if (data.alerts) return data.alerts;
+                if (data.notifications) return data.notifications;
+                if (data.conversations) return data.conversations;
+                if (data.properties) return data.properties;
+                if (data.users) return data.users;
+                return data;
+            }
+
+            async function adminFetch(url, opts) {
+                // prefer window.apiFetch if available (handles API_BASE fallback)
                 try {
-                    const r = await fetch(url, opts);
-                    if (r.ok) return r;
-                    // if 404 or other non-ok, fall through to try base
-                } catch (e) { /* ignore */ }
-                if (API_BASE) {
+                    if (window.apiFetch) return await window.apiFetch(url, opts);
+                    return await fetch(url, opts);
+                } catch (e) {
                     try {
-                        const full = API_BASE.replace(/\/$/, '') + url;
-                        const r2 = await fetch(full, opts);
-                        return r2;
-                    } catch (e) { /* ignore */ }
+                        const base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+                        if (base) return await fetch(base + url, opts);
+                    } catch (e) {}
                 }
                 return null;
             }
 
-            function extractPayload(data) {
-                if (Array.isArray(data)) return data;
-                if (!data || typeof data !== 'object') return data;
-                // Known wrapper keys -> return inner value
-                const picks = ['sent','profile','requests','contacts','reactions','alerts','notifications','conversations','users','properties','messages'];
-                for (const k of picks) {
-                    if (data[k] !== undefined) return data[k];
-                }
-                // If single-key object whose value is array, return that
-                const keys = Object.keys(data);
-                if (keys.length === 1 && Array.isArray(data[keys[0]])) return data[keys[0]];
-                return data;
-            }
-
-            async function fetchAndStore(key, url) {
+            window.adminGet = async function(key) {
+                const url = mapping[key];
+                if (!url) return null;
                 try {
-                    const res = await apiFetch(url);
-                    if (!res || !res.ok) return;
-                    const data = await res.json();
-                    const payload = extractPayload(data);
-                    try { localStorage.setItem(key, JSON.stringify(payload)); } catch(e){}
-                } catch (e) { /* ignore */ }
-            }
+                    const r = await adminFetch(url);
+                    if (!r || !r.ok) return null;
+                    const j = await r.json();
+                    return extractPayload(j);
+                } catch (e) { return null; }
+            };
 
-            // On load, fetch server-side copies and write into localStorage so existing UI continues working synchronously
-            window.addEventListener('DOMContentLoaded', function() {
-                Object.keys(syncKeys).forEach(k => fetchAndStore(k, syncKeys[k]));
-            });
-
-            // Intercept setItem to forward updates to server for keys we support (async, best-effort)
-            try {
-                const _origSet = localStorage.setItem.bind(localStorage);
-                localStorage.setItem = function(key, value) {
-                    _origSet(key, value);
-                    if (syncKeys[key]) {
-                        // best-effort: send full value to server sync endpoint
-                        try {
-                            let parsed = null;
-                            try { parsed = JSON.parse(value); } catch(e) { parsed = value; }
-                            try { window.apiFetch('/api/admin/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: key, value: parsed }) }).catch(()=>{}); } catch(e){}
-                        } catch(e){}
+            window.adminSet = async function(key, value) {
+                const url = mapping[key] || '/api/admin/sync';
+                try {
+                    if (url === '/api/admin/sync') {
+                        await adminFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value }) });
+                        return true;
                     }
-                };
-            } catch(e) { /* localStorage not available or locked */ }
+                    // POST to resource-specific endpoints for simple lists
+                    await adminFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
+                    return true;
+                } catch (e) { return false; }
+            };
+
         })();
         </script>
     <!-- MAIN ADMIN LAYOUT -->
@@ -499,13 +491,17 @@
                         <button class="btn-primary" id="view-more-properties-btn" style="padding:8px 22px;">View More</button>
                     </div>
                     <script>
-                    // Render recent properties using the same row structure as properties list
-                    function renderRecentPropertiesUnified() {
+                    // Render recent properties using server-backed properties list
+                    async function renderRecentPropertiesUnified() {
                         const tbody = document.getElementById('recent-properties-tbody');
                         if (!tbody) return;
                         let props = [];
                         try {
-                            props = JSON.parse(localStorage.getItem('properties') || '[]');
+                            const r = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
+                            if (r && r.ok) {
+                                const j = await r.json();
+                                props = j.properties || [];
+                            }
                         } catch (e) { props = []; }
                         props.sort((a, b) => new Date(b.posted || b.created || b.date || 0) - new Date(a.posted || a.created || a.date || 0));
                         const recent = props.slice(0, 5);
