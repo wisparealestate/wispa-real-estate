@@ -3295,6 +3295,12 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                     city: p.city || '',
                                     state: p.state || '',
                                     zip_code: p.zip_code || p.postal || '',
+                                    bedrooms: p.bedrooms || p.beds || null,
+                                    bathrooms: p.bathrooms || p.baths || null,
+                                    area: p.area || p.size || null,
+                                    type: p.type || p.property_type || null,
+                                    sale_rent: p.sale_rent || p.for || p.saleRent || null,
+                                    post_to: p.post_to || p.post || p.postTo || null,
                                     image_url: (photoUrls && photoUrls[0]) || p.image || null
                                 },
                                 photoUrls: photoUrls
