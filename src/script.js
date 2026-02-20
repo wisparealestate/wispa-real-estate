@@ -1,4 +1,25 @@
-// ...existing code...
+// Provide a site-wide API base and apiFetch helper so pages (property-detail, etc.)
+// call the deployed backend when the frontend is served from a different origin.
+window.WISPA_API_BASE = window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
+if (!window.apiFetch) {
+    window.apiFetch = async function(url, opts) {
+        const API_BASE = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+        try {
+            // if no API_BASE configured, just use fetch
+            if (!API_BASE) {
+                return await fetch(url, opts);
+            }
+            // prefer calling configured backend directly for /api/ paths
+            if (typeof url === 'string' && url.startsWith('/api/')) {
+                return await fetch(API_BASE + url, opts);
+            }
+            // otherwise try same-origin then fallback to API_BASE
+            try { const r = await fetch(url, opts); if (r && r.ok) return r; } catch(e){}
+            return await fetch(API_BASE + url, opts);
+        } catch (e) { return null; }
+    };
+}
+
 
 // Always sync window.properties from localStorage on page load
 document.addEventListener('DOMContentLoaded', function() {
