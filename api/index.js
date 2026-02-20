@@ -147,6 +147,30 @@ app.post('/api/system-alerts', async (req, res) => {
   await writeJson('systemAlerts.json', arr);
   res.json({ success: true });
 });
+
+// Generic admin sync endpoint to overwrite a named file
+app.post('/api/admin/sync', async (req, res) => {
+  const { key, value } = req.body || {};
+  if (!key) return res.status(400).json({ error: 'Missing key' });
+  const mapping = {
+    'adminSentNotifications': 'adminSentNotifications.json',
+    'adminProfile': 'adminProfile.json',
+    'propertyRequests': 'propertyRequests.json',
+    'contactMessages': 'contactMessages.json',
+    'notificationReactions': 'notificationReactions.json',
+    'systemAlerts': 'systemAlerts.json',
+    'notifications': 'notifications.json',
+    'conversations': 'conversations.json'
+  };
+  const file = mapping[key];
+  if (!file) return res.status(400).json({ error: 'Unsupported key' });
+  try {
+    await writeJson(file, value || []);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -154,6 +178,62 @@ app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   // Return the public URL to the uploaded image
   const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
   res.json({ imageUrl });
+});
+
+// Create a notification for a user (DB first, fallback to file)
+app.post('/api/notifications', async (req, res) => {
+  const { userId, notification } = req.body || {};
+  if (!userId || !notification) return res.status(400).json({ error: 'Missing userId or notification' });
+  try {
+    // Try DB insert first
+    try {
+      const result = await pool.query(
+        'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+        [userId, notification.title || null, notification.message || notification.fullMessage || null, JSON.stringify(notification || {}), notification.timestamp || new Date().toISOString(), notification.read ? true : false]
+      );
+      return res.json({ notification: result.rows[0] });
+    } catch (e) {
+      // Fallback to file
+      const all = await readJson('notifications.json');
+      all.unshift(Object.assign({ userId: userId }, notification));
+      await writeJson('notifications.json', all);
+      return res.json({ notification: notification });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Append a message to a conversation (DB first, fallback to file)
+app.post('/api/conversations/messages', async (req, res) => {
+  const { convId, message } = req.body || {};
+  if (!convId || !message) return res.status(400).json({ error: 'Missing convId or message' });
+  try {
+    try {
+      // If a messages table exists, insert into it
+      const result = await pool.query(
+        'INSERT INTO messages (conversation_id, sender, body, meta, sent_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+        [convId, message.sender || null, message.text || message.body || null, JSON.stringify(message || {}), message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]
+      );
+      return res.json({ message: result.rows[0] });
+    } catch (e) {
+      // Fallback: store conversation object in conversations.json
+      const all = await readJson('conversations.json');
+      // Find conversation array entry
+      let conv = all.find(c => c.id === convId);
+      if (!conv) {
+        conv = { id: convId, messages: [] };
+        all.push(conv);
+      }
+      conv.messages = conv.messages || [];
+      conv.messages.push(message);
+      conv.updated = Date.now();
+      await writeJson('conversations.json', all);
+      return res.json({ message });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 // Update user's avatar_url after image upload
 app.post('/api/update-avatar-url', async (req, res) => {

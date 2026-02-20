@@ -90,24 +90,25 @@
             const subject = document.getElementById('subject').value;
             const message = document.getElementById('message').value;
 
-            // Save to localStorage
-            const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-            contactMessages.push({
-                name,
-                email,
-                phone,
-                subject,
-                message,
-                date: new Date().toISOString(),
-                read: false
-            });
-            localStorage.setItem('contactMessages', JSON.stringify(contactMessages));
-
-            // Show success message
-            alert('Your message has been sent successfully! We will get back to you soon.');
-            
-            // Reset form
-            this.reset();
+            // Try to POST to backend, fallback to localStorage
+            const msgObj = { name, email, phone, subject, message, date: new Date().toISOString(), read: false };
+            (async function(){
+                try {
+                    await fetch('/api/contact-messages', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(msgObj)
+                    });
+                    alert('Your message has been sent successfully! We will get back to you soon.');
+                    document.getElementById('contact-form').reset();
+                } catch(e) {
+                    const contactMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+                    contactMessages.push(msgObj);
+                    localStorage.setItem('contactMessages', JSON.stringify(contactMessages));
+                    alert('Your message has been saved locally (offline). It will be sent when the server is available.');
+                    document.getElementById('contact-form').reset();
+                }
+            })();
         });
     </script>
 </body>
