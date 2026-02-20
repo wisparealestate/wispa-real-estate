@@ -917,8 +917,8 @@
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Type</label>
-                                <select id="edit-alert-type">
+                                <label for="edit-alert-type">Type</label>
+                                <select id="edit-alert-type" name="edit-alert-type">
                                     <option value="info">ℹ️ Info</option>
                                     <option value="success">✅ Success</option>
                                     <option value="warning">⚠️ Warning</option>
@@ -926,8 +926,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Priority</label>
-                                <select id="edit-alert-priority">
+                                <label for="edit-alert-priority">Priority</label>
+                                <select id="edit-alert-priority" name="edit-alert-priority">
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
                                     <option value="high">High</option>
@@ -935,8 +935,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Target</label>
-                                <select id="edit-alert-target">
+                                <label for="edit-alert-target">Target</label>
+                                <select id="edit-alert-target" name="edit-alert-target">
                                     <option value="all">All Users</option>
                                     <option value="agents">All Agents</option>
                                     <option value="users">All Buyers/Renters</option>
@@ -946,16 +946,16 @@
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Status</label>
-                                <select id="edit-alert-status">
+                                <label for="edit-alert-status">Status</label>
+                                <select id="edit-alert-status" name="edit-alert-status">
                                     <option value="active">Active</option>
                                     <option value="draft">Draft</option>
                                     <option value="scheduled">Scheduled</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Expiry Date</label>
-                                <input type="date" id="edit-alert-expiry">
+                                <label for="edit-alert-expiry">Expiry Date</label>
+                                <input type="date" id="edit-alert-expiry" name="edit-alert-expiry">
                             </div>
                         </div>
                         <div style="display:flex;gap:10px;margin-top:20px;">
@@ -1461,8 +1461,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Property Type</label>
-                        <select name="type" required>
+                        <label for="property-type">Property Type</label>
+                        <select id="property-type" name="type" required>
                             <option value="">Select type...</option>
                             <option>Apartment</option>
                             <option>House</option>
@@ -1470,8 +1470,8 @@ document.addEventListener('DOMContentLoaded', function(){
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>For</label>
-                        <select name="saleRent" required>
+                        <label for="property-saleRent">For</label>
+                        <select id="property-saleRent" name="saleRent" required>
                             <option value="sale">For Sale</option>
                             <option value="rent">For Rent</option>
                         </select>
@@ -1479,30 +1479,30 @@ document.addEventListener('DOMContentLoaded', function(){
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Price (€)</label>
-                        <input type="number" name="price" placeholder="500000" required>
+                        <label for="property-price">Price (€)</label>
+                        <input type="number" id="property-price" name="price" placeholder="500000" required>
                     </div>
                     <div class="form-group">
-                        <label>Location</label>
-                        <input type="text" name="location" placeholder="City, Country" required>
+                        <label for="property-location">Location</label>
+                        <input type="text" id="property-location" name="location" placeholder="City, Country" required>
                     </div>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Property Area (m²)</label>
-                        <input type="number" name="area" placeholder="e.g., 156" min="0">
+                        <label for="property-area">Property Area (m²)</label>
+                        <input type="number" id="property-area" name="area" placeholder="e.g., 156" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Bedrooms (optional)</label>
-                        <input type="number" name="bedrooms" placeholder="e.g., 3" min="0">
+                        <label for="property-bedrooms">Bedrooms (optional)</label>
+                        <input type="number" id="property-bedrooms" name="bedrooms" placeholder="e.g., 3" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Bathrooms (optional)</label>
-                        <input type="number" name="bathrooms" placeholder="e.g., 2" min="0">
+                        <label for="property-bathrooms">Bathrooms (optional)</label>
+                        <input type="number" id="property-bathrooms" name="bathrooms" placeholder="e.g., 2" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Post to</label>
-                        <select name="postTo">
+                        <label for="property-postTo">Post to</label>
+                        <select id="property-postTo" name="postTo">
                             <option value="available">✅ Available</option>
                             <option value="featured">⭐ Featured</option>
                             <option value="hot">🔥 Hot</option>
@@ -1510,13 +1510,13 @@ document.addEventListener('DOMContentLoaded', function(){
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Property Description</label>
-                    <textarea name="description" placeholder="Enter a detailed description for this property (shown on property detail page)" rows="5"></textarea>
+                    <label for="property-description">Property Description</label>
+                    <textarea id="property-description" name="description" placeholder="Enter a detailed description for this property (shown on property detail page)" rows="5"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Upload Photos & Videos</label>
+                    <label for="property-media">Upload Photos & Videos</label>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <input type="file" name="media" accept="image/*,video/*" multiple style="flex:1;min-width:200px;">
+                        <input type="file" id="property-media" name="media" accept="image/*,video/*" multiple style="flex:1;min-width:200px;">
                         <button type="button" class="btn-sm edit" onclick="document.querySelector('input[name=media]').click();" style="white-space:nowrap;">📸 Browse Files</button>
                     </div>
                 </div>
