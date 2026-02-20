@@ -1,6 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+        <script>
+        // API-driven loadAdminChats implementation
+        async function loadAdminChats() {
+            try {
+                const res = await fetch('/api/admin/messages');
+                if (!res.ok) return [];
+                const data = await res.json();
+                const messages = data.messages || [];
+                // Group messages by conversation (sender/receiver)
+                const convMap = {};
+                messages.forEach(msg => {
+                    const key = [msg.sender_id, msg.receiver_id].sort().join('-');
+                    if (!convMap[key]) convMap[key] = [];
+                    convMap[key].push(msg);
+                });
+                // Convert to chat objects
+                return Object.entries(convMap).map(([key, msgs]) => {
+                    const lastMsg = msgs[msgs.length-1];
+                    return {
+                        id: key,
+                        participantId: lastMsg.sender_id === 1 ? lastMsg.receiver_id : lastMsg.sender_id,
+                        participantName: lastMsg.sender_id === 1 ? 'User ' + lastMsg.receiver_id : 'User ' + lastMsg.sender_id,
+                        messages: msgs.map(m => ({
+                            id: m.id,
+                            from: m.sender_id === 1 ? 'Admin' : 'User',
+                            text: m.content,
+                            timestamp: m.sent_at
+                        })),
+                        lastMessage: lastMsg.content,
+                        timestamp: lastMsg.sent_at,
+                        unread: 0
+                    };
+                });
+            } catch (e) {
+                return [];
+            }
+        }
+        </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Wispa Real Estate</title>
