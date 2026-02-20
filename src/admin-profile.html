@@ -72,17 +72,20 @@
             // For demo, just redirect to admin login page
             window.location.href = 'admin-login.html';
         }
-        // Load admin profile from server (adminGet) or fallback to localStorage
+        // Load admin profile from server or fallback to localStorage
         async function updateProfile() {
             let profile = {};
             try {
-                if (window.adminGet) {
-                    const p = await window.adminGet('adminProfile');
-                    profile = p || {};
+                // prefer apiFetch which handles API_BASE
+                const getter = window.apiFetch || fetch;
+                const res = await getter('/api/admin/profile');
+                if (res && res.ok) {
+                    const j = await res.json();
+                    profile = j.profile || j || {};
                 } else {
                     profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
                 }
-            } catch (e) { profile = {}; }
+            } catch (e) { try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){ profile = {}; } }
             document.getElementById('adminName').textContent = profile.adminName || 'Terry Franklin';
             document.getElementById('adminRole').textContent = profile.adminRole || 'Manager';
             document.getElementById('adminEmail').textContent = 'Email: ' + (profile.adminEmail || 'admin@wispa.com');
@@ -103,17 +106,24 @@
             const file = e.target.files[0];
             if(file && file.type.startsWith('image/')){
                 const reader = new FileReader();
-                reader.onload = function(evt){
+                reader.onload = async function(evt){
                     let profile = {};
                     try {
-                        if (window.adminGet) profile = await window.adminGet('adminProfile') || {};
-                        else profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
-                    } catch (e) { profile = {}; }
+                        const getter = window.apiFetch || fetch;
+                        const res = await getter('/api/admin/profile');
+                        if (res && res.ok) {
+                            const j = await res.json(); profile = j.profile || j || {};
+                        } else {
+                            profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+                        }
+                    } catch (e) { try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){ profile = {}; } }
                     profile.adminAvatar = evt.target.result;
                     try {
-                        if (window.adminSet) await window.adminSet('adminProfile', profile);
-                        else localStorage.setItem('adminProfile', JSON.stringify(profile));
-                    } catch (e) { try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch{} }
+                        const poster = window.apiFetch || fetch;
+                        await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
+                    } catch (e) {
+                        try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e){}
+                    }
                     updateProfile();
                 };
                 reader.readAsDataURL(file);

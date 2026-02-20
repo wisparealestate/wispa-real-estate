@@ -79,35 +79,33 @@
             let profile = {};
             try {
                 if (window.adminGet) profile = await window.adminGet('adminProfile') || {};
-                else profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+                else {
+                    const raw = localStorage.getItem('adminProfile');
+                    profile = raw ? JSON.parse(raw) : {};
+                }
             } catch(e) { profile = {}; }
             fields.forEach(f => {
                 if(form.elements[f]) form.elements[f].value = profile[f] || '';
             });
         }
+
         form.addEventListener('submit', async function(e){
             e.preventDefault();
             let profile = {};
-            fields.forEach(f => {
-                profile[f] = form.elements[f].value;
+            fields.forEach(f => { profile[f] = form.elements[f].value; });
+            const poster = window.apiFetch || fetch;
             try {
-                await fetch('/api/admin/profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(profile)
-                });
-                // update server-backed cache
+                await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
                 try { if (window.adminSet) await window.adminSet('adminProfile', profile); else localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e) { try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e){} }
                 alert('Profile updated!');
                 window.location.href = 'admin-profile.html';
             } catch (err) {
-                // fallback to localStorage
                 try { if (window.adminSet) await window.adminSet('adminProfile', profile); else localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e) { try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e){} }
                 alert('Profile updated (offline fallback)');
                 window.location.href = 'admin-profile.html';
             }
-        loadProfile();
         });
+
         loadProfile();
     </script>
 </body>
