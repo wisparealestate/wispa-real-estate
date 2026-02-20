@@ -168,6 +168,7 @@
     <!-- ADMIN HEADER -->
     <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px;">
         <style>
+            html, body { min-height: 100vh !important; height: auto !important; }
         .admin-header {
             position: fixed;
             top: 0;
@@ -377,7 +378,7 @@
                         <span id="alert-unread" style="display:none;"></span>
                         <span id="stat-messages-unread" style="display:none;"></span>
             <!-- OVERVIEW TAB -->
-            <div id="overview" class="admin-tab" style="display:block;">
+            <div id="overview" class="admin-tab" style="display:block; min-height:60vh;">
                 <div class="dashboard-header" style="border: none;">
                     <h2 style="font-weight: 500;">Dashboard</h2>
                     <h5 style="font-weight: 500;">Welcome to the Wispa Real Estate Admin Panel</h5>
