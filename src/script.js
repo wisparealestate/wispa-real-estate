@@ -1841,17 +1841,38 @@ if (typeof propertyImageIds === 'undefined') {
     }
 
     function saveProperty(property) {
-        // TODO: Connect to real DB - Save property via API
-        // return fetch('/api/properties', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(property)
-        // }).then(response => response.json());
-
-        // For now, add to local array
-        properties.push(property);
-        localStorage.setItem('properties', JSON.stringify(properties));
-        return Promise.resolve(property);
+        // Try saving to backend API first
+        try {
+            const body = {
+                property: property,
+                photoUrls: Array.isArray(property.photoUrls) ? property.photoUrls : (property.photos || [])
+            };
+            return fetch('/api/properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(async response => {
+                if (!response.ok) throw new Error('API save failed');
+                const data = await response.json();
+                // Add returned id to property and persist locally as well
+                if (data.propertyId) property.id = data.propertyId;
+                properties.push(property);
+                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+                return property;
+            })
+            .catch(err => {
+                console.warn('saveProperty API failed, falling back to localStorage', err);
+                properties.push(property);
+                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+                return Promise.resolve(property);
+            });
+        } catch (e) {
+            // Fallback to localStorage
+            properties.push(property);
+            try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+            return Promise.resolve(property);
+        }
     }
 
     function loadLikedProperties() {
