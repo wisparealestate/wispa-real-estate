@@ -1,21 +1,3 @@
-import express from "express";
-import pkg from "pg";
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
-import upload from "./upload.js";
-import path from "path";
-
-const { Pool } = pkg;
-const app = express();
-app.use(cors({
-  origin: "https://wispa-real-estate-one.vercel.app"
-}));
-app.use(bodyParser.json());
-const port = process.env.PORT || 3001;
-// Serve uploaded images statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // PostgreSQL connection
 export const pool = new Pool({
