@@ -8,59 +8,7 @@
 </head>
 <body>
     <!-- ADMIN HEADER -->
-    <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px; position:fixed; top:0; left:0; width:100vw; z-index:1002; box-sizing:border-box;">
-        <div class="header-left" style="display:flex; flex-direction:column;">
-            <span style="font-size:25px; font-weight:500; color:black; margin-right: 30px; font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;">ADMIN PANEL</span>
-        </div>
-        <div class="header-right" style="display:flex; align-items:center; gap:18px; position:relative;">
-            <span title="Search" id="header-search" style="font-size:22px; cursor:pointer;">🔍</span>
-            <span title="Notifications" id="header-notification" style="font-size:22px; cursor:pointer;">🔔</span>
-            <span title="Chat" id="header-chat" style="font-size:22px; cursor:pointer;">💬</span>
-        </div>
-        <script>
-            // Hamburger menu dropdown toggle and header icon wiring
-            document.addEventListener('DOMContentLoaded', function() {
-                var toggle = document.getElementById('hamburger-toggle');
-                var dropdown = document.querySelector('.menu-dropdown');
-                var label = document.querySelector('label[for="hamburger-toggle"]');
-                if(toggle && dropdown && label) {
-                    toggle.addEventListener('change', function() {
-                        dropdown.style.display = toggle.checked ? 'block' : 'none';
-                    });
-                    label.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        toggle.checked = !toggle.checked;
-                        dropdown.style.display = toggle.checked ? 'block' : 'none';
-                    });
-                    document.addEventListener('click', function(e) {
-                        if (!dropdown.contains(e.target) && !label.contains(e.target)) {
-                            toggle.checked = false;
-                            dropdown.style.display = 'none';
-                        }
-                    });
-                }
-                // Header icon wiring
-                var searchIcon = document.getElementById('header-search');
-                var notifIcon = document.getElementById('header-notification');
-                var chatIcon = document.getElementById('header-chat');
-                if(searchIcon) {
-                    searchIcon.addEventListener('click', function(){
-                        window.location.href = 'admin-search.html';
-                    });
-                }
-                if(notifIcon) {
-                    notifIcon.addEventListener('click', function(){
-                        window.location.href = 'admin.html#notification';
-                    });
-                }
-                if(chatIcon) {
-                    chatIcon.addEventListener('click', function(){
-                        window.location.href = 'admin-chat.html';
-                    });
-                }
-            });
-        </script>
-    </header>
+
     <div style="height:80px;"></div>
     <main class="admin-main">
         <div class="search-section" style="width:100%;max-width:600px;margin:40px auto 0 auto;padding:20px;">

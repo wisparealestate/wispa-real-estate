@@ -32,71 +32,7 @@
     </style>
 </head>
 <body>
-    <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px; position:fixed; top:0; left:0; width:100vw; z-index:1002; box-sizing:border-box;">
-        <style>
-        .admin-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            z-index: 1002;
-            box-sizing: border-box;
-        }
-        @media (max-width: 768px) {
-            .admin-header { padding: 10px 5vw !important; }
-        }
-        </style>
-        <div class="header-left" style="display:flex; flex-direction:column;">
-            <span style="font-size:25px; font-weight:500; color:black; margin-right: 30px; font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;">ADMIN PANEL</span>
-        </div>
-        <div class="header-right" style="display:flex; align-items:center; gap:18px; position:relative;">
-            <span title="Search" id="header-search" class="header-icon" style="font-size:22px; cursor:pointer;">🔍</span>
-            <span title="Notifications" id="header-notification" class="header-icon" style="font-size:22px; cursor:pointer;">🔔</span>
-            <span title="Chat" id="header-chat" class="header-icon" style="font-size:22px; cursor:pointer;">💬</span>
-        </div>
-        <script>
-            // Highlight active nav in hamburger menu with green style
-            function setActiveNav() {
-                var navs = [
-                    {id: 'navOverview', match: /admin.html(#overview)?$/},
-                    {id: 'navProfile', match: /admin-profile.html$/},
-                    {id: 'navProperties', match: /admin.html#properties$/},
-                    {id: 'navUsers', match: /admin.html#users$/},
-                    {id: 'navAgents', match: /admin.html#agents$/},
-                    {id: 'navAnalytics', match: /admin.html#analytics$/},
-                    {id: 'navDocuments', match: /admin.html#documents$/},
-                    {id: 'navSettings', match: /admin.html#settings$/}
-                ];
-                var path = (window.location.pathname.split('/').pop() + window.location.hash).replace(/\/$/, '');
-                navs.forEach(function(nav) {
-                    var el = document.getElementById(nav.id);
-                    if(el && nav.match.test(path)) {
-                        el.classList.add('active');
-                    } else if(el) {
-                        el.classList.remove('active');
-                    }
-                });
-            }
-            document.addEventListener('DOMContentLoaded', setActiveNav);
-            document.getElementById('hamburger-toggle').addEventListener('change', setActiveNav);
-            // Hamburger menu dropdown toggle and header icon wiring
-            document.addEventListener('DOMContentLoaded', function() {
-                var toggle = document.getElementById('hamburger-toggle');
-                var dropdown = document.querySelector('.menu-dropdown');
-                var label = document.querySelector('label[for="hamburger-toggle"]');
-                if(toggle && dropdown && label) {
-                    toggle.addEventListener('change', function() {
-                        dropdown.style.display = toggle.checked ? 'block' : 'none';
-                    });
-                    label.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        toggle.checked = !toggle.checked;
-                        dropdown.style.display = toggle.checked ? 'block' : 'none';
-                    });
-                }
-            });
-        </script>
-    </header>
+
     <div class="edit-profile-container" style="margin-top:90px;">
         <div class="edit-profile-title">Edit Admin Profile</div>
         <form class="edit-profile-form" id="adminEditProfileForm">
