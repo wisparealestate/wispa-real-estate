@@ -537,9 +537,19 @@
                             const out = {};
                             out.id = p.id || raw.id || raw.propertyId || p.propertyId || String(Date.now()).slice(-8);
                             out.title = p.title || p.name || p.headline || p.description || '';
-                            out.type = p.type || p.postTo || p.property_type || p.saleRent || p.category || '';
+                            // Robust type detection: accept many field name variants and infer from title when missing
+                            let typeVal = p.type || p.postTo || p.post_to || p.property_type || p.propertyType || p.saleRent || p.sale_rent || p.category || (p.tags && p.tags[0]) || (p.meta && p.meta.type) || '';
+                            if (!typeVal) {
+                                const ttitle = (p.title || p.name || p.description || '').toLowerCase();
+                                if (ttitle.match(/\b(land|plot|lot)\b/)) typeVal = 'land';
+                                else if (ttitle.match(/\b(apartment|condo|penthouse|studio)\b/)) typeVal = 'apartment';
+                                else if (ttitle.match(/\b(villa|house|bungalow|mansion|detached|townhouse)\b/)) typeVal = 'house';
+                                else if (ttitle.match(/\b(rent|rental|to let|for rent)\b/)) typeVal = 'rent';
+                                else if (ttitle.match(/\b(sale|for sale|sell)\b/)) typeVal = 'sale';
+                            }
+                            out.type = typeVal || '';
                             out.price = (p.price !== undefined && p.price !== null) ? Number(p.price) : (p.list_price || 0);
-                            out.location = p.location || p.address || (p.city ? (p.city + (p.state ? ', ' + p.state : '')) : '') || p.location_string || '';
+                            out.location = p.location || p.address || p.addr || p.address_line || (p.city ? (p.city + (p.state ? ', ' + p.state : '')) : '') || p.location_string || '';
                             out.status = p.status || (p.active ? 'Active' : (p.state || 'Active'));
                             out.images = p.images || p.photos || (p.image_url ? [p.image_url] : (p.image ? [p.image] : []));
                             out.bedrooms = p.bedrooms || p.beds || null;
@@ -650,9 +660,19 @@
                             const out = {};
                             out.id = p.id || raw.id || raw.propertyId || p.propertyId || String(Date.now()).slice(-8);
                             out.title = p.title || p.name || p.headline || p.description || '';
-                            out.type = p.type || p.postTo || p.property_type || p.saleRent || p.category || '';
+                            // Robust type detection: accept many field name variants and infer from title when missing
+                            let typeVal = p.type || p.postTo || p.post_to || p.property_type || p.propertyType || p.saleRent || p.sale_rent || p.category || (p.tags && p.tags[0]) || (p.meta && p.meta.type) || '';
+                            if (!typeVal) {
+                                const ttitle = (p.title || p.name || p.description || '').toLowerCase();
+                                if (ttitle.match(/\b(land|plot|lot)\b/)) typeVal = 'land';
+                                else if (ttitle.match(/\b(apartment|condo|penthouse|studio)\b/)) typeVal = 'apartment';
+                                else if (ttitle.match(/\b(villa|house|bungalow|mansion|detached|townhouse)\b/)) typeVal = 'house';
+                                else if (ttitle.match(/\b(rent|rental|to let|for rent)\b/)) typeVal = 'rent';
+                                else if (ttitle.match(/\b(sale|for sale|sell)\b/)) typeVal = 'sale';
+                            }
+                            out.type = typeVal || '';
                             out.price = (p.price !== undefined && p.price !== null) ? Number(p.price) : (p.list_price || 0);
-                            out.location = p.location || p.address || (p.city ? (p.city + (p.state ? ', ' + p.state : '')) : '') || p.location_string || '';
+                            out.location = p.location || p.address || p.addr || p.address_line || (p.city ? (p.city + (p.state ? ', ' + p.state : '')) : '') || p.location_string || '';
                             out.status = p.status || (p.active ? 'Active' : (p.state || 'Active'));
                             out.images = p.images || p.photos || (p.image_url ? [p.image_url] : (p.image ? [p.image] : []));
                             out.bedrooms = p.bedrooms || p.beds || null;
