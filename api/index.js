@@ -165,11 +165,16 @@ app.post('/api/admin/sync', async (req, res) => {
     'notifications': 'notifications.json',
     'conversations': 'conversations.json'
   };
-  const file = mapping[key];
-  if (!file) return res.status(400).json({ error: 'Unsupported key' });
+  // Allow writing arbitrary safe keys to disk as fallback (useful for admin UI)
+  let file = mapping[key];
+  if (!file) {
+    // sanitize key to a filename (allow letters, numbers, dash, underscore)
+    const safe = String(key).replace(/[^a-zA-Z0-9_-]/g, '_');
+    file = safe + '.json';
+  }
   try {
     await writeJson(file, value || []);
-    res.json({ success: true });
+    res.json({ success: true, file });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -264,6 +269,7 @@ app.post("/api/properties", async (req, res) => {
   // Accept multiple client shapes: { property, photoUrls },
   // { property, photos }, { property, images }, or a top-level property object
   const body = req.body || {};
+  console.debug('/api/properties received body:', body);
   let property = body.property || null;
   let photoUrls = body.photoUrls || body.photos || body.images || null;
 
@@ -276,9 +282,24 @@ app.post("/api/properties", async (req, res) => {
 
   // Ensure photoUrls is an array (default to empty array)
   if (!Array.isArray(photoUrls)) photoUrls = [];
+  // Normalize photo entries: accept objects like {src: 'data:...'} or {url: '...'}
+  photoUrls = photoUrls.map(p => (p && typeof p === 'object') ? (p.src || p.url || p.photo || p.image || '') : p).filter(Boolean);
+
+  // Also accept property.images which may be an array of objects
+  if ((!photoUrls || photoUrls.length === 0) && property && Array.isArray(property.images)){
+    const imgs = property.images.map(p => (p && typeof p === 'object') ? (p.src || p.url || p.photo || p.image || '') : p).filter(Boolean);
+    if (imgs.length) photoUrls = imgs;
+  }
 
   if (!property || typeof property !== 'object') {
-    return res.status(400).json({ error: 'Missing or invalid property object', received: body });
+    // Try to parse if property is a JSON string
+    if (property && typeof property === 'string') {
+      try { property = JSON.parse(property); } catch(e){}
+    }
+    if (!property || typeof property !== 'object') {
+      console.warn('/api/properties bad payload, received:', body);
+      return res.status(400).json({ error: 'Missing or invalid property object', received: body });
+    }
   }
 
   try {

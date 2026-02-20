@@ -3154,6 +3154,8 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             };
 
                             console.debug('admin.saveProperties: posting property to API', body);
+                            // Save outgoing body for debugging
+                            try { localStorage.setItem('lastPropertyPost', JSON.stringify({ time: Date.now(), body })); } catch (e) {}
                             const res = await poster('/api/properties', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -3164,6 +3166,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                 try {
                                     const t = await res.text();
                                     console.error('admin.saveProperties: API returned non-ok', res.status, t);
+                                    try { localStorage.setItem('lastPropertyPost', JSON.stringify({ time: Date.now(), body, status: res.status, responseText: t })); } catch(e){}
                                 } catch (e) { console.error('admin.saveProperties: API returned non-ok and text read failed', e); }
                             }
                             // apiFetch may return parsed JSON
