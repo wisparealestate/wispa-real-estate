@@ -3107,6 +3107,50 @@ reports@wispa.com | +EU-SUPPORT-LINE
                     localStorage.setItem('propertiesUpdated', String(Date.now()));
                 } catch(e){}
                 console.debug('admin.saveProperties: saved properties length=', Array.isArray(props) ? props.length : 'na');
+
+                // Attempt to sync each property to server (server-first, localStorage fallback)
+                if (typeof window !== 'undefined') {
+                    const poster = window.apiFetch ? window.apiFetch : fetch;
+                    props.forEach(async (p, idx) => {
+                        try {
+                            // build backend shape
+                            const body = {
+                                property: {
+                                    user_id: p.user_id || null,
+                                    title: p.title || p.name || '',
+                                    description: p.description || p.type || '',
+                                    price: p.price || 0,
+                                    address: p.address || p.location || '',
+                                    city: p.city || '',
+                                    state: p.state || '',
+                                    zip_code: p.zip_code || p.postal || '',
+                                    image_url: (p.images && p.images[0]) || p.image || null
+                                },
+                                photoUrls: Array.isArray(p.images) ? p.images : (p.photos || [])
+                            };
+
+                            // If property already has an id, skip creation (could be update path later)
+                            if (p.id) return;
+
+                            const res = await poster('/api/properties', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(body)
+                            });
+                            // apiFetch may return parsed JSON
+                            let data;
+                            if (res && typeof res.json === 'function') data = await res.json(); else data = res;
+                            if (data && data.propertyId) {
+                                // update local property id so it doesn't get re-posted
+                                props[idx].id = data.propertyId;
+                                try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                            }
+                        } catch (e) {
+                            // leave in localStorage as fallback
+                            console.warn('admin.saveProperties: server sync failed for a property', e);
+                        }
+                    });
+                }
             }
 
             function clearAllProperties(){

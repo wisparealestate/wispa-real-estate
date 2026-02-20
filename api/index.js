@@ -382,6 +382,29 @@ app.get("/api/properties", async (req, res) => {
   }
 });
 
+// Delete a property by id (DB-first, fallback to file)
+app.delete('/api/properties/:id', async (req, res) => {
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+  try {
+    try {
+      // Delete photos first (cascade may handle it depending on schema)
+      await pool.query('DELETE FROM property_photos WHERE property_id = $1', [id]);
+      const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
+      if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+      return res.json({ success: true, deleted: result.rows[0] });
+    } catch (e) {
+      // Fallback to file-based store
+      const all = await readJson('properties.json');
+      const filtered = all.filter(p => String(p.id) !== String(id));
+      await writeJson('properties.json', filtered);
+      return res.json({ success: true });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Wispa Real Estate Backend is running!");
 });
