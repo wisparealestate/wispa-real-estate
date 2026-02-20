@@ -141,6 +141,16 @@
     </style>
 </head>
 <body>
+        <!-- Mobile navigation buttons required by script.js -->
+        <button id="mobile-support-btn" style="display:none;"></button>
+        <button id="mobile-likes-btn" style="display:none;"></button>
+        <button id="mobile-wallet-btn" style="display:none;"></button>
+        <button id="mobile-notification-btn" style="display:none;"></button>
+        <button id="mobile-chat-btn" style="display:none;"></button>
+        <!-- Hamburger menu container required by script.js -->
+        <div id="hamburgerMenuContainer" style="display:none;"></div>
+        <!-- Notification button required by script.js -->
+        <button class="notification-btn" style="display:none;"></button>
     <!-- ADMIN HEADER -->
     <header class="admin-header" style="display:flex; align-items:center; justify-content:space-between; background:var(--white); border-bottom:1px solid var(--border); padding:18px 30px;">
         <style>
@@ -326,6 +336,19 @@
 
         <!-- MAIN CONTENT -->
         <main class="admin-main">
+                        <!-- CHAT TAB (required by script.js) -->
+                        <div id="chat" class="admin-tab" style="display:none;">
+                            <div id="admin-chats-list"></div>
+                            <div id="chat-fullview" style="display:none;">
+                                <div id="chat-full-title"></div>
+                                <div id="chat-full-sub"></div>
+                                <div id="chat-full-messages"></div>
+                                <input id="chat-full-input" type="text" placeholder="Write a message..." disabled>
+                            </div>
+                        </div>
+                        <!-- Admin stat elements required by script.js -->
+                        <span id="alert-unread" style="display:none;"></span>
+                        <span id="stat-messages-unread" style="display:none;"></span>
             <!-- OVERVIEW TAB -->
             <div id="overview" class="admin-tab" style="display:block;">
                 <div class="dashboard-header" style="border: none;">
