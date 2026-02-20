@@ -397,7 +397,38 @@ app.get("/api/properties", async (req, res) => {
   try {
     try {
       const result = await pool.query("SELECT * FROM properties ORDER BY created_at DESC");
-      return res.json({ properties: result.rows });
+      let rows = result.rows || [];
+      // Load file-backed properties to merge extra fields (type, location, images) when present
+      const fileProps = await readJson('properties.json');
+      const fileMap = {};
+      if (Array.isArray(fileProps)) {
+        for (const fp of fileProps) {
+          if (fp && fp.id) fileMap[String(fp.id)] = fp;
+        }
+      }
+      // For each DB row, fetch photos and merge missing fields from file-backed props
+      for (let i = 0; i < rows.length; i++){
+        const r = rows[i];
+        try {
+          const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [r.id]);
+          const photos = photosRes.rows.map(p => p.photo_url).filter(Boolean);
+          if (photos.length) r.images = photos;
+        } catch(e) {
+          // ignore photo fetch errors
+        }
+        // Merge common fallbacks from file-backed property
+        const fp = fileMap[String(r.id)];
+        if (fp) {
+          if (!r.type && (fp.type || fp.postTo || fp.property_type || fp.saleRent)) r.type = fp.type || fp.postTo || fp.property_type || fp.saleRent;
+          if (!r.location && (fp.location || fp.address)) r.location = fp.location || fp.address;
+          if ((!r.images || !r.images.length) && Array.isArray(fp.images) && fp.images.length) r.images = fp.images;
+          if (!r.bedrooms && fp.bedrooms) r.bedrooms = fp.bedrooms;
+          if (!r.bathrooms && fp.bathrooms) r.bathrooms = fp.bathrooms;
+        }
+        // Use address column as location when present
+        if (!r.location && r.address) r.location = r.address;
+      }
+      return res.json({ properties: rows });
     } catch (e) {
       // Fallback to file-backed properties
       const all = await readJson('properties.json');
