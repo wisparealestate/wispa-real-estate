@@ -1457,7 +1457,7 @@ if (typeof propertyImageIds === 'undefined') {
 
         // Refresh featured and hot sections
         renderFeaturedProperties();
-        renderHotProperties();
+        if (document.getElementById('hot-properties-section')) renderHotProperties();
 
         postAdForm.reset();
         postAdModal.style.display = 'none';
@@ -2058,7 +2058,7 @@ document.addEventListener('DOMContentLoaded', () => {
         properties = loadedProperties;
         filteredProperties = [...properties];
         // Render main homepage sections — do NOT show the filtered "Search Results" section by default.
-        renderHotProperties();
+        if (document.getElementById('hot-properties-section')) renderHotProperties();
         renderFeaturedProperties();
         // Render available listings into the Available section (not the search results)
         renderAvailableProperties();
@@ -2118,7 +2118,7 @@ window.addEventListener('storage', (e) => {
             properties = [];
         }
         filteredProperties = [...properties];
-        renderHotProperties();
+        if (document.getElementById('hot-properties-section')) renderHotProperties();
         renderFeaturedProperties();
         // Update available list instead of showing search results
         renderAvailableProperties();
