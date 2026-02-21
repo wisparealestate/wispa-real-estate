@@ -61,21 +61,22 @@
                 window.publishConversations = function(key, val){ (window.__conversationSubs[key]||[]).forEach(cb=>{ try { cb(val); } catch(e){} }); };
             }
 
-            function loadConversations(){
+            function formatTime(ts){ const d = new Date(ts); return d.toLocaleString(); }
+
+            // Load conversations from server for this user
+            async function loadConversationsFromApi(){
+                try{
+                    const fetcher = window.apiFetch ? window.apiFetch : fetch;
+                    const r = await fetcher('/api/conversations?userId=' + encodeURIComponent(userId));
+                    if (r && r.ok){ const j = await r.json(); return Array.isArray(j.conversations) ? j.conversations : []; }
+                }catch(e){}
+                // Fallback to in-memory
                 window._wispaConversations = window._wispaConversations || {};
                 return Array.isArray(window._wispaConversations[KEY]) ? window._wispaConversations[KEY] : [];
             }
 
-            function saveConversations(v){
-                window._wispaConversations = window._wispaConversations || {};
-                window._wispaConversations[KEY] = v;
-                try { window.publishConversations(KEY, v); } catch(e) {}
-            }
-
-            function formatTime(ts){ const d = new Date(ts); return d.toLocaleString(); }
-
-            function render(){
-                const convs = loadConversations();
+            async function render(){
+                const convs = await loadConversationsFromApi();
                 listEl.innerHTML = '';
 
                 if (!convs || convs.length === 0) {
@@ -95,14 +96,16 @@
                     a.style.textDecoration = 'none';
                     a.style.color = 'inherit';
 
+                    const agentName = c.agent || c.title || (c.user_id ? `User ${c.user_id}` : 'Agent');
+
                     a.innerHTML = `
-                        <div style="width:56px;height:56px;border-radius:50%;background:var(--light);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--text);">${c.agent.split(' ').map(n=>n[0]).join('')}</div>
+                        <div style="width:56px;height:56px;border-radius:50%;background:var(--light);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--text);">${String(agentName).split(' ').map(n=>n[0]||'').join('')}</div>
                         <div style="flex:1;min-width:0">
                             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                                <strong style="font-size:15px">${c.agent}</strong>
+                                <strong style="font-size:15px">${agentName}</strong>
                                 <small style="color:var(--secondary);font-size:12px">${formatTime(c.updated)}</small>
                             </div>
-                            <div style="color:var(--secondary);font-size:14px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last}</div>
+                            <div style="color:var(--secondary);font-size:14px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last || ''}</div>
                         </div>
                         ${c.unread ? `<div style="margin-left:8px"><span class="unread-badge">${c.unread}</span></div>` : ''}
                     `;
@@ -111,9 +114,10 @@
                 });
             }
 
+            // Initial render
             render();
 
-            // Subscribe to in-memory conversation updates
+            // Also subscribe to in-memory conversation updates if present
             if (window.subscribeConversations) {
                 window.subscribeConversations(KEY, function() { render(); });
             }

@@ -79,60 +79,58 @@
                 messagesEl.scrollTop = messagesEl.scrollHeight;
             }
 
-            // Load initial messages from in-memory store or subscription
-            const key = 'wispaMessages_' + userId + '_' + convId;
-            const adminKey = 'adminMessages_' + convId;
-            const legacyKey = 'wispaMessages_' + convId;
-
-            function loadMessages(){
+            // Load messages from server API first, fallback to in-memory
+            async function loadMessagesFromApi(){
+                try{
+                    const fetcher = window.apiFetch ? window.apiFetch : fetch;
+                    const r = await fetcher('/api/conversations/' + encodeURIComponent(convId) + '/messages');
+                    if (r && r.ok){ const j = await r.json(); return Array.isArray(j.messages) ? j.messages : []; }
+                }catch(e){}
+                // fallback to in-memory merge
                 window._wispaMessages = window._wispaMessages || {};
+                const key = 'wispaMessages_' + userId + '_' + convId;
+                const adminKey = 'adminMessages_' + convId;
+                const legacyKey = 'wispaMessages_' + convId;
                 const all = [];
                 const seen = new Set();
-                const candidates = [ window._wispaMessages[key] || [], window._wispaMessages[adminKey] || [], window._wispaMessages[legacyKey] || [] ];
-                candidates.forEach(msgs => {
-                    if (Array.isArray(msgs)) {
-                        msgs.forEach(m => {
-                            const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                            if (!seen.has(sig)) { all.push(m); seen.add(sig); }
-                        });
-                    }
+                [ window._wispaMessages[key] || [], window._wispaMessages[adminKey] || [], window._wispaMessages[legacyKey] || [] ].forEach(msgs => {
+                    if (Array.isArray(msgs)) msgs.forEach(m => { const sig = (m.time||m.ts||'')+'|'+(m.text||m.content||m.body||'')+'|'+(m.sender||m.from||''); if (!seen.has(sig)){ all.push(m); seen.add(sig); } });
                 });
-                all.sort((a,b) => { const ta = a.time || a.ts || 0; const tb = b.time || b.ts || 0; return ta - tb; });
+                all.sort((a,b)=>{ const ta = a.time||a.ts||a.sent_at||0; const tb = b.time||b.ts||b.sent_at||0; return ta - tb; });
                 return all;
             }
-            renderList(loadMessages());
 
-            // Clear unread count for this conversation (in-memory)
-            try {
-                window._wispaConversations = window._wispaConversations || {};
-                const convsKey = 'conversations_' + userId;
-                const convs = window._wispaConversations[convsKey] || [];
-                const found = convs.find(c => c.id === convId);
-                if (found && found.unread && found.unread > 0) {
-                    found.unread = 0;
-                    window._wispaConversations[convsKey] = convs;
-                }
-            } catch (e) {}
+            // Initial load
+            (async ()=>{ const msgs = await loadMessagesFromApi(); renderList(msgs); })();
 
-            // Listen for storage changes (ignored; in-memory only). If subscribe available, use it.
+            // Subscribe for in-tab updates
             if (window.subscribeConversation) {
                 window.subscribeConversation(convId, (list) => renderList(list || []));
             }
 
-            function send(text){
+            // Send via API, include userId and property meta
+            async function send(text){
                 if (!text || !text.trim()) return;
                 const now = Date.now();
-                const msg = { sender: 'user', text: text.trim(), ts: now, time: now };
+                const wispaUser = await window.getCurrentUser();
+                const userName = (wispaUser && (wispaUser.username || wispaUser.email)) || 'Anonymous User';
+                const userEmail = (wispaUser && wispaUser.email) || '';
+                const userIdReal = wispaUser && wispaUser.id ? wispaUser.id : null;
+                const msg = { sender: 'user', text: text.trim(), ts: now, meta: { fromPage: 'messages' } };
+                // Try server
+                try{
+                    const payload = { convId: convId, message: Object.assign({}, msg, { userId: userIdReal }) };
+                    const fetcher = window.apiFetch ? window.apiFetch : fetch;
+                    const r = await fetcher('/api/conversations/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (r && r.ok){ const body = await r.json(); const returned = body && (body.message || (Array.isArray(body.messages) ? body.messages : null)); const toRender = Array.isArray(returned) ? returned : (returned ? [returned] : []); window._wispaMessages = window._wispaMessages || {}; const key = 'wispaMessages_' + userId + '_' + convId; window._wispaMessages[key] = window._wispaMessages[key] || []; if (toRender.length) toRender.forEach(m=>window._wispaMessages[key].push(m)); renderList(await loadMessagesFromApi()); inputEl.value=''; return; }
+                }catch(e){}
+                // Fallback: queue in-memory
                 window._wispaMessages = window._wispaMessages || {};
-                window._wispaMessages[key] = window._wispaMessages[key] || loadMessages();
-                window._wispaMessages[key].push(msg);
-                // also push to admin view
-                window._wispaMessages[adminKey] = window._wispaMessages[adminKey] || [];
-                const sig = msg.ts + '|' + msg.text + '|' + msg.sender;
-                const exists = window._wispaMessages[adminKey].some(m => ((m.ts||m.time) + '|' + m.text + '|' + m.sender) === sig);
-                if (!exists) window._wispaMessages[adminKey].push(msg);
+                const key = 'wispaMessages_' + userId + '_' + convId;
+                window._wispaMessages[key] = window._wispaMessages[key] || [];
+                window._wispaMessages[key].push({ sender: 'user', text: text.trim(), ts: now, userName, userEmail });
+                renderList(await loadMessagesFromApi());
                 inputEl.value = '';
-                renderList(loadMessages());
             }
 
             sendBtn.addEventListener('click', ()=> send(inputEl.value));
