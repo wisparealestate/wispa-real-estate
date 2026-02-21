@@ -1160,29 +1160,70 @@
 
                     // handlers (scoped)
                     chooser.querySelectorAll('.quick-msg').forEach(btn => {
-                        btn.addEventListener('click', function(){
+                        btn.addEventListener('click', async function(){
                             const text = this.dataset.msg || this.textContent;
                             // Get logged-in user info
                             const userName = (curUser && (curUser.full_name || curUser.username)) || (curUser && curUser.email) || 'Anonymous User';
                             const userEmail = (curUser && curUser.email) || '';
                             const uid = userId;
 
-                            if (window.saveConversationMessage) {
-                                window.saveConversationMessage(convId, 'user', text);
-                            } else {
-                                // update in-memory store only (DB-first, no localStorage writes)
+                            // Build payload matching sendPropertyDetailMessage
+                            const payload = {
+                                convId: convId,
+                                message: {
+                                    sender: 'user',
+                                    text: text,
+                                    userId: uid,
+                                    ts: Date.now(),
+                                    meta: {
+                                        propertyId: propertyId,
+                                        title: property && property.title ? property.title : (window.__currentProperty && window.__currentProperty.title) || '',
+                                        price: property && property.price ? property.price : (window.__currentProperty && window.__currentProperty.price) || null,
+                                        url: window.location.href
+                                    }
+                                }
+                            };
+
+                            let posted = false;
+                            try {
+                                const fetcher = window.apiFetch ? window.apiFetch : (u, o) => fetch(u, o);
+                                const r = await fetcher('/api/conversations/messages', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (r && r.ok) {
+                                    const body = await r.json();
+                                    const returnedMsg = body && (body.message || (Array.isArray(body.messages) ? body.messages[body.messages.length-1] : null));
+                                    // Ensure in-memory view is updated and subscribers notified
+                                    window._wispaMessages = window._wispaMessages || {};
+                                    const key = 'wispaMessages_' + uid + '_' + convId;
+                                    window._wispaMessages[key] = window._wispaMessages[key] || [];
+                                    if (returnedMsg) window._wispaMessages[key].push(returnedMsg);
+                                    else window._wispaMessages[key].push({ sender: 'user', text: text, ts: Date.now(), userName, userEmail });
+                                    if (typeof window.publishConversation === 'function') {
+                                        try { window.publishConversation(convId, window._wispaMessages[key]); } catch(e){}
+                                    }
+                                    renderList(window._wispaMessages[key]);
+                                    if (typeof showNotification === 'function') showNotification('Message sent');
+                                    posted = true;
+                                }
+                            } catch (e) { /* fallthrough to local fallback */ }
+
+                            if (!posted) {
+                                // Fallback to in-memory store
                                 window._wispaMessages = window._wispaMessages || {};
                                 const key = 'wispaMessages_' + uid + '_' + convId;
                                 window._wispaMessages[key] = window._wispaMessages[key] || [];
                                 window._wispaMessages[key].push({ sender: 'user', text: text, ts: Date.now(), userName: userName, userEmail: userEmail });
-                                // notify subscribers if available
-                                if (typeof window.subscribeConversation === 'function' && typeof window.publishConversation === 'function') {
+                                if (typeof window.publishConversation === 'function') {
                                     try { window.publishConversation(convId, window._wispaMessages[key]); } catch(e){}
                                 }
+                                renderList(window._wispaMessages[key]);
+                                if (typeof showNotification === 'function') showNotification('Message queued');
                             }
+
                             chooser.remove();
-                            renderList(window._wispaMessages['wispaMessages_' + uid + '_' + convId] || []);
-                            if (typeof showNotification === 'function') showNotification('Message sent');
                         });
                     });
 

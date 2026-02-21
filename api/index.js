@@ -252,9 +252,16 @@ app.post('/api/conversations/messages', async (req, res) => {
           await pool.query('UPDATE messages SET conversation_id = $1 WHERE id = $2', [convId, r2.rows[0].id]);
         }
       } catch (e) { /* ignore */ }
-      // If we created a conversation earlier but used fallback insert, update conversations.updated/last_message as well
+      // Ensure a conversations row exists (create or update) so the conversation appears for the user/admin
       try {
-        await pool.query('UPDATE conversations SET last_message = $1, updated = $2 WHERE id = $3', [content, sentAt, convId]);
+        const convUserId = message.userId || null;
+        const convTitle = (message.meta && (message.meta.title || (message.meta.property && message.meta.property.title))) ? (message.meta.title || message.meta.property.title) : null;
+        await pool.query(
+          `INSERT INTO conversations (id, user_id, title, last_message, updated)
+           VALUES ($1,$2,$3,$4,$5)
+           ON CONFLICT (id) DO UPDATE SET last_message = EXCLUDED.last_message, updated = EXCLUDED.updated, user_id = EXCLUDED.user_id`,
+          [convId, convUserId, convTitle, content, sentAt]
+        );
       } catch (e) {}
       return res.json({ message: r2.rows[0], fallback: true });
     } catch (e2) {
