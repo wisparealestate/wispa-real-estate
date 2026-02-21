@@ -214,10 +214,29 @@ app.post('/api/conversations/messages', async (req, res) => {
   const { convId, message } = req.body || {};
   if (!convId || !message) return res.status(400).json({ error: 'Missing convId or message' });
   try {
+    // Ensure a conversation row exists (create if missing)
+    try {
+      const convCheck = await pool.query('SELECT id FROM conversations WHERE id = $1', [convId]);
+      if (convCheck.rows.length === 0) {
+        // Create a minimal conversation record. Prefer userId from message if present.
+        const userId = message.userId || null;
+        const title = (message.meta && message.meta.property && message.meta.property.title) ? message.meta.property.title : null;
+        await pool.query('INSERT INTO conversations (id, user_id, title, last_message, updated) VALUES ($1,$2,$3,$4,$5)', [convId, userId, title, message.text || message.body || null, message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]);
+      }
+    } catch (e) {
+      // If conversations table doesn't exist or insert fails, continue and rely on message fallback below
+    }
+
     const result = await pool.query(
       'INSERT INTO messages (conversation_id, sender, body, meta, sent_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
       [convId, message.sender || null, message.text || message.body || null, JSON.stringify(message || {}), message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]
     );
+
+    // Update conversation metadata (last_message, updated) if possible
+    try {
+      await pool.query('UPDATE conversations SET last_message = $1, updated = $2 WHERE id = $3', [message.text || message.body || null, message.ts ? new Date(message.ts).toISOString() : new Date().toISOString(), convId]);
+    } catch (e) { /* ignore update failures */ }
+
     return res.json({ message: result.rows[0] });
   } catch (err) {
     // Fallback for older schema: messages table may be legacy with (sender_id, receiver_id, content, sent_at)
@@ -227,6 +246,10 @@ app.post('/api/conversations/messages', async (req, res) => {
       const content = (message.text || message.body) ? String(message.text || message.body) : JSON.stringify(message || {});
       const sentAt = message.ts ? new Date(message.ts).toISOString() : new Date().toISOString();
       const r2 = await pool.query('INSERT INTO messages (sender_id, receiver_id, content, sent_at) VALUES ($1,$2,$3,$4) RETURNING *', [senderId, receiverId, content, sentAt]);
+      // If we created a conversation earlier but used fallback insert, update conversations.updated/last_message as well
+      try {
+        await pool.query('UPDATE conversations SET last_message = $1, updated = $2 WHERE id = $3', [content, sentAt, convId]);
+      } catch (e) {}
       return res.json({ message: r2.rows[0], fallback: true });
     } catch (e2) {
       res.status(500).json({ error: 'Database error appending message', details: err.message + ' / ' + (e2 && e2.message) });
