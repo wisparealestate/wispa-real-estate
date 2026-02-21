@@ -1093,15 +1093,15 @@
         };
 
         // Chat functionality
-        window.openChat = function() {
+        window.openChat = async function() {
             const modal = document.getElementById('propertyDetailChatModal');
             if (modal) {
                 modal.style.display = 'flex';
                 const messagesDiv = document.getElementById('propertyDetailChatMessages');
 
-                // Get user ID for user-specific storage
-                const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-                const userId = wispaUser.id || null;
+                // Get current user via server session helper
+                const curUser = (window.getCurrentUser ? await window.getCurrentUser() : null);
+                const userId = curUser && curUser.id ? curUser.id : null;
                 if (!userId) {
                     messagesDiv.innerHTML = '<p style="text-align:center;color:var(--secondary);">Please log in to chat with an agent.</p>';
                     return;
@@ -1128,10 +1128,11 @@
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 };
 
-                // Load existing messages from localStorage (including admin replies)
+                // Load existing messages from in-memory store (including admin replies)
                 const messagesKey = 'wispaMessages_' + userId + '_' + convId;
-                const existingMessages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
-                const existing = existingMessages.length > 0 ? existingMessages : (window.getConversationMessages ? window.getConversationMessages(convId) : []);
+                window._wispaMessages = window._wispaMessages || {};
+                const existingMessages = Array.isArray(window._wispaMessages[messagesKey]) ? window._wispaMessages[messagesKey] : (window.getConversationMessages ? window.getConversationMessages(convId) : []);
+                const existing = existingMessages && existingMessages.length ? existingMessages : [];
 
                 // If first-time chat (no messages), show quick-message chooser
                 if (!existing || existing.length === 0) {
@@ -1173,23 +1174,25 @@
                         btn.addEventListener('click', function(){
                             const text = this.dataset.msg || this.textContent;
                             // Get logged-in user info
-                            const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-                            const userName = wispaUser.username || wispaUser.email || 'Anonymous User';
-                            const userEmail = wispaUser.email || '';
-                            const uid = wispaUser.id || null;
-                            
+                            const userName = (curUser && (curUser.full_name || curUser.username)) || (curUser && curUser.email) || 'Anonymous User';
+                            const userEmail = (curUser && curUser.email) || '';
+                            const uid = userId;
+
                             if (window.saveConversationMessage) {
                                 window.saveConversationMessage(convId, 'user', text);
                             } else {
+                                // update in-memory store only (DB-first, no localStorage writes)
+                                window._wispaMessages = window._wispaMessages || {};
                                 const key = 'wispaMessages_' + uid + '_' + convId;
-                                const cur = JSON.parse(localStorage.getItem(key) || '[]');
-                                cur.push({ sender: 'user', text: text, ts: Date.now(), userName: userName, userEmail: userEmail });
-                                localStorage.setItem(key, JSON.stringify(cur));
-                                try { localStorage.setItem(key + '_backup', JSON.stringify(cur)); } catch(e){}
+                                window._wispaMessages[key] = window._wispaMessages[key] || [];
+                                window._wispaMessages[key].push({ sender: 'user', text: text, ts: Date.now(), userName: userName, userEmail: userEmail });
+                                // notify subscribers if available
+                                if (typeof window.subscribeConversation === 'function' && typeof window.publishConversation === 'function') {
+                                    try { window.publishConversation(convId, window._wispaMessages[key]); } catch(e){}
+                                }
                             }
                             chooser.remove();
-                            const messagesKey = 'wispaMessages_' + uid + '_' + convId;
-                            renderList(JSON.parse(localStorage.getItem(messagesKey) || '[]'));
+                            renderList(window._wispaMessages['wispaMessages_' + uid + '_' + convId] || []);
                             if (typeof showNotification === 'function') showNotification('Message sent');
                         });
                     });
@@ -1206,28 +1209,18 @@
                 }
 
                 // Load and display all existing messages (including admin replies)
-                renderList(JSON.parse(localStorage.getItem(messagesKey) || '[]'));
+                renderList(window._wispaMessages[messagesKey] || []);
 
-                // Set up polling interval to check for new messages from admin (every 2 seconds)
+                // Set up polling interval to check for new messages from in-memory store (every 2 seconds)
                 const pollInterval = setInterval(function(){
-                    const currentMessages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
+                    const currentMessages = window._wispaMessages[messagesKey] || [];
                     renderList(currentMessages);
                 }, 2000);
 
                 // Store interval on modal so it can be cleared when closed
                 modal._pollInterval = pollInterval;
 
-                // Listen for storage changes (if admin updates in another window)
-                const storageHandler = function(e) {
-                    if(e.key === messagesKey || e.key === 'wispaMessageSignal_' + userId){
-                        const updatedMessages = JSON.parse(localStorage.getItem(messagesKey) || '[]');
-                        renderList(updatedMessages);
-                    }
-                };
-                window.addEventListener('storage', storageHandler);
-                modal._storageHandler = storageHandler;
-
-                // Subscribe for live updates
+                // Subscribe for live updates if provided
                 if (window.subscribeConversation) {
                     window.subscribeConversation(convId, (list) => renderList(list || []));
                 }
@@ -1268,9 +1261,9 @@
             }
         };
 
-        // Load property documents from admin
+        // Load property documents from admin (use server-provided properties list)
         function loadPropertyDocuments() {
-            const properties = JSON.parse(localStorage.getItem('properties') || '[]');
+            const properties = Array.isArray(window.properties) ? window.properties : [];
             const currentPropId = parseInt(propertyId);
             const adminProp = properties.find(p => {
                 return p.id === currentPropId || p.title === property.title || (p.address && p.address === property.address);

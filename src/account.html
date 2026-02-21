@@ -271,15 +271,21 @@
         };
         let user = defaultUser;
         (async function(){
-            const stored = safeParse('wispaUser');
-            user = stored && stored.username ? stored : defaultUser;
-            // If localStorage is empty, try server session
-            if(!user || !user.username){
-                try{ const u = await window.getCurrentUser(); if(u) user = u; }catch(e){}
+            try { if (window.requireLogin) await window.requireLogin(); } catch(e) {}
+            try {
+                const u = await window.getCurrentUser();
+                if (u && u.username) user = u;
+                else {
+                    const stored = safeParse('wispaUser');
+                    if (stored && stored.username) user = stored;
+                }
+            } catch(e) {
+                const stored = safeParse('wispaUser');
+                if (stored && stored.username) user = stored;
             }
             if(!user || !user.username){ window.location.href = 'login.html'; return; }
-            // expose user to the rest of this script if needed
             window.__accountUser = user;
+            initializeUI();
         })();
         const displayNameInput = document.getElementById('displayName');
         const displayEmailInput = document.getElementById('displayEmail');

@@ -380,6 +380,16 @@ app.get('/api/me', async (req, res) => {
   }catch(e){ res.status(500).json({ error: 'Error checking session' }); }
 });
 
+// Logout: clear session cookie
+app.post('/api/logout', async (req, res) => {
+  try {
+    res.cookie('wispa_session', '', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 0 });
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to clear session' });
+  }
+});
+
 // Admin login
 app.post("/api/admin-login", async (req, res) => {
   const { username, password } = req.body;

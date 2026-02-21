@@ -1,10 +1,11 @@
     <script>
-    // Require user login before accessing the site (DB-only: ask server)
+    // Require user login via central helper (uses server session)
     document.addEventListener('DOMContentLoaded', async function() {
         try{
-            const API_BASE = window.WISPA_API_BASE || '';
-            const r = API_BASE ? await fetch(API_BASE + '/api/me') : await fetch('/api/me');
-            if(!r || !r.ok) { window.location.href = 'login.html'; }
+            if (window.requireLogin) await window.requireLogin();
+            else {
+                try { const r = await fetch('/api/me', { credentials: 'include' }); if(!r || !r.ok) window.location.href = 'login.html'; } catch(e) { window.location.href = 'login.html'; }
+            }
         }catch(e){ window.location.href = 'login.html'; }
     });
     </script>

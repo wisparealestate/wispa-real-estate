@@ -910,7 +910,7 @@
             }
         }
         
-        // Initialize user data
+        // Initialize user data (prefer server session; fallback to localStorage)
         const defaultUser = { 
             username: 'User', 
             email: '', 
@@ -920,19 +920,30 @@
             location: '',
             joined: (new Date()).toISOString() 
         };
-        let stored = safeParseJSON('wispaUser');
-        let user = stored && stored.username ? stored : defaultUser;
+        let user = defaultUser;
 
-        // Ensure user has a joined date (for older accounts without this field)
-        if (!user.joined) {
-            user.joined = (new Date()).toISOString();
-            localStorage.setItem('wispaUser', JSON.stringify(user));
-        }
-
-        // Check if user is logged in (try server session if local missing)
+        // Async init: prefer server session via requireLogin/getCurrentUser
         (async function(){
-            if(!user || !user.username){ try{ const u = await window.getCurrentUser(); if(u) user = u; }catch(e){} }
+            try {
+                if (window.requireLogin) await window.requireLogin();
+            } catch(e) {}
+            try {
+                const u = await window.getCurrentUser();
+                if (u && u.username) {
+                    user = u;
+                    try { localStorage.setItem('wispaUser', JSON.stringify(user)); } catch(e){}
+                } else {
+                    // fallback to localStorage for older clients
+                    const stored = safeParseJSON('wispaUser');
+                    if (stored && stored.username) user = stored;
+                }
+            } catch(e) {
+                const stored = safeParseJSON('wispaUser');
+                if (stored && stored.username) user = stored;
+            }
+
             if(!user || !user.username){ window.location.href = 'login.html'; }
+            initializeUI();
         })();
 
         // DOM Elements - Profile Header
