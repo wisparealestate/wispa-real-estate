@@ -67,7 +67,16 @@ async function getSessionUser(req){
   if(!payload || !payload.uid || payload.exp < Math.floor(Date.now()/1000)) return null;
   try{
     const r = await pool.query('SELECT id, username, email, full_name, role, created_at FROM users WHERE id = $1', [payload.uid]);
-    return r.rows[0] || null;
+    if (r.rows && r.rows[0]) return r.rows[0];
+    // If not found in users table, check admin_logins table (admins stored separately)
+    try{
+      const a = await pool.query('SELECT id, username, email, created_at FROM admin_logins WHERE id = $1', [payload.uid]);
+      if (a.rows && a.rows[0]) {
+        const adminRow = a.rows[0];
+        return { id: adminRow.id, username: adminRow.username, email: adminRow.email, full_name: adminRow.full_name || null, role: 'admin', created_at: adminRow.created_at };
+      }
+    }catch(e){ /* ignore admin lookup errors */ }
+    return null;
   }catch(e){ return null; }
 }
 async function readJson(name){
@@ -515,9 +524,9 @@ app.post("/api/admin-login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
   try {
-    // Find admin user in users table (by username or email) and require role = 'admin'
+    // Find admin user in admin_logins table (by username or email)
     const result = await pool.query(
-      "SELECT * FROM users WHERE (username = $1 OR email = $1) AND role = 'admin'",
+      "SELECT * FROM admin_logins WHERE username = $1 OR email = $1",
       [username]
     );
     if (result.rows.length === 0) {
