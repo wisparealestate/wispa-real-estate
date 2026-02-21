@@ -812,37 +812,40 @@
             (async function(){
                 const user = await window.getCurrentUser();
                 if (!user) return;
-                // Only show the modal immediately after login/signup (or when explicitly requested)
-                // Avoid showing on every page refresh. We use sessionStorage flag or a query param.
+                // Only show the modal immediately after login/signup (transient flag)
+                // Do NOT show it on ordinary page refreshes. Require both: user hasn't
+                // accepted agreements AND the transient sessionStorage flag (set at login/signup).
                 const shouldShowFlag = (function(){
                     try { if (sessionStorage.getItem('showUserAgreement') === '1') return true; } catch(e){}
                     try { if (window.location && window.location.search && window.location.search.indexOf('showAgreement=1') !== -1) return true; } catch(e){}
                     return false;
                 })();
-                if (!user.agreementsAccepted || shouldShowFlag) {
-                    // Only proceed to show when the flag is set or user hasn't accepted and just logged in
-                    if (!shouldShowFlag && user.agreementsAccepted) return; // don't show on refresh
-                    agreementsModal.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
 
-                    // clear the transient flag so it doesn't reappear on refresh
+                // If user already accepted agreements, never show the modal here
+                if (user.agreementsAccepted) return;
+
+                // Require the transient flag (set immediately after login/signup)
+                if (!shouldShowFlag) return;
+
+                // Show modal and clear transient flag so it doesn't reappear on refresh
+                try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
+                agreementsModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+
+                acceptBtn.addEventListener('click', async function() {
+                    // Prefer calling server to persist acceptance (best-effort)
+                    try { await (window.apiFetch ? window.apiFetch('/api/users/accept-agreements', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) }) : fetch('/api/users/accept-agreements', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) })); } catch(e){}
+                    // Close modal (will not persist if server endpoint missing)
+                    agreementsModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                });
+
+                declineBtn.addEventListener('click', function() {
+                    agreementsModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
                     try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
-
-                    acceptBtn.addEventListener('click', async function() {
-                        // Prefer calling server to persist acceptance (best-effort)
-                        try { await (window.apiFetch ? window.apiFetch('/api/users/accept-agreements', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) }) : fetch('/api/users/accept-agreements', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) })); } catch(e){}
-                        // Close modal (will not persist if server endpoint missing)
-                        agreementsModal.style.display = 'none';
-                        document.body.style.overflow = 'auto';
-                    });
-
-                    declineBtn.addEventListener('click', function() {
-                        agreementsModal.style.display = 'none';
-                        document.body.style.overflow = 'auto';
-                        try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
-                        window.location.href = 'login.html';
-                    });
-                }
+                    window.location.href = 'login.html';
+                });
             })();
         });
     </script>
