@@ -30,7 +30,7 @@
             </div>
             <div>
                 <label for="adminPassword">Password</label>
-                <input type="password" id="adminPassword" name="adminPassword" required>
+                <input type="password" id="adminPassword" name="adminPassword" required autocomplete="current-password">
             </div>
             <div class="admin-login-actions">
                 <button type="submit">Login</button>
@@ -52,10 +52,12 @@
                 return;
             }
             try {
-                // Call the admin-login endpoint which authenticates against `users` (role='admin')
-                const postFn = window.apiFetch || fetch;
-                const res = await postFn('/api/admin-login', {
+                // Build a robust API URL: prefer configured `window.WISPA_API_BASE`, otherwise use same-origin
+                const apiBase = (window.WISPA_API_BASE && String(window.WISPA_API_BASE).replace(/\/$/, '')) || '';
+                const target = apiBase ? apiBase + '/api/admin-login' : '/api/admin-login';
+                const res = await fetch(target, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: email, password })
                 });
