@@ -4,7 +4,6 @@ import pkg from "pg";
 import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { addPropertyWithPhotos } from "./property.js";
 import upload from "./upload.js";
 import path from "path";
 import fs from 'fs/promises';
@@ -14,6 +13,9 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
+
+// Import property helper after pool is defined to avoid circular import issues
+import { addPropertyWithPhotos } from "./property.js";
 
 const app = express();
 app.use(cors({
@@ -334,7 +336,21 @@ app.post("/api/properties", async (req, res) => {
     if (resObj && resObj.propertyId) return res.json({ propertyId: resObj.propertyId });
     return res.json({ propertyId: resObj });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // Include stack in response for local debugging (remove in production)
+    console.error('addPropertyWithPhotos error:', err && err.stack ? err.stack : err);
+    // Fallback: if DB is unavailable (e.g., local dev without DATABASE_URL), persist to file-backed properties.json
+    try {
+      const allProps = await readJson('properties.json');
+      const newId = Date.now();
+      const toSave = Object.assign({ id: newId, created_at: new Date().toISOString() }, property || {});
+      if (Array.isArray(photoUrls) && photoUrls.length) toSave.images = photoUrls;
+      allProps.unshift(toSave);
+      await writeJson('properties.json', allProps);
+      return res.json({ property: toSave, propertyId: newId, fallback: true });
+    } catch (e) {
+      // If fallback also fails, return original error
+      return res.status(500).json({ error: err.message, stack: err.stack });
+    }
   }
 });
 
@@ -487,6 +503,66 @@ app.get("/db-test", async (req, res) => {
     res.json({ time: result.rows[0].now });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate a simple property document (JSON) and store in uploads/, return URL
+app.post('/api/properties/:id/generate-document', async (req, res) => {
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ error: 'Missing property id' });
+  try {
+    // Try DB first
+    let prop = null;
+    try {
+      const pRes = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+      if (pRes.rows && pRes.rows.length) prop = pRes.rows[0];
+    } catch (e) { /* ignore DB errors */ }
+
+    // Fallback to file-backed store
+    if (!prop) {
+      const all = await readJson('properties.json');
+      prop = (all || []).find(x => String(x.id) === String(id)) || null;
+    }
+
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
+
+    // Gather photos if DB available
+    let photos = [];
+    try {
+      const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [id]);
+      photos = photosRes.rows.map(r => r.photo_url).filter(Boolean);
+    } catch (e) { /* ignore */ }
+
+    // Compose document content (simple JSON summary)
+    const doc = {
+      id: prop.id || id,
+      title: prop.title || prop.name || '',
+      description: prop.description || '',
+      price: prop.price || null,
+      address: prop.address || prop.location || null,
+      bedrooms: prop.bedrooms || null,
+      bathrooms: prop.bathrooms || null,
+      type: prop.type || prop.property_type || null,
+      images: photos.length ? photos : (prop.images || []),
+      generated_at: new Date().toISOString()
+    };
+
+    // Ensure uploads dir exists
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    try { await fs.mkdir(uploadsDir, { recursive: true }); } catch (e) {}
+    const filename = `property-doc-${String(id)}-${Date.now()}.json`;
+    const filePath = path.join(uploadsDir, filename);
+    await fs.writeFile(filePath, JSON.stringify(doc, null, 2), 'utf8');
+    const url = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+
+    // Optionally persist document_url in DB when possible
+    try {
+      await pool.query('UPDATE properties SET document_url = $1 WHERE id = $2', [url, id]);
+    } catch (e) { /* ignore if column doesn't exist */ }
+
+    return res.json({ documentUrl: url });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 

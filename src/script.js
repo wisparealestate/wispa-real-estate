@@ -1986,11 +1986,17 @@ if (typeof propertyImageIds === 'undefined') {
             })
             .then(data => {
                 properties = Array.isArray(data.properties) ? data.properties : [];
-                // Normalize backend fields to frontend shape so images display correctly
+                // Normalize backend fields to frontend shape so images and post status display correctly
                 properties = properties.map(p => {
                     const prop = Object.assign({}, p);
                     if (prop.image_url && !prop.image) prop.image = prop.image_url;
                     if (prop.image_url && (!prop.images || !Array.isArray(prop.images) || prop.images.length === 0)) prop.images = [prop.image_url];
+                    // map DB snake_case to frontend camelCase for post status
+                    if (prop.post_to && !prop.postTo) prop.postTo = prop.post_to;
+                    if (prop.postTo) {
+                        prop.featured = prop.postTo === 'featured';
+                        prop.hot = prop.postTo === 'hot';
+                    }
                     // Ensure numeric price
                     if (prop.price && typeof prop.price === 'string') {
                         const num = Number(prop.price);
