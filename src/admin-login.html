@@ -72,13 +72,35 @@
                     return;
                 }
                 const data = await res.json().catch(() => ({}));
+                console.debug('admin-login response data', data);
                 const user = data && (data.user || data.admin || data.user);
                 if (!user || user.role !== 'admin') {
                     errorDiv.textContent = 'Account is not an admin.';
                     errorDiv.style.display = 'block';
                     return;
                 }
-                window.location.href = 'admin.html';
+                // Verify session was set by asking /api/me with credentials included
+                try {
+                    const meRes = await fetch(apiBase ? apiBase + '/api/me' : '/api/me', { credentials: 'include' });
+                    console.debug('/api/me status', meRes && meRes.status);
+                    if (meRes && meRes.ok) {
+                        const meJson = await meRes.json().catch(() => ({}));
+                        console.debug('/api/me body', meJson);
+                        if (meJson && meJson.user && meJson.user.role === 'admin') {
+                            window.location.href = 'admin.html';
+                            return;
+                        }
+                    }
+                    // If we reach here, session cookie might not be accepted by the browser (cross-site cookie or CORS issue)
+                    errorDiv.textContent = 'Login succeeded but session cookie was not accepted by the browser. Check CORS and cookie settings (SameSite/secure).';
+                    errorDiv.style.display = 'block';
+                    return;
+                } catch (e) {
+                    console.error('session verify error', e);
+                    errorDiv.textContent = 'Login succeeded but verifying session failed.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
             } catch (err) {
                 errorDiv.textContent = 'Login failed. Please try again.';
                 errorDiv.style.display = 'block';
