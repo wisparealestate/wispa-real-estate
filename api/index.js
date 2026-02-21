@@ -99,11 +99,14 @@ app.get("/api/notifications", async (req, res) => {
 // Get conversations for a user (real DB)
 app.get("/api/conversations", async (req, res) => {
   const userId = req.query.userId;
+  function sanitizeTitle(t){ try{ if(!t) return t; if(typeof t !== 'string') return t; const s = t.trim(); if(!s) return null; if(s.toLowerCase() === 'undefined') return null; return s; }catch(e){return t} }
   try {
     const result = userId
       ? await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId])
       : await pool.query('SELECT * FROM conversations ORDER BY updated DESC');
-    return res.json({ conversations: result.rows });
+    // sanitize titles to avoid literal 'undefined' showing in UI
+    const rows = (result.rows || []).map(r => (Object.assign({}, r, { title: sanitizeTitle(r.title) })));
+    return res.json({ conversations: rows });
   } catch (err) {
     // Fallback: some deployments use an older schema without a `conversations` table.
     // Try to synthesize a conversations list from the legacy `messages` table instead
@@ -123,7 +126,8 @@ app.get("/api/conversations", async (req, res) => {
           convMap.set(key, { id: key, last: m.content || null, updated: m.sent_at || new Date().toISOString(), unread: 0 });
         }
       }
-      return res.json({ conversations: Array.from(convMap.values()) });
+      const convs = Array.from(convMap.values()).map(c => (Object.assign({}, c, { title: sanitizeTitle(c.title) })));
+      return res.json({ conversations: convs });
     } catch (e) {
       return res.status(500).json({ error: 'Database error fetching conversations', details: err.message });
     }
@@ -220,7 +224,14 @@ app.post('/api/conversations/messages', async (req, res) => {
       if (convCheck.rows.length === 0) {
         // Create a minimal conversation record. Prefer userId from message if present.
         const userId = message.userId || null;
-        const title = (message.meta && message.meta.property && message.meta.property.title) ? message.meta.property.title : null;
+        // Normalize conversation title: prefer explicit meta.title, then meta.property.title; sanitize empty/undefined strings
+        let title = null;
+        try {
+          if (message.meta && typeof message.meta === 'object') {
+            if (message.meta.title && typeof message.meta.title === 'string' && message.meta.title.trim()) title = message.meta.title.trim();
+            else if (message.meta.property && message.meta.property.title && typeof message.meta.property.title === 'string' && message.meta.property.title.trim()) title = message.meta.property.title.trim();
+          }
+        } catch (e) { title = null; }
         await pool.query('INSERT INTO conversations (id, user_id, title, last_message, updated) VALUES ($1,$2,$3,$4,$5)', [convId, userId, title, message.text || message.body || null, message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]);
       }
     } catch (e) {
@@ -255,7 +266,14 @@ app.post('/api/conversations/messages', async (req, res) => {
       // Ensure a conversations row exists (create or update) so the conversation appears for the user/admin
       try {
         const convUserId = message.userId || null;
-        const convTitle = (message.meta && (message.meta.title || (message.meta.property && message.meta.property.title))) ? (message.meta.title || message.meta.property.title) : null;
+        // sanitize convTitle similar to above
+        let convTitle = null;
+        try {
+          if (message.meta && typeof message.meta === 'object') {
+            if (message.meta.title && typeof message.meta.title === 'string' && message.meta.title.trim()) convTitle = message.meta.title.trim();
+            else if (message.meta.property && message.meta.property.title && typeof message.meta.property.title === 'string' && message.meta.property.title.trim()) convTitle = message.meta.property.title.trim();
+          }
+        } catch (ee) { convTitle = null; }
         await pool.query(
           `INSERT INTO conversations (id, user_id, title, last_message, updated)
            VALUES ($1,$2,$3,$4,$5)

@@ -73,7 +73,9 @@
                     div.style.alignSelf = m.sender === 'user' ? 'flex-end' : 'flex-start';
                     div.style.background = m.sender === 'user' ? 'var(--primary)' : 'var(--light)';
                     div.style.color = m.sender === 'user' ? '#fff' : 'var(--text)';
-                    div.innerHTML = `<div style="font-size:14px;margin-bottom:6px">${escapeHtml(m.text)}</div><div style="font-size:11px;opacity:0.7;text-align:${m.sender==='user'?'right':'left'}">${new Date(m.ts).toLocaleTimeString()}</div>`;
+                    const text = (m.text || m.body || m.content || (m.meta && m.meta.text) || (m.message && m.message.text) || '');
+                    const ts = m.ts || m.time || m.sent_at || m.created_at || Date.now();
+                    div.innerHTML = `<div style="font-size:14px;margin-bottom:6px">${escapeHtml(text)}</div><div style="font-size:11px;opacity:0.7;text-align:${m.sender==='user'?'right':'left'}">${new Date(ts).toLocaleTimeString()}</div>`;
                     messagesEl.appendChild(div);
                 });
                 messagesEl.scrollTop = messagesEl.scrollHeight;

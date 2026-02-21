@@ -96,7 +96,7 @@
                     a.style.textDecoration = 'none';
                     a.style.color = 'inherit';
 
-                    const agentName = c.agent || c.title || (c.user_id ? `User ${c.user_id}` : 'Agent');
+                    const agentName = (c.agent && c.agent !== 'undefined') ? c.agent : ((c.title && c.title !== 'undefined') ? c.title : (c.user_id ? `User ${c.user_id}` : 'Agent'));
 
                     a.innerHTML = `
                         <div style="width:56px;height:56px;border-radius:50%;background:var(--light);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--text);">${String(agentName).split(' ').map(n=>n[0]||'').join('')}</div>

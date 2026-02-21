@@ -1175,10 +1175,10 @@
                                     text: text,
                                     userId: uid,
                                     ts: Date.now(),
-                                    meta: {
+                                        meta: {
                                         propertyId: propertyId,
-                                        title: property && property.title ? property.title : (window.__currentProperty && window.__currentProperty.title) || '',
-                                        price: property && property.price ? property.price : (window.__currentProperty && window.__currentProperty.price) || null,
+                                        title: (property && property.title) ? property.title : ((window.__currentProperty && window.__currentProperty.title) ? window.__currentProperty.title : null),
+                                        price: (property && property.price) ? property.price : ((window.__currentProperty && window.__currentProperty.price) ? window.__currentProperty.price : null),
                                         url: window.location.href
                                     }
                                 }
@@ -1400,8 +1400,8 @@
                     text: text,
                     meta: {
                         propertyId: propertyId,
-                        title: property && property.title ? property.title : (window.__currentProperty && window.__currentProperty.title) || '',
-                        price: property && property.price ? property.price : (window.__currentProperty && window.__currentProperty.price) || null,
+                        title: (property && property.title) ? property.title : ((window.__currentProperty && window.__currentProperty.title) ? window.__currentProperty.title : null),
+                        price: (property && property.price) ? property.price : ((window.__currentProperty && window.__currentProperty.price) ? window.__currentProperty.price : null),
                         url: window.location.href
                     }
                 }
