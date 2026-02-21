@@ -105,7 +105,28 @@ app.get("/api/conversations", async (req, res) => {
       : await pool.query('SELECT * FROM conversations ORDER BY updated DESC');
     return res.json({ conversations: result.rows });
   } catch (err) {
-    res.status(500).json({ error: 'Database error fetching conversations', details: err.message });
+    // Fallback: some deployments use an older schema without a `conversations` table.
+    // Try to synthesize a conversations list from the legacy `messages` table instead
+    try {
+      const msgResult = userId
+        ? await pool.query('SELECT * FROM messages WHERE sender_id = $1 OR receiver_id = $1 ORDER BY sent_at DESC', [userId])
+        : await pool.query('SELECT * FROM messages ORDER BY sent_at DESC');
+      const rows = msgResult.rows || [];
+      const convMap = new Map();
+      for (const m of rows) {
+        // Determine a simple conversation key (other party id or 'unknown')
+        const other = (userId && m.sender_id && String(m.sender_id) !== String(userId)) ? m.sender_id
+                    : (userId && m.receiver_id && String(m.receiver_id) !== String(userId)) ? m.receiver_id
+                    : (m.sender_id || m.receiver_id || 'unknown');
+        const key = 'user-' + String(other);
+        if (!convMap.has(key)) {
+          convMap.set(key, { id: key, last: m.content || null, updated: m.sent_at || new Date().toISOString(), unread: 0 });
+        }
+      }
+      return res.json({ conversations: Array.from(convMap.values()) });
+    } catch (e) {
+      return res.status(500).json({ error: 'Database error fetching conversations', details: err.message });
+    }
   }
 });
 
@@ -199,7 +220,17 @@ app.post('/api/conversations/messages', async (req, res) => {
     );
     return res.json({ message: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: 'Database error appending message', details: err.message });
+    // Fallback for older schema: messages table may be legacy with (sender_id, receiver_id, content, sent_at)
+    try {
+      const senderId = message.userId || null;
+      const receiverId = null;
+      const content = (message.text || message.body) ? String(message.text || message.body) : JSON.stringify(message || {});
+      const sentAt = message.ts ? new Date(message.ts).toISOString() : new Date().toISOString();
+      const r2 = await pool.query('INSERT INTO messages (sender_id, receiver_id, content, sent_at) VALUES ($1,$2,$3,$4) RETURNING *', [senderId, receiverId, content, sentAt]);
+      return res.json({ message: r2.rows[0], fallback: true });
+    } catch (e2) {
+      res.status(500).json({ error: 'Database error appending message', details: err.message + ' / ' + (e2 && e2.message) });
+    }
   }
 });
 
