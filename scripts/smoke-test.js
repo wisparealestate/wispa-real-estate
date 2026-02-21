@@ -1,5 +1,5 @@
 (async()=>{
-  const base = 'http://localhost:3001';
+  const base = process.env.SERVER_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
   const log = (label, v) => console.log('---', label, '---\n', v);
   try{
     const r = await fetch(base + '/api/me');

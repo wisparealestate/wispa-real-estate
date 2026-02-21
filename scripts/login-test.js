@@ -1,6 +1,6 @@
 // Simple login flow tester: tries /db-test, /api/signup, /api/login and /api/me
 (async ()=>{
-  const base = 'http://localhost:3001';
+  const base = process.env.SERVER_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
   function log(){ console.log.apply(console, arguments); }
   try{
     const db = await fetch(base + '/db-test');

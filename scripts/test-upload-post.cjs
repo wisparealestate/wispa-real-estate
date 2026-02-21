@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SERVER = process.env.SERVER_BASE || 'http://localhost:3001';
+const SERVER = process.env.SERVER_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
 const uploadEndpoint = SERVER.replace(/\/$/, '') + '/api/upload-photos';
 const propertiesEndpoint = SERVER.replace(/\/$/, '') + '/api/properties';
 
