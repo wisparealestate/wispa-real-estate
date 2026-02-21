@@ -1104,16 +1104,14 @@
                     messagesDiv.innerHTML = '';
                     (list || []).forEach(m => {
                         const el = document.createElement('div');
-                        if (m.sender === 'user') {
+                        const text = m.body || m.content || m.text || (m.meta && (m.meta.text || (m.meta.message && (m.meta.message.text || m.meta.message.body)))) || JSON.stringify(m);
+                        const isUser = (m.sender === 'user' || String(m.sender_id) === String(userId) || (m.userId && String(m.userId) === String(userId)) || (m.meta && m.meta.userId && String(m.meta.userId) === String(userId)));
+                        if (isUser) {
                             el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
-                            el.textContent = m.text;
-                        } else if (m.sender === 'admin') {
-                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
-                            el.textContent = m.text;
                         } else {
                             el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
-                            el.textContent = m.text;
                         }
+                        el.textContent = text;
                         messagesDiv.appendChild(el);
                     });
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -1367,6 +1365,9 @@
                     }
                 }
             };
+            // Attach authenticated user id and timestamp so server can create conversation.user_id
+            if (userId) payload.message.userId = userId;
+            payload.message.ts = Date.now();
 
             // Try sending to server API
             try {
