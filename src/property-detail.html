@@ -666,6 +666,17 @@
 
         let property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: [FALLBACK_IMAGE] };
 
+        // Expose lightweight current property info for chat/message helpers to include
+        try {
+            window.__currentProperty = {
+                id: property.id || propertyId,
+                title: property.title || '',
+                price: property.price || '',
+                location: property.location || property.address || '',
+                image: (property.images && property.images[0]) || property.image || ''
+            };
+        } catch(e) {}
+
         // Normalize price string for display
         if (typeof property.price === 'number') {
             property.price = '€' + property.price.toLocaleString();

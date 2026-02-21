@@ -1665,6 +1665,17 @@ if (typeof propertyImageIds === 'undefined') {
         
         // Capture user info if sender is 'user'
         const msg = { sender: sender, text: String(text), ts: now };
+        // If this is a property conversation and the sender is the user, attach
+        // lightweight property details (only on first message ideally) so admin
+        // receives context and can build a thread that includes the sent property.
+        try {
+            if (typeof convId === 'string' && convId.startsWith('property-') && sender === 'user') {
+                const prop = (typeof window !== 'undefined' && window.__currentProperty) ? window.__currentProperty : null;
+                if (prop) {
+                    msg.meta = Object.assign({}, msg.meta || {}, { property: { id: prop.id, title: prop.title, price: prop.price, location: prop.location, image: prop.image } });
+                }
+            }
+        } catch (e) {}
         if (sender === 'user') {
             try {
                 const u = (window._wispaCurrentUser) ? window._wispaCurrentUser : (JSON.parse(localStorage.getItem('wispaUser') || '{}'));
