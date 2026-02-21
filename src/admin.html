@@ -1,5 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Require admin session - if not authenticated as admin redirect to admin-login
+    (async function(){
+        try{
+            if (typeof window.getCurrentUser === 'function') {
+                const u = await window.getCurrentUser();
+                if(!u || u.role !== 'admin'){
+                    // preserve where they wanted to go
+                    window.location.href = 'admin-login.html';
+                }
+            } else {
+                // fallback: redirect to admin-login
+                window.location.href = 'admin-login.html';
+            }
+        }catch(e){ window.location.href = 'admin-login.html'; }
+    })();
+</script>
                     <script>
                     async function renderPropertyDocuments() {
                         const tbody = document.getElementById('property-docs-list');

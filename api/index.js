@@ -135,6 +135,19 @@ app.get("/api/conversations", async (req, res) => {
 });
 
 // File-backed admin endpoints (notifications/chat/sent-notifs/profile/requests/contacts/reactions/alerts)
+// Protect admin API routes: require authenticated user with role 'admin'
+app.use('/api/admin', async (req, res, next) => {
+  try {
+    const user = await getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(401).json({ error: 'Admin authentication required' });
+    // attach user to request for downstream handlers
+    req.currentUser = user;
+    next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Admin auth check failed' });
+  }
+});
+
 app.get('/api/admin/sent-notifications', async (req, res) => {
   res.status(501).json({ error: 'Admin sent-notifications endpoint not implemented on server. Configure a DB-backed store.' });
 });

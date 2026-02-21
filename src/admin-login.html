@@ -52,7 +52,8 @@
                 return;
             }
             try {
-                const res = await fetch('/api/admin-login', {
+                // Use regular login which sets session cookie; server's /api/login returns the user including `role`.
+                const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: email, password })
@@ -63,8 +64,13 @@
                     errorDiv.style.display = 'block';
                     return;
                 }
-                // Optionally store admin info in sessionStorage if needed
-                // const data = await res.json();
+                const data = await res.json().catch(() => ({}));
+                const user = data && data.user;
+                if (!user || user.role !== 'admin') {
+                    errorDiv.textContent = 'Account is not an admin.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
                 window.location.href = 'admin.html';
             } catch (err) {
                 errorDiv.textContent = 'Login failed. Please try again.';
