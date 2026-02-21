@@ -834,10 +834,16 @@
                         async function deleteProperty(id) {
                             if (!confirm('Delete this property?')) return;
                             try {
-                                const r = await window.apiFetch(`/api/properties/${id}`, { method: 'DELETE' });
-                                if (!r || !r.ok) throw new Error('Delete failed');
-                                renderPropertiesWithDocButton();
-                                if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
+                                    const r = await window.apiFetch(`/api/properties/${id}`, { method: 'DELETE' });
+                                    if (!r || !r.ok) throw new Error('Delete failed');
+                                    // Remove from local cache to prevent background sync from re-posting
+                                    try {
+                                        const stored = JSON.parse(localStorage.getItem('properties') || '[]');
+                                        const filtered = (Array.isArray(stored) ? stored : []).filter(pp => String(pp.id) !== String(id) && String(pp.propertyId) !== String(id) && String(formatEightIdLocal(pp.id)) !== String(id));
+                                        localStorage.setItem('properties', JSON.stringify(filtered));
+                                    } catch (e) {}
+                                    renderPropertiesWithDocButton();
+                                    if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
                             } catch (e) {
                                 alert('Failed to delete property');
                             }
@@ -3379,8 +3385,8 @@ reports@wispa.com | +EU-SUPPORT-LINE
                     for (let idx = 0; idx < props.length; idx++) {
                         const p = props[idx];
                         if (!p) continue;
-                        // Skip if already has server id or currently being posted
-                        if (p._serverId || p._posting) continue;
+                        // Skip if already has server id, currently being posted, or marked deleted
+                        if (p._serverId || p._posting || p._deleted) continue;
 
                         // Mark as posting early to prevent duplicate attempts
                         p._posting = true;
