@@ -592,6 +592,7 @@
             </div>
             <div class="property-detail-price" id="propertyPrice"></div>
             <div class="property-detail-location" id="propertyLocation"></div>
+            <div id="propertyMeta" class="property-meta" style="margin-top:8px;color:#4b5563;"></div>
             <div class="property-detail-description">
                 <p>This is a beautiful property with excellent location and modern amenities. Perfect for families or investors looking for a premium real estate opportunity.</p>
                 <p>Features include spacious rooms, natural lighting, parking facilities, and proximity to schools and public transportation.</p>
@@ -842,6 +843,32 @@
             const titleEl = document.getElementById('propertyTitle'); if (titleEl) titleEl.textContent = property.title;
             const priceEl = document.getElementById('propertyPrice'); if (priceEl) priceEl.textContent = property.price;
             const locEl = document.getElementById('propertyLocation'); if (locEl) locEl.textContent = property.location;
+            // Post badge (where the property was posted) - prefer `postTo` or `post_to` or `sale_rent`
+            try {
+                const postBadgeEl = document.getElementById('postBadge');
+                const categoryBadgeEl = document.getElementById('categoryBadge');
+                const postVal = property.postTo || property.post_to || property.post || property.sale_rent || property.saleRent || '';
+                if (postBadgeEl && postVal) { postBadgeEl.textContent = String(postVal).toUpperCase(); postBadgeEl.style.display = 'inline-block'; }
+                // category badge (type) e.g., Apartment, House
+                const catVal = property.type || property.property_type || property.category || '';
+                if (categoryBadgeEl && catVal) { categoryBadgeEl.textContent = String(catVal); categoryBadgeEl.style.display = 'inline-block'; }
+            } catch (e) {}
+
+            // Meta info: area, bedrooms, bathrooms
+            try {
+                const metaEl = document.getElementById('propertyMeta');
+                if (metaEl) {
+                    const beds = (property.bedrooms != null && property.bedrooms !== '') ? property.bedrooms : (property.beds != null ? property.beds : null);
+                    const baths = (property.bathrooms != null && property.bathrooms !== '') ? property.bathrooms : (property.baths != null ? property.baths : null);
+                    const area = (property.area != null && property.area !== '') ? property.area : (property.size != null ? property.size : null);
+                    const parts = [];
+                    if (beds != null) parts.push((Number(beds) || beds) + ' bed');
+                    if (baths != null) parts.push((Number(baths) || baths) + ' bath');
+                    if (area != null) parts.push((Number(area) || area) + ' m²');
+                    metaEl.textContent = parts.join(' • ');
+                    if (!metaEl.textContent) metaEl.style.display = 'none';
+                }
+            } catch(e) {}
             document.title = (property.title || 'Property') + ' - Wispa Real Estate';
 
             // Refresh similar properties section now that propertiesMap may include API entries
