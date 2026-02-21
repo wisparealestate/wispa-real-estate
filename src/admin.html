@@ -3230,35 +3230,40 @@ reports@wispa.com | +EU-SUPPORT-LINE
             }
 
             function saveProperties(props){
-                localStorage.setItem('properties', JSON.stringify(props));
-                try {
-                    localStorage.setItem('propertiesUpdated', String(Date.now()));
-                } catch(e){}
+                try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                try { localStorage.setItem('propertiesUpdated', String(Date.now())); } catch(e){}
                 console.debug('admin.saveProperties: saved properties length=', Array.isArray(props) ? props.length : 'na');
 
-                // Attempt to sync each property to server (server-first, localStorage fallback)
-                if (typeof window !== 'undefined') {
-                    const poster = window.apiFetch ? window.apiFetch : fetch;
-                    props.forEach(async (p, idx) => {
-                        try {
-                            // If already synced to server, skip
-                            if (p._serverId) return;
+                if (typeof window === 'undefined') return;
+                const poster = window.apiFetch ? window.apiFetch : fetch;
 
-                            // build backend shape
-                            // If images contains data: URLs, convert to blobs and upload them first to avoid huge JSON bodies
+                // Run a serialized sync loop to avoid parallel POSTs and retries
+                (async () => {
+                    for (let idx = 0; idx < props.length; idx++) {
+                        const p = props[idx];
+                        if (!p) continue;
+                        // Skip if already has server id or currently being posted
+                        if (p._serverId || p._posting) continue;
+
+                        // Mark as posting early to prevent duplicate attempts
+                        p._posting = true;
+                        try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+
+                        try {
+                            // helper to convert data URL to Blob
                             async function dataURLtoBlob(dataurl) {
                                 const parts = dataurl.split(',');
-                                const header = parts[0];
-                                const base64 = parts[1];
-                                const mime = header.match(/:(.*?);/)[1];
-                                const byteChars = atob(base64);
+                                const header = parts[0] || '';
+                                const base64 = parts[1] || '';
+                                const mimeMatch = header.match(/:(.*?);/);
+                                const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+                                const byteChars = atob(base64 || '');
                                 const byteNumbers = new Array(byteChars.length);
                                 for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
                                 return new Blob([new Uint8Array(byteNumbers)], { type: mime });
                             }
 
                             let photoUrls = Array.isArray(p.images) ? p.images.slice() : (p.photos ? p.photos.slice() : []);
-                            // detect data URLs
                             const dataImgs = photoUrls.filter(u => typeof u === 'string' && u.startsWith('data:'));
                             if (dataImgs.length) {
                                 try {
@@ -3267,27 +3272,30 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                         const blob = await dataURLtoBlob(dataImgs[i]);
                                         form.append('files', blob, 'upload-' + Date.now() + '-' + i + '.png');
                                     }
-                                    const poster = window.apiFetch ? window.apiFetch : fetch;
                                     const upRes = await poster('/api/upload-photos', { method: 'POST', body: form });
                                     if (upRes && typeof upRes.json === 'function') {
                                         const upJson = await upRes.json();
                                         if (Array.isArray(upJson.urls) && upJson.urls.length) {
-                                            // replace data URLs with returned URLs (preserve non-data URLs)
-                                            const uploaded = upJson.urls;
                                             let ui = 0;
-                                            photoUrls = photoUrls.map(u => (typeof u === 'string' && u.startsWith('data:')) ? (uploaded[ui++] || '') : u).filter(Boolean);
+                                            photoUrls = photoUrls.map(u => (typeof u === 'string' && u.startsWith('data:')) ? (upJson.urls[ui++] || '') : u).filter(Boolean);
                                         }
                                     }
                                 } catch (e) {
                                     console.warn('admin.saveProperties: failed to upload embedded images', e);
-                                    // fall back to stripping data URLs to avoid huge POST
                                     photoUrls = photoUrls.filter(u => !(typeof u === 'string' && u.startsWith('data:')));
                                 }
+                            }
+
+                            // Only send numeric server id (the DB expects numeric ids); avoid sending local client ids
+                            let sendId = null;
+                            if (p._serverId && (typeof p._serverId === 'number' || (/^\d+$/.test(String(p._serverId))))) {
+                                sendId = Number(p._serverId);
                             }
 
                             const body = {
                                 property: {
                                     user_id: p.user_id || null,
+                                    id: sendId,
                                     title: p.title || p.name || '',
                                     description: p.description || p.type || '',
                                     price: p.price || 0,
@@ -3307,40 +3315,46 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             };
 
                             console.debug('admin.saveProperties: posting property to API', body);
-                            // Log outgoing body for debugging (no localStorage usage)
                             try { console.info('lastPropertyPost', { time: Date.now(), body }); } catch (e) {}
+
                             const res = await poster('/api/properties', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(body)
                             });
-                            // If the response is a Response and not ok, capture text for debugging
+
                             if (res && typeof res.ok === 'boolean' && !res.ok) {
-                                try {
-                                    const t = await res.text();
-                                    console.error('admin.saveProperties: API returned non-ok', res.status, t);
-                                    try { console.error('lastPropertyPost error', { time: Date.now(), body, status: res.status, responseText: t }); } catch(e){}
-                                } catch (e) { console.error('admin.saveProperties: API returned non-ok and text read failed', e); }
+                                try { const t = await res.text(); console.error('admin.saveProperties: API returned non-ok', res.status, t); } catch(e){}
+                                p._postFailed = true;
+                                continue;
                             }
-                            // apiFetch may return parsed JSON
-                            let data;
+
+                            let data = null;
                             if (res && typeof res.json === 'function') data = await res.json(); else data = res;
                             if (data) {
-                                // If server returned full property object, merge it into local props
+                                // Accept different server shapes: { property } or { propertyId }
+                                const serverId = (data.property && (data.property.id || data.propertyId)) || data.propertyId || data.id || null;
+                                if (serverId) {
+                                    // Normalize to numeric when possible
+                                    if (typeof serverId === 'string' && /^\d+$/.test(serverId)) props[idx]._serverId = Number(serverId);
+                                    else props[idx]._serverId = serverId;
+                                }
                                 if (data.property) {
                                     props[idx] = Object.assign({}, props[idx] || {}, data.property);
-                                    props[idx]._serverId = data.propertyId || data.property.id || props[idx]._serverId;
-                                } else if (data.propertyId) {
-                                    props[idx]._serverId = data.propertyId;
                                 }
                                 try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                            } else {
+                                p._postFailed = true;
                             }
                         } catch (e) {
-                            // leave in localStorage as fallback
+                            p._postFailed = true;
                             console.warn('admin.saveProperties: server sync failed for a property', e);
+                        } finally {
+                            delete p._posting;
+                            try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
                         }
-                    });
-                }
+                    }
+                })();
             }
 
             function clearAllProperties(){
