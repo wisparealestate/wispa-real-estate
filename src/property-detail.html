@@ -884,77 +884,56 @@
         // Keyboard navigation for carousel
         window.openChat = async function() {
             const modal = document.getElementById('propertyDetailChatModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                const messagesDiv = document.getElementById('propertyDetailChatMessages');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            const messagesDiv = document.getElementById('propertyDetailChatMessages');
 
-                // Get user ID from server session
-                const userObj = await window.getCurrentUser();
-                const userId = userObj && userObj.id ? userObj.id : null;
-                if (!userId) {
-                    messagesDiv.innerHTML = '<p style="text-align:center;color:var(--secondary);">Please log in to chat with an agent.</p>';
-                    return;
-                }
+            // Ensure user is logged in
+            const userObj = (window.getCurrentUser ? await window.getCurrentUser() : null);
+            const userId = userObj && userObj.id ? userObj.id : null;
+            if (!userId) {
+                messagesDiv.innerHTML = '<p style="text-align:center;color:var(--secondary);">Please log in to chat with an agent.</p>';
+                return;
+            }
 
-                // Render existing conversation for this property
-                const convId = 'property-' + propertyId;
-                function renderList(list){
-                    messagesDiv.innerHTML = '';
-                    (list || []).forEach(m => {
-                        const el = document.createElement('div');
-                        if (m.sender === 'user') {
-                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
-                            el.textContent = m.text;
-                        } else {
-                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
-                            el.textContent = m.text;
-                        }
-                        messagesDiv.appendChild(el);
-                    });
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                };
+            const convId = 'property-' + propertyId;
+            function renderList(list){
+                messagesDiv.innerHTML = '';
+                (list || []).forEach(m => {
+                    const el = document.createElement('div');
+                    const text = m.body || m.content || m.text || (m.meta && m.meta.text) || JSON.stringify(m);
+                    const isUser = (m.sender === 'user' || String(m.sender_id) === String(userId) || (m.userId && String(m.userId) === String(userId)));
+                    if (isUser) {
+                        el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
+                    } else {
+                        el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                    }
+                    el.textContent = text;
+                    messagesDiv.appendChild(el);
+                });
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
 
-                // Load existing messages from in-memory store or subscription
+            // Try loading from API, fallback to in-memory
+            try {
+                const fetcher = window.apiFetch ? window.apiFetch : fetch;
+                const r = await fetcher('/api/conversations/' + encodeURIComponent(convId) + '/messages');
+                const data = r && r.ok ? await r.json() : { messages: [] };
+                renderList(Array.isArray(data.messages) ? data.messages : []);
+            } catch (e) {
                 const messagesKey = 'wispaMessages_' + userId + '_' + convId;
                 window._wispaMessages = window._wispaMessages || {};
-                const existingMessages = window._wispaMessages[messagesKey] || (window.getConversationMessages ? window.getConversationMessages(convId) : []);
-
-                // If first-time chat (no messages), show quick-message chooser (same UI path)
-                if (!existingMessages || existingMessages.length === 0) {
-                    const chooser = document.createElement('div');
-                    chooser.id = 'quickMessageChooser';
-                    chooser.style.cssText = 'position:absolute;left:16px;right:16px;top:80px;background:var(--white);padding:14px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:2000;max-width:420px;margin:0 auto;';
-                    // content omitted intentionally (keeps previous UI)
-                    const existingChooser = document.getElementById('quickMessageChooser');
-                    if (existingChooser) existingChooser.remove();
-                    const modalContent = modal.firstElementChild || modal;
-                    modalContent.appendChild(chooser);
-                }
-
-                // Load and display all existing messages
-                renderList(existingMessages || []);
-
-                // Set up polling interval to check for new messages from admin (every 2 seconds)
-                const pollInterval = setInterval(function(){
-                    const currentMessages = window._wispaMessages[messagesKey] || [];
-                    renderList(currentMessages);
-                }, 2000);
-
-                // Store interval on modal so it can be cleared when closed
-                modal._pollInterval = pollInterval;
-
-                // Subscribe for live updates
-                if (window.subscribeConversation) {
-                    window.subscribeConversation(convId, (list) => renderList(list || []));
-                }
-
-                loadPropertyDocuments();
-
-                const input = document.getElementById('propertyDetailChatInput');
-                if (input) {
-                    input.focus();
-                }
+                renderList(window._wispaMessages[messagesKey] || (window.getConversationMessages ? window.getConversationMessages(convId) : []));
             }
+
+            // Subscribe for live updates if provided
+            if (window.subscribeConversation) {
+                window.subscribeConversation(convId, (list) => renderList(list || []));
+            }
+
+            loadPropertyDocuments();
+            const input = document.getElementById('propertyDetailChatInput');
+            if (input) input.focus();
         };
 
             function findSimilarProperties() {
@@ -1220,17 +1199,19 @@
                     });
                 }
 
-                // Load and display all existing messages (including admin replies)
-                renderList(window._wispaMessages[messagesKey] || []);
-
-                // Set up polling interval to check for new messages from in-memory store (every 2 seconds)
-                const pollInterval = setInterval(function(){
-                    const currentMessages = window._wispaMessages[messagesKey] || [];
-                    renderList(currentMessages);
-                }, 2000);
-
-                // Store interval on modal so it can be cleared when closed
-                modal._pollInterval = pollInterval;
+                // If no existing in-memory messages, try to load from API
+                if (!existing || existing.length === 0) {
+                    try {
+                        const fetcher = window.apiFetch ? window.apiFetch : fetch;
+                        const r = await fetcher('/api/conversations/' + encodeURIComponent(convId) + '/messages');
+                        const data = r && r.ok ? await r.json() : { messages: [] };
+                        renderList(Array.isArray(data.messages) ? data.messages : []);
+                    } catch (e) {
+                        renderList(existing || []);
+                    }
+                } else {
+                    renderList(existing);
+                }
 
                 // Subscribe for live updates if provided
                 if (window.subscribeConversation) {
@@ -1238,11 +1219,8 @@
                 }
 
                 loadPropertyDocuments();
-
                 const input = document.getElementById('propertyDetailChatInput');
-                if (input) {
-                    input.focus();
-                }
+                if (input) input.focus();
             }
         };
 
