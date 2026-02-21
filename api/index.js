@@ -377,6 +377,32 @@ app.post("/api/properties", async (req, res) => {
         // ignore write errors
       }
     }
+    // Trigger async document generation for the created/updated property (fire-and-forget)
+    try {
+      const createdId = resObj.propertyId || (resObj.property && resObj.property.id) || null;
+      if (createdId) {
+        (async () => {
+          try {
+            const url = `${req.protocol}://${req.get('host')}/api/properties/${createdId}/generate-document`;
+            if (typeof fetch === 'function') {
+              await fetch(url, { method: 'POST' });
+            } else {
+              // Node older versions may not have global fetch; attempt dynamic import
+              try {
+                const nodeFetch = await import('node-fetch');
+                await nodeFetch.default(url, { method: 'POST' });
+              } catch (e) {
+                // ignore if fetch is unavailable
+              }
+            }
+          } catch (e) {
+            console.error('Background generate-document failed for property', createdId, e && e.stack ? e.stack : e);
+          }
+        })();
+      }
+    } catch (e) {
+      // ignore background job scheduling errors
+    }
     if (resObj && resObj.property) return res.json({ property: resObj.property, propertyId: resObj.propertyId });
     if (resObj && resObj.propertyId) return res.json({ propertyId: resObj.propertyId });
     return res.json({ propertyId: resObj });
