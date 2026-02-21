@@ -3382,11 +3382,16 @@ reports@wispa.com | +EU-SUPPORT-LINE
                         console.debug('admin.saveProperties: skipping sync due to add-property submit');
                         return;
                     }
+                    // load tombstoned (deleted) server ids to avoid re-posting them
+                    let tombstones = [];
+                    try { tombstones = JSON.parse(localStorage.getItem('deletedPropertyIds') || '[]') || []; } catch(e){ tombstones = []; }
                     for (let idx = 0; idx < props.length; idx++) {
                         const p = props[idx];
                         if (!p) continue;
-                        // Skip if already has server id, currently being posted, or marked deleted
-                        if (p._serverId || p._posting || p._deleted) continue;
+                        // Skip if already has server id, currently being posted, marked deleted, or tombstoned
+                        const serverIdVal = p._serverId || p.id || null;
+                        if (p._posting || p._deleted) continue;
+                        if (serverIdVal && tombstones.indexOf(String(serverIdVal)) !== -1) continue;
 
                         // Mark as posting early to prevent duplicate attempts
                         p._posting = true;
@@ -3570,10 +3575,37 @@ reports@wispa.com | +EU-SUPPORT-LINE
                     btn.addEventListener('click', function(){
                         const id = this.dataset.id;
                         if(!confirm('Delete this property?')) return;
-                        let props = loadProperties();
-                        props = props.filter(x => String(x.id) !== String(id));
-                        saveProperties(props);
-                        renderPropertiesTable();
+                        (async () => {
+                            let props = loadProperties();
+                            // If this looks like a server id, attempt to delete server-side first
+                            const isNumeric = (/^\d+$/.test(String(id)));
+                            if (isNumeric) {
+                                try {
+                                    const del = await (window.apiFetch ? window.apiFetch(`/api/properties/${id}`, { method: 'DELETE' }) : fetch(`/api/properties/${id}`, { method: 'DELETE' }));
+                                    if (del && del.ok) {
+                                        // persist tombstone to avoid re-posts
+                                        try {
+                                            const existing = JSON.parse(localStorage.getItem('deletedPropertyIds') || '[]') || [];
+                                            if (existing.indexOf(String(id)) === -1) {
+                                                existing.push(String(id));
+                                                localStorage.setItem('deletedPropertyIds', JSON.stringify(existing));
+                                            }
+                                        } catch (e) { /* ignore */ }
+                                    }
+                                } catch (e) {
+                                    // ignore remote delete failure; continue to remove local copy anyway
+                                }
+                            }
+                            // Remove any local items that reference this id (_serverId or id)
+                            props = props.filter(x => {
+                                if (!x) return false;
+                                const vid = x._serverId || x.id || null;
+                                if (vid && String(vid) === String(id)) return false;
+                                return true;
+                            });
+                            saveProperties(props);
+                            renderPropertiesTable();
+                        })();
                     });
                 });
             }
