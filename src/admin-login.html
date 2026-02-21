@@ -38,6 +38,10 @@
             <div class="admin-login-error" id="adminLoginError" style="display:none;"></div>
         </form>
     </div>
+    <!-- Ensure pages that are served from other origins use the configured API backend by default -->
+    <script>
+        window.WISPA_API_BASE = window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
+    </script>
     <script>
         const form = document.getElementById('adminLoginForm');
         const errorDiv = document.getElementById('adminLoginError');
