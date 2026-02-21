@@ -3338,12 +3338,16 @@ reports@wispa.com | +EU-SUPPORT-LINE
                                 // Accept different server shapes: { property } or { propertyId }
                                 const serverId = (data.property && (data.property.id || data.propertyId)) || data.propertyId || data.id || null;
                                 if (serverId) {
-                                    // Normalize to numeric when possible
-                                    if (typeof serverId === 'string' && /^\d+$/.test(serverId)) props[idx]._serverId = Number(serverId);
-                                    else props[idx]._serverId = serverId;
+                                    // Normalize to numeric when possible and persist as the canonical id
+                                    const normId = (typeof serverId === 'string' && /^\d+$/.test(serverId)) ? Number(serverId) : serverId;
+                                    props[idx]._serverId = normId;
+                                    // Ensure the persisted local property uses the server id so views stay consistent
+                                    props[idx].id = normId;
                                 }
                                 if (data.property) {
                                     props[idx] = Object.assign({}, props[idx] || {}, data.property);
+                                    // Ensure id field is numeric when server provided one
+                                    if (data.property.id && typeof data.property.id === 'string' && /^\d+$/.test(data.property.id)) props[idx].id = Number(data.property.id);
                                 }
                                 try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
                             } else {
@@ -3357,6 +3361,32 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
                         }
                     }
+
+                    // After serial sync, perform a local dedupe pass to remove any duplicate entries
+                    try {
+                        const seen = new Set();
+                        const filtered = [];
+                        for (const item of props) {
+                            if (!item) continue;
+                            const key = (item.id !== undefined && item.id !== null) ? String(item.id) : (item._serverId ? String(item._serverId) : null);
+                            if (key) {
+                                if (!seen.has(key)) {
+                                    seen.add(key);
+                                    filtered.push(item);
+                                } else {
+                                    // skip duplicate
+                                }
+                            } else {
+                                // keep items without an id (unsynced drafts)
+                                filtered.push(item);
+                            }
+                        }
+                        if (filtered.length !== props.length) {
+                            props.length = 0;
+                            for (const it of filtered) props.push(it);
+                            try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                        }
+                    } catch (e) { /* ignore dedupe errors */ }
                 })();
             }
 
