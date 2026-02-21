@@ -414,7 +414,7 @@
         <script>
         // Populate an in-memory cache from server and shim localStorage to use it (no browser localStorage persistence)
         (async function(){
-            const keys = ['adminSentNotifications','adminProfile','propertyRequests','contactMessages','notificationReactions','systemAlerts','notifications','conversations','properties','postCreationStatus','chatNotifications','systemAttackers','agentProfile','wispaUser','adminChats','adminCurrentTab'];
+            const keys = ['adminSentNotifications','adminProfile','propertyRequests','contactMessages','notificationReactions','systemAlerts','notifications','conversations','postCreationStatus','chatNotifications','systemAttackers','agentProfile','wispaUser','adminChats','adminCurrentTab'];
             window._adminCache = window._adminCache || {};
             for (const k of keys) {
                 try {
@@ -428,8 +428,11 @@
                     window._adminCache[key] = value;
                     try {
                         const parsed = JSON.parse(value);
+                        // Do not write the `properties` key to file-backed admin sync; use DB endpoints instead
+                        if (key === 'properties') return true;
                         if (window.adminSet) window.adminSet(key, parsed).catch(()=>{});
                     } catch (e) {
+                        if (key === 'properties') return true;
                         if (window.adminSet) window.adminSet(key, value).catch(()=>{});
                     }
                 };
@@ -3222,13 +3225,24 @@ reports@wispa.com | +EU-SUPPORT-LINE
 
             function capitalize(s){ return (s||'').charAt(0).toUpperCase() + (s||'').slice(1); }
 
-            // Load properties saved by admin. Do NOT generate system defaults here.
+            // Load properties: return cached copy synchronously and refresh from server asynchronously
             function loadProperties(){
-                let props = JSON.parse(localStorage.getItem('properties') || 'null');
-                if(!props || !Array.isArray(props)){
-                    props = [];
-                    try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
-                }
+                let props = [];
+                try { props = JSON.parse(localStorage.getItem('properties') || 'null') || []; } catch(e){ props = []; }
+                // Async refresh from server to keep cache in sync with DB-backed endpoint
+                (async () => {
+                    try {
+                        const res = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
+                        if (!res) return;
+                        const data = (typeof res.json === 'function') ? await res.json() : res;
+                        const serverProps = Array.isArray(data) ? data : (data && Array.isArray(data.properties) ? data.properties : []);
+                        if (Array.isArray(serverProps) && serverProps.length) {
+                            try { localStorage.setItem('properties', JSON.stringify(serverProps)); } catch(e){}
+                            if (typeof renderPropertiesTable === 'function') renderPropertiesTable();
+                            if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
+                        }
+                    } catch (e) { /* ignore refresh errors */ }
+                })();
                 return props;
             }
 
