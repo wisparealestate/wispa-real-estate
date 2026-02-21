@@ -3367,7 +3367,15 @@ reports@wispa.com | +EU-SUPPORT-LINE
                         const data = (typeof res.json === 'function') ? await res.json() : res;
                         const serverProps = Array.isArray(data) ? data : (data && Array.isArray(data.properties) ? data.properties : []);
                         if (Array.isArray(serverProps) && serverProps.length) {
-                            try { localStorage.setItem('properties', JSON.stringify(serverProps)); } catch(e){}
+                            try {
+                                if (window.adminSaveKeySync) {
+                                    window.adminSaveKeySync('properties', JSON.stringify(serverProps));
+                                } else if (window.adminSaveKey) {
+                                    window.adminSaveKey('properties', JSON.stringify(serverProps));
+                                } else {
+                                    try { localStorage.setItem('properties', JSON.stringify(serverProps)); } catch(e){}
+                                }
+                            } catch(e){}
                             if (typeof renderPropertiesTable === 'function') renderPropertiesTable();
                             if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
                         }
@@ -3377,8 +3385,18 @@ reports@wispa.com | +EU-SUPPORT-LINE
             }
 
             function saveProperties(props){
-                try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
-                try { localStorage.setItem('propertiesUpdated', String(Date.now())); } catch(e){}
+                try {
+                    if (window.adminSaveKeySync) {
+                        window.adminSaveKeySync('properties', JSON.stringify(props));
+                        window.adminSaveKeySync('propertiesUpdated', String(Date.now()));
+                    } else if (window.adminSaveKey) {
+                        window.adminSaveKey('properties', JSON.stringify(props));
+                        window.adminSaveKey('propertiesUpdated', String(Date.now()));
+                    } else {
+                        try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                        try { localStorage.setItem('propertiesUpdated', String(Date.now())); } catch(e){}
+                    }
+                } catch(e){}
                 console.debug('admin.saveProperties: saved properties length=', Array.isArray(props) ? props.length : 'na');
 
                 if (typeof window === 'undefined') return;
@@ -3404,7 +3422,15 @@ reports@wispa.com | +EU-SUPPORT-LINE
 
                         // Mark as posting early to prevent duplicate attempts
                         p._posting = true;
-                        try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                        try {
+                            if (window.adminSaveKeySync) {
+                                window.adminSaveKeySync('properties', JSON.stringify(props));
+                            } else if (window.adminSaveKey) {
+                                window.adminSaveKey('properties', JSON.stringify(props));
+                            } else {
+                                try { localStorage.setItem('properties', JSON.stringify(props)); } catch(e){}
+                            }
+                        } catch(e){}
 
                         try {
                             // helper to convert data URL to Blob

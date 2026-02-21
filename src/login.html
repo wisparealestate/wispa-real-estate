@@ -338,6 +338,7 @@
             fetch(API_URL + '/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ username: identifier, password })
             })
             .then(res => res.json())
@@ -345,9 +346,29 @@
                 if (data.error) {
                     showError(data.error);
                 } else {
-                    // Server sets a secure session cookie; just redirect on success.
-                    showSuccess('Login successful! Redirecting...');
-                    setTimeout(() => { window.location.href = 'index.html'; }, 800);
+                        // Server sets a secure session cookie; wait for /api/me to confirm session
+                        showSuccess('Login successful! Verifying session...');
+                        // Try /api/me a few times to ensure cookie is accepted before redirecting
+                        (async () => {
+                            const maxAttempts = 6;
+                            let attempt = 0;
+                            const delay = ms => new Promise(r => setTimeout(r, ms));
+                            while (attempt < maxAttempts) {
+                                try {
+                                    await delay(attempt === 0 ? 300 : 500);
+                                    const meRes = await fetch(API_URL + '/api/me', { credentials: 'include' });
+                                    if (meRes && meRes.ok) {
+                                        // confirmed
+                                        setTimeout(() => { window.location.href = 'index.html'; }, 300);
+                                        return;
+                                    }
+                                } catch (e) {}
+                                attempt++;
+                            }
+                            // If we couldn't confirm, still redirect but show a hint
+                            showSuccess('Login succeeded; redirecting (session may take a moment)...');
+                            setTimeout(() => { window.location.href = 'index.html'; }, 800);
+                        })();
                 }
             })
             .catch(() => showError('Login failed. Please try again.'));

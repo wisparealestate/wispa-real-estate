@@ -10,12 +10,16 @@ if (!window.apiFetch) {
                 return await fetch(url, opts);
             }
             // prefer calling configured backend directly for /api/ paths
-            if (typeof url === 'string' && url.startsWith('/api/')) {
-                return await fetch(API_BASE + url, opts);
-            }
-            // otherwise try same-origin then fallback to API_BASE
-            try { const r = await fetch(url, opts); if (r && r.ok) return r; } catch(e){}
-            return await fetch(API_BASE + url, opts);
+                    if (typeof url === 'string' && url.startsWith('/api/')) {
+                        const finalOpts = Object.assign({}, opts || {}, { credentials: 'include' });
+                        return await fetch(API_BASE + url, finalOpts);
+                    }
+                    // otherwise try same-origin then fallback to API_BASE
+                    try { const r = await fetch(url, opts); if (r && r.ok) return r; } catch(e){}
+                    try {
+                        const finalOpts2 = Object.assign({}, opts || {}, { credentials: 'include' });
+                        return await fetch(API_BASE + url, finalOpts2);
+                    } catch (e) { return null; }
         } catch (e) { return null; }
     };
 }

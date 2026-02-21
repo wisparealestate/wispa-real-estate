@@ -19,8 +19,11 @@ export const pool = new Pool({
 import { addPropertyWithPhotos } from "./property.js";
 
 const app = express();
+// Allow configured origin(s) and credentials for cross-site session cookies
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://wispa-real-estate-one.vercel.app';
 app.use(cors({
-  origin: "https://wispa-real-estate-one.vercel.app"
+  origin: CORS_ORIGIN,
+  credentials: true
 }));
 // Allow larger JSON payloads (but prefer file uploads for images)
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -353,7 +356,14 @@ app.post("/api/login", async (req, res) => {
     // Create session cookie
     try{
       const token = createSessionToken(user.id);
-      res.cookie('wispa_session', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7*24*3600*1000 });
+      // For cross-site logins, set SameSite=None and secure in production so browsers accept the cookie
+      const cookieOpts = {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7*24*3600*1000
+      };
+      res.cookie('wispa_session', token, cookieOpts);
     }catch(e){ /* ignore cookie set errors */ }
     res.json({ user: { id: user.id, username: user.username, email: user.email, full_name: user.full_name, role: user.role, created_at: user.created_at } });
   } catch (err) {
