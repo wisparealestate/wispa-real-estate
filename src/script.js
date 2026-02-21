@@ -2106,12 +2106,16 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {
             console.warn('Failed to parse stored likedProperties', e);
         }
-        // TODO: Implement /api/user/liked-properties endpoint in backend
-        // return fetch('/api/user/liked-properties')
-        //     .then(response => response.json())
-        //     .then(data => Array.isArray(data.liked) ? data.liked : [])
-        //     .catch(() => []);
-        return Promise.resolve([]);
+        // Prefer server API when available
+        try {
+            const fetcher = window.apiFetch ? window.apiFetch : fetch;
+            return fetcher('/api/user/liked-properties')
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => Array.isArray(data.liked) ? data.liked : [])
+                .catch(() => Promise.resolve([]));
+        } catch (e) {
+            return Promise.resolve([]);
+        }
     }
 
     function loadNotifications(userId) {
@@ -2127,12 +2131,17 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {
             console.warn('Failed to parse stored notifications', e);
         }
-        // TODO: Implement /api/notifications?userId=... endpoint in backend
-        // return fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`)
-        //     .then(response => response.json())
-        //     .then(data => Array.isArray(data.notifications) ? data.notifications : [])
-        //     .catch(() => []);
-        return Promise.resolve([]);
+        try {
+            const fetcher = window.apiFetch ? window.apiFetch : fetch;
+            return fetcher('/api/notifications?userId=' + encodeURIComponent(userId))
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => Array.isArray(data.notifications) ? data.notifications : (data.notifications || []))
+                .catch(() => {
+                    try { const stored = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); return stored; } catch(e){ return []; }
+                });
+        } catch (e) {
+            try { const stored = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); return Promise.resolve(stored); } catch(err){ return Promise.resolve([]); }
+        }
     }
 
     function loadConversations(userId) {
@@ -2148,41 +2157,84 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {
             console.warn('Failed to parse stored conversations', e);
         }
-        // TODO: Implement /api/conversations?userId=... endpoint in backend
-        // return fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`)
-        //     .then(response => response.json())
-        //     .then(data => Array.isArray(data.conversations) ? data.conversations : [])
-        //     .catch(() => []);
-        return Promise.resolve([]);
+        try {
+            const fetcher = window.apiFetch ? window.apiFetch : fetch;
+            return fetcher('/api/conversations?userId=' + encodeURIComponent(userId))
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => Array.isArray(data.conversations) ? data.conversations : (data.conversations || []))
+                .catch(() => {
+                    try { const stored = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); return stored; } catch(e){ return []; }
+                });
+        } catch (e) {
+            try { const stored = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); return Promise.resolve(stored); } catch(err){ return Promise.resolve([]); }
+        }
     }
 
     function renderChatMessages(messages) {
         chatMessages.innerHTML = '';
         messages.forEach(msg => {
             const msgDiv = document.createElement('div');
-            msgDiv.textContent = `${msg.timestamp}: ${msg.text}`;
+            const text = msg.body || msg.content || msg.text || (msg.meta && msg.meta.text) || JSON.stringify(msg);
+            const ts = msg.sent_at || msg.ts || msg.timestamp || msg.sentAt || new Date().toISOString();
+            msgDiv.textContent = `${ts}: ${text}`;
             chatMessages.appendChild(msgDiv);
         });
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+    function loadChatMessages(convId) {
+        // convId optional: try to infer from current property or support
+        let cid = convId || (window.__currentProperty ? ('property-' + window.__currentProperty.id) : null);
+        // fallback to support queue per user
+        if (!cid) {
+            const uid = _getUserId();
+            cid = uid ? ('support-' + uid) : 'support-guest';
+        }
+        try {
+            const fetcher = window.apiFetch ? window.apiFetch : fetch;
+            return fetcher('/api/conversations/' + encodeURIComponent(cid) + '/messages')
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => {
+                    const msgs = Array.isArray(data.messages) ? data.messages : (data.messages || []);
+                    renderChatMessages(msgs);
+                    return msgs;
+                })
+                .catch(() => {
+                    const msgs = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+                    renderChatMessages(msgs);
+                    return msgs;
+                });
+        } catch (e) {
+            const msgs = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            renderChatMessages(msgs);
+            return Promise.resolve(msgs);
+        }
+    }
 
     function sendChatMessage(text) {
-        // TODO: Connect to real DB - Send chat message via API
-        // return fetch('/api/chat/send', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ message: text })
-        // }).then(() => loadChatMessages());
-
-        // For now, use localStorage
-        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-        const newMsg = {
-            text: text,
-            timestamp: new Date().toLocaleString()
-        };
-        messages.push(newMsg);
-        localStorage.setItem('chatMessages', JSON.stringify(messages));
-        loadChatMessages();
+        let cid = (window.__currentProperty ? ('property-' + window.__currentProperty.id) : null);
+        if (!cid) {
+            const uid = _getUserId();
+            cid = uid ? ('support-' + uid) : 'support-guest';
+        }
+        const msg = { sender: 'user', text: String(text), ts: Date.now(), userId: _getUserId() };
+        try {
+            const poster = window.apiFetch ? window.apiFetch : (url => fetch(url));
+            return poster('/api/conversations/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ convId: cid, message: msg }) })
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(() => loadChatMessages(cid))
+                .catch(() => {
+                    // fallback to localStorage
+                    const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+                    messages.push({ text: text, timestamp: new Date().toLocaleString() });
+                    localStorage.setItem('chatMessages', JSON.stringify(messages));
+                    loadChatMessages(cid);
+                });
+        } catch (e) {
+            const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            messages.push({ text: text, timestamp: new Date().toLocaleString() });
+            localStorage.setItem('chatMessages', JSON.stringify(messages));
+            return loadChatMessages(cid);
+        }
     }
 
     // Update existing functions to use new API-ready functions

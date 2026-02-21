@@ -246,6 +246,12 @@ app.post('/api/conversations/messages', async (req, res) => {
       const content = (message.text || message.body) ? String(message.text || message.body) : JSON.stringify(message || {});
       const sentAt = message.ts ? new Date(message.ts).toISOString() : new Date().toISOString();
       const r2 = await pool.query('INSERT INTO messages (sender_id, receiver_id, content, sent_at) VALUES ($1,$2,$3,$4) RETURNING *', [senderId, receiverId, content, sentAt]);
+      // If possible, annotate the legacy row with conversation_id so future queries work
+      try {
+        if (r2.rows && r2.rows[0] && r2.rows[0].id) {
+          await pool.query('UPDATE messages SET conversation_id = $1 WHERE id = $2', [convId, r2.rows[0].id]);
+        }
+      } catch (e) { /* ignore */ }
       // If we created a conversation earlier but used fallback insert, update conversations.updated/last_message as well
       try {
         await pool.query('UPDATE conversations SET last_message = $1, updated = $2 WHERE id = $3', [content, sentAt, convId]);
