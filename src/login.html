@@ -316,6 +316,7 @@
         </div>
     </div>
 
+    <script src="script.js"></script>
     <script>
         const loginForm = document.getElementById('login-form');
         const errorMessage = document.getElementById('error-message');
@@ -356,12 +357,20 @@
                             while (attempt < maxAttempts) {
                                 try {
                                     await delay(attempt === 0 ? 300 : 500);
-                                    const meRes = await fetch(API_URL + '/api/me', { credentials: 'include' });
-                                    if (meRes && meRes.ok) {
-                                        // confirmed
-                                        setTimeout(() => { window.location.href = 'index.html'; }, 300);
-                                        return;
-                                    }
+                                            const meRes = await fetch(API_URL + '/api/me', { credentials: 'include' });
+                                            if (meRes && meRes.ok) {
+                                                try {
+                                                    const meJ = await meRes.json();
+                                                    if (meJ && meJ.user && !meJ.user.agreementsAccepted) {
+                                                        try { sessionStorage.setItem('showUserAgreement', '1'); } catch(e){}
+                                                    } else {
+                                                        try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
+                                                    }
+                                                } catch(e){}
+                                                // confirmed
+                                                setTimeout(() => { window.location.href = 'index.html'; }, 300);
+                                                return;
+                                            }
                                 } catch (e) {}
                                 attempt++;
                             }

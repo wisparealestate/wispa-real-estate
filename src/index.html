@@ -812,10 +812,21 @@
             (async function(){
                 const user = await window.getCurrentUser();
                 if (!user) return;
-                // Show modal if user hasn't accepted agreements yet
-                if (!user.agreementsAccepted) {
+                // Only show the modal immediately after login/signup (or when explicitly requested)
+                // Avoid showing on every page refresh. We use sessionStorage flag or a query param.
+                const shouldShowFlag = (function(){
+                    try { if (sessionStorage.getItem('showUserAgreement') === '1') return true; } catch(e){}
+                    try { if (window.location && window.location.search && window.location.search.indexOf('showAgreement=1') !== -1) return true; } catch(e){}
+                    return false;
+                })();
+                if (!user.agreementsAccepted || shouldShowFlag) {
+                    // Only proceed to show when the flag is set or user hasn't accepted and just logged in
+                    if (!shouldShowFlag && user.agreementsAccepted) return; // don't show on refresh
                     agreementsModal.style.display = 'flex';
                     document.body.style.overflow = 'hidden';
+
+                    // clear the transient flag so it doesn't reappear on refresh
+                    try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
 
                     acceptBtn.addEventListener('click', async function() {
                         // Prefer calling server to persist acceptance (best-effort)
@@ -828,6 +839,7 @@
                     declineBtn.addEventListener('click', function() {
                         agreementsModal.style.display = 'none';
                         document.body.style.overflow = 'auto';
+                        try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
                         window.location.href = 'login.html';
                     });
                 }
