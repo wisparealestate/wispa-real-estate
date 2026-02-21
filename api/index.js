@@ -520,10 +520,17 @@ app.post("/api/admin-login", async (req, res) => {
       "SELECT * FROM users WHERE (username = $1 OR email = $1) AND role = 'admin'",
       [username]
     );
-    if (result.rows.length === 0) return res.status(401).json({ error: "Invalid credentials or not an admin" });
+    if (result.rows.length === 0) {
+      console.warn('[admin-login] no admin user found for', username);
+      return res.status(401).json({ error: "Invalid credentials or not an admin" });
+    }
     const admin = result.rows[0];
     const match = await bcrypt.compare(password, admin.password_hash || '');
-    if (!match) return res.status(401).json({ error: "Invalid credentials or not an admin" });
+    if (!match) {
+      console.warn('[admin-login] password mismatch for user', username, 'id', admin.id);
+      return res.status(401).json({ error: "Invalid credentials or not an admin" });
+    }
+    console.log('[admin-login] success for user', username, 'id', admin.id);
     // Create session cookie (same behavior as /api/login)
     try{
       const token = createSessionToken(admin.id);
