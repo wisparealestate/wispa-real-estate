@@ -1,24 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Wispa Real Estate</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        * { box-sizing:border-box; }
-        html, body { margin:0; padding:0; }
+                    <script>
+                    async function renderPropertyDocuments() {
+                        const tbody = document.getElementById('property-docs-list');
+                        const noDocsMsg = document.getElementById('no-documents-message');
+                        if (!tbody) return;
+                        let properties = [];
+                        try {
+                            const res = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
+                            if (res && typeof res.json === 'function') {
+                                const data = await res.json();
+                                if (Array.isArray(data)) properties = data;
+                                else if (data && Array.isArray(data.properties)) properties = data.properties;
+                                else properties = [];
+                            } else {
+                                properties = [];
+                            }
+                        } catch (e) {
+                            // fallback to localStorage only when API is unreachable
+                            try { properties = JSON.parse(localStorage.getItem('properties') || '[]'); } catch (e2) { properties = []; }
+                        }
+                        const docs = (properties || []).filter(p => p && (p.document || p.documentUrl || p.document_url));
+                        if (!docs || docs.length === 0) {
+                            if (noDocsMsg) noDocsMsg.style.display = 'block';
+                            tbody.innerHTML = '';
+                            return;
+                        }
+                        if (noDocsMsg) noDocsMsg.style.display = 'none';
+                        tbody.innerHTML = docs.map(prop => {
+                            const id = prop.id || prop.propertyId || '';
+                            const shortId = String(id).slice(-8).padStart(8, '0');
+                            const title = prop.title || prop.name || 'Untitled';
+                            const doc = prop.document || prop.documentUrl || prop.document_url || '';
+                            const link = doc ? (typeof doc === 'string' ? doc : (doc.url || '')) : '';
+                            const downloadHtml = link ? `<a href="${link}" target="_blank">Download</a>` : '';
+                            return `
+                                <tr>
+                                    <td>#${shortId}</td>
+                                    <td>${(title)}</td>
+                                    <td style="text-align:right">${downloadHtml}</td>
+                                </tr>`;
+                        }).join('');
+                    }
+                    document.addEventListener('DOMContentLoaded', function() {
+                        renderPropertyDocuments();
+                    });
+                    </script>
         
-        .admin-layout { display:flex; background:transparent; max-width:1400px; margin:0 auto; }
-        .admin-sidebar { display:none; }
-        .admin-main { flex:1; margin-left:0; padding:24px 30px; }
-        .admin-menu { list-style:none; padding:0; margin:0; }
-        .header-nav { display:none; }
-        .header-container { justify-content:flex-start; gap:0; }
-        .header-left { flex:1; }
-        .header-right { display:flex; gap:10px; }
-        .btn-primary, .btn-sm { max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        
+        <style>
         .admin-menu a { display:flex; align-items:center; gap:12px; padding:12px 15px; font-size:15px; color:var(--text); text-decoration:none; border-radius:6px; }
         .admin-menu a.active { background:var(--primary-light); color:var(--primary); font-weight:600; }
         .dashboard-header { margin-bottom:30px; text-align:center; padding:0 20px; }
@@ -755,7 +784,53 @@
                                 return ch;
                             });
                         }
-                        function editProperty(id) { alert('Edit property: ' + id); }
+                        function editProperty(id) {
+                            // Prefill Add Property modal with existing property data and open it for editing
+                            (async function(){
+                                try {
+                                    const res = await window.apiFetch('/api/properties');
+                                    if (!res) throw new Error('No response');
+                                    const data = await res.json();
+                                    let all = [];
+                                    if (Array.isArray(data)) all = data;
+                                    else if (data && Array.isArray(data.properties)) all = data.properties;
+                                    else all = [];
+                                    function formatEightIdLocal(v){ const s = String(v||''); if (s.length>=8) return s.slice(-8); return s.padStart(8,'0'); }
+                                    let found = all.find(p => String(p.id) === String(id) || formatEightIdLocal(p.id) === String(id) || String(p.propertyId) === String(id));
+                                    if (!found) {
+                                        // Try file-backed localStorage fallback
+                                        try {
+                                            const local = JSON.parse(localStorage.getItem('properties')||'[]');
+                                            found = local.find(p => String(p.id) === String(id) || formatEightIdLocal(p.id) === String(id) || String(p.propertyId) === String(id));
+                                        } catch(e){}
+                                    }
+                                    if (!found) {
+                                        alert('Property not found for edit: ' + id);
+                                        return;
+                                    }
+                                    // Fill the form
+                                    const form = document.getElementById('add-property-form');
+                                    if (!form) return;
+                                    form.querySelector('input[name="property-id"]').value = found.id || found.propertyId || '';
+                                    if (form.querySelector('#property-title')) form.querySelector('#property-title').value = found.title || found.name || '';
+                                    if (form.querySelector('#property-type')) form.querySelector('#property-type').value = found.type || found.postTo || '';
+                                    if (form.querySelector('#property-saleRent')) form.querySelector('#property-saleRent').value = found.sale_rent || found.saleRent || found.sale || '';
+                                    if (form.querySelector('#property-price')) form.querySelector('#property-price').value = found.price || found.list_price || '';
+                                    if (form.querySelector('#property-location')) form.querySelector('#property-location').value = found.location || found.address || '';
+                                    if (form.querySelector('#property-area')) form.querySelector('#property-area').value = found.area || found.size || '';
+                                    if (form.querySelector('#property-bedrooms')) form.querySelector('#property-bedrooms').value = found.bedrooms || '';
+                                    if (form.querySelector('#property-bathrooms')) form.querySelector('#property-bathrooms').value = found.bathrooms || '';
+                                    if (form.querySelector('#property-postTo')) form.querySelector('#property-postTo').value = found.post_to || found.postTo || '';
+                                    if (form.querySelector('#property-description')) form.querySelector('#property-description').value = found.description || found.desc || '';
+                                    // Clear file input (we don't prefill files)
+                                    if (form.querySelector('#property-media')) form.querySelector('#property-media').value = '';
+                                    openModal('addProperty');
+                                } catch (e) {
+                                    console.error('editProperty error', e);
+                                    alert('Failed to load property for edit');
+                                }
+                            })();
+                        }
                         async function deleteProperty(id) {
                             if (!confirm('Delete this property?')) return;
                             try {
@@ -965,69 +1040,7 @@
                             No property documents found.
                         </div>
                     </div>
-                    <script>
-                    function renderPropertyDocuments() {
-                        const tbody = document.getElementById('property-docs-list');
-                        const noDocsMsg = document.getElementById('no-documents-message');
-                        if (!tbody) return;
-                        let properties = [];
-                        try {
-                            properties = JSON.parse(localStorage.getItem('properties') || '[]');
-                        } catch (e) { properties = []; }
-                        const docs = properties.filter(p => p.document);
-                        if (docs.length === 0) {
-                            tbody.innerHTML = '';
-                            if (noDocsMsg) noDocsMsg.style.display = 'block';
-                            return;
-                        }
-                        if (noDocsMsg) noDocsMsg.style.display = 'none';
-                        tbody.innerHTML = docs.map(prop => `
-                            <tr style="border-bottom:1px solid var(--border);">
-                                <td style="padding:14px 8px; font-weight:600; color:var(--primary-dark);">
-                                    <span style="font-size:1.1rem;">🏠</span> ${prop.name || prop.title || 'Untitled'}
-                                </td>
-                                <td style="padding:14px 8px; color:#555;">${prop.location || 'N/A'}</td>
-                                <td style="padding:14px 8px; color:#333;">${prop.price ? '€' + prop.price : 'N/A'}</td>
-                                <td style="padding:14px 8px; color:#333;">${prop.documentFormat || 'PDF'}</td>
-                                <td style="padding:14px 8px;">
-                                    ${prop.document ? `<a href="${prop.document}" target="_blank" style="color:var(--secondary);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">⬇️ Download</a>` : '<span style="color:#aaa;">None</span>'}
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                    document.addEventListener('DOMContentLoaded', function() {
-                        renderPropertyDocuments();
-                        if (window.location.hash === '#documents') {
-                            var docsTab = document.getElementById('documents');
-                            if (docsTab) {
-                                var allTabs = document.querySelectorAll('.admin-tab');
-                                allTabs.forEach(function(tab){ tab.style.display = 'none'; });
-                                docsTab.style.display = 'block';
-                                renderPropertyDocuments();
-                            }
-                        }
-                    });
-                    if (typeof window.switchTab === 'function') {
-                        const origSwitchTab = window.switchTab;
-                        window.switchTab = function(tabName) {
-                            origSwitchTab.apply(this, arguments);
-                            if (tabName === 'documents') {
-                                renderPropertyDocuments();
-                            }
-                        }
-                    }
-                    window.addEventListener('hashchange', function() {
-                        if (window.location.hash === '#documents') {
-                            var docsTab = document.getElementById('documents');
-                            if (docsTab) {
-                                var allTabs = document.querySelectorAll('.admin-tab');
-                                allTabs.forEach(function(tab){ tab.style.display = 'none'; });
-                                docsTab.style.display = 'block';
-                                renderPropertyDocuments();
-                            }
-                        }
-                    });
-                    </script>
+                    <!-- documents rendering handled by global API-backed renderPropertyDocuments() defined earlier; localStorage-only duplicate removed -->
                 </div>
             </div>
 
@@ -1467,7 +1480,7 @@
                             tabContent.style.display = 'block';
                         }
                         let btn = null;
-                        if (event && event.target && event.target.classList.contains('admin-notif-tab')) {
+                        if (typeof event !== 'undefined' && event && event.target && event.target.classList.contains('admin-notif-tab')) {
                             btn = event.target;
                         } else {
                             btn = document.querySelector('.admin-notif-tab[data-tab="' + tabName + '"]');
@@ -1775,7 +1788,103 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
     </div>
 
-    <div id="addAgent" class="modal">
+        <script>
+        // Add Property: submit directly to /api/upload-photos then /api/properties
+        (function(){
+            async function uploadFiles(files){
+                if (!files || files.length === 0) return [];
+                try {
+                    const fd = new FormData();
+                    for (let i = 0; i < files.length; i++) fd.append('files', files[i]);
+                    const res = await (window.apiFetch ? window.apiFetch('/api/upload-photos', { method: 'POST', body: fd }) : fetch('/api/upload-photos', { method: 'POST', body: fd }));
+                    if (!res) return [];
+                    let j = null;
+                    try { j = await res.json(); } catch(e) { return []; }
+                    // Accept array or { photoUrls: [...] } or { urls: [...] }
+                    if (Array.isArray(j)) return j;
+                    if (Array.isArray(j.photoUrls)) return j.photoUrls;
+                    if (Array.isArray(j.urls)) return j.urls;
+                    if (Array.isArray(j.uploads)) return j.uploads;
+                    return [];
+                } catch (e) { return []; }
+            }
+
+            async function handleAddPropertySubmit(e){
+                e.preventDefault();
+                const form = e.target;
+                const id = form.querySelector('input[name="property-id"]').value || undefined;
+                const title = (form.querySelector('#property-title').value || '').trim();
+                const type = (form.querySelector('#property-type').value || '').trim();
+                const saleRent = (form.querySelector('#property-saleRent').value || '').trim();
+                const price = Number(form.querySelector('#property-price').value || 0);
+                const location = (form.querySelector('#property-location').value || '').trim();
+                const area = Number(form.querySelector('#property-area').value || 0) || undefined;
+                const bedrooms = form.querySelector('#property-bedrooms').value ? Number(form.querySelector('#property-bedrooms').value) : undefined;
+                const bathrooms = form.querySelector('#property-bathrooms').value ? Number(form.querySelector('#property-bathrooms').value) : undefined;
+                const postTo = (form.querySelector('#property-postTo').value || '').trim();
+                const description = (form.querySelector('#property-description').value || '').trim();
+                const mediaInput = form.querySelector('#property-media');
+                const files = mediaInput && mediaInput.files ? Array.from(mediaInput.files) : [];
+
+                // Basic validation
+                if (!title || !type || !saleRent) {
+                    alert('Please fill required fields');
+                    return;
+                }
+
+                // Upload files first
+                let photoUrls = [];
+                if (files.length > 0) {
+                    photoUrls = await uploadFiles(files);
+                }
+
+                // Build property payload
+                const property = {
+                    title,
+                    type,
+                    sale_rent: saleRent,
+                    price,
+                    location,
+                    area,
+                    bedrooms,
+                    bathrooms,
+                    post_to: postTo,
+                    description
+                };
+                if (id) property.id = id;
+
+                try {
+                    const res = await (window.apiFetch ? window.apiFetch('/api/properties', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ property, photoUrls }) }) : fetch('/api/properties', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ property, photoUrls }) }));
+                    if (!res) throw new Error('No response from server');
+                    const j = await res.json();
+                    // server may return { property: { ... } } or the property directly
+                    const saved = j && (j.property || j) ? (j.property || j) : null;
+                    if (saved && saved.id) {
+                        closeModal('addProperty');
+                        // refresh lists
+                        try { if (typeof renderPropertiesWithDocButton === 'function') renderPropertiesWithDocButton(); } catch(e){}
+                        try { if (typeof renderRecentPropertiesUnified === 'function') renderRecentPropertiesUnified(); } catch(e){}
+                        alert('Property saved (id: ' + saved.id + ')');
+                        form.reset();
+                        return;
+                    }
+                    throw new Error('Unexpected server response');
+                } catch (err) {
+                    console.error('Failed to save property', err);
+                    alert('Failed to save property. See console for details.');
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function(){
+                const form = document.getElementById('add-property-form');
+                if (form) {
+                    form.addEventListener('submit', handleAddPropertySubmit);
+                }
+            });
+        })();
+        </script>
+
+        <div id="addAgent" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Add New Agent</h2>
@@ -1951,7 +2060,7 @@ document.addEventListener('DOMContentLoaded', function(){
         // Add active class to button
         // If called from click, event.target is the button; otherwise, find the button
         let btn = null;
-        if (event && event.target && event.target.classList.contains('admin-notif-tab')) {
+        if (typeof event !== 'undefined' && event && event.target && event.target.classList.contains('admin-notif-tab')) {
             btn = event.target;
         } else {
             btn = document.querySelector('.admin-notif-tab[data-tab="' + tabName + '"]');
@@ -2553,7 +2662,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const tabId = 'alert-' + tabName + '-tab';
             const tab = document.getElementById(tabId);
             if(tab) tab.style.display = 'block';
-            if(event && event.target) event.target.style.borderBottomColor = 'var(--primary)';
+            if (typeof event !== 'undefined' && event && event.target) event.target.style.borderBottomColor = 'var(--primary)';
             
             // Load notification alerts if in create tab
             if(tabName === 'create') {
@@ -3778,7 +3887,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
                 // Add active class to button
                 // If called from click, event.target is the button; otherwise, find the button
                 let btn = null;
-                if (event && event.target && event.target.classList.contains('admin-notif-tab')) {
+                if (typeof event !== 'undefined' && event && event.target && event.target.classList.contains('admin-notif-tab')) {
                     btn = event.target;
                 } else {
                     btn = document.querySelector('.admin-notif-tab[data-tab="' + tabName + '"]');

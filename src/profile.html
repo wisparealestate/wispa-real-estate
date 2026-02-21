@@ -1045,17 +1045,45 @@
         if (profilePic && avatarInput) {
             profilePic.addEventListener('click', () => avatarInput.click());
 
-            avatarInput.addEventListener('change', function(e) {
+            avatarInput.addEventListener('change', async function(e) {
             const file = e.target.files && e.target.files[0];
             if(!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function() {
-                profilePic.src = reader.result;
-                user.avatar = reader.result;
-                localStorage.setItem('wispaUser', JSON.stringify(user));
-            };
-            reader.readAsDataURL(file);
+
+            // Prefer uploading the avatar to the server and storing the returned URL
+            try {
+                const fd = new FormData();
+                fd.append('avatar', file);
+                const res = await fetch('/api/upload-avatar', { method: 'POST', body: fd });
+                if (res && res.ok) {
+                    const data = await res.json();
+                    const imageUrl = data && (data.imageUrl || data.url || data.imageUrl);
+                    if (imageUrl) {
+                        profilePic.src = imageUrl;
+                        user.avatar = imageUrl;
+                        localStorage.setItem('wispaUser', JSON.stringify(user));
+                        // If user has an id, try to persist avatar_url server-side (best-effort)
+                        if (user && user.id) {
+                            try { await fetch('/api/update-avatar-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id, avatarUrl: imageUrl }) }); } catch(e){}
+                        }
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn('Avatar upload failed, falling back to local data URL', err);
+            }
+
+            // Fallback: store as data URL in localStorage (keeps previous behaviour)
+            try {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    profilePic.src = reader.result;
+                    user.avatar = reader.result;
+                    localStorage.setItem('wispaUser', JSON.stringify(user));
+                };
+                reader.readAsDataURL(file);
+            } catch(e) {
+                console.error('Failed to read avatar file', e);
+            }
             });
         } else {
             if (!profilePic) console.warn('profilePic element missing — avatar upload disabled');

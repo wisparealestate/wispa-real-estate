@@ -669,7 +669,7 @@
             + '</svg>'
         );
 
-        const property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: [FALLBACK_IMAGE] };
+        let property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: [FALLBACK_IMAGE] };
 
         // Normalize price string for display
         if (typeof property.price === 'number') {
@@ -799,8 +799,55 @@
             });
         }
 
-        // Initialize images
-        initializeImages();
+        // Try to fetch authoritative properties from API and update page (fallback to localStorage)
+        (async function(){
+            try {
+                const res = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
+                if (res && res.ok && typeof res.json === 'function') {
+                    const data = await res.json();
+                    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.properties) ? data.properties : []);
+                    if (Array.isArray(arr) && arr.length) {
+                        arr.forEach(p => { if (p && p.id != null) propertiesMap[String(p.id)] = p; });
+                        // if the API provided this property, use it (prefer DB record)
+                        const remote = propertiesMap[propertyId] || arr.find(x => String(x.id) === String(propertyId) || String(x.propertyId) === String(propertyId));
+                        if (remote) {
+                            property = remote;
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore and continue with localStorage fallback
+            }
+
+            // Normalize price string for display
+            if (typeof property.price === 'number') property.price = '€' + property.price.toLocaleString();
+
+            // Ensure images array exists (fallback to image field)
+            if (!property.images || !Array.isArray(property.images)) {
+                if (property.image) property.images = [property.image];
+                else property.images = property.images || [];
+            }
+
+            // Render description
+            const detailDescDiv = document.querySelector('.property-detail-description');
+            if (detailDescDiv && property.description && property.description.trim() !== '') {
+                const paragraphs = property.description.split(/\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+                detailDescDiv.innerHTML = paragraphs;
+            }
+
+            // Initialize images/carousel now that we have the data
+            initializeImages();
+
+            // Populate the page fields
+            const titleEl = document.getElementById('propertyTitle'); if (titleEl) titleEl.textContent = property.title;
+            const priceEl = document.getElementById('propertyPrice'); if (priceEl) priceEl.textContent = property.price;
+            const locEl = document.getElementById('propertyLocation'); if (locEl) locEl.textContent = property.location;
+            document.title = (property.title || 'Property') + ' - Wispa Real Estate';
+
+            // Refresh similar properties section now that propertiesMap may include API entries
+            try { displaySimilarProperties(); } catch(e) {}
+            try { initializeLikeButton(); } catch(e) {}
+        })();
 
         // Keyboard navigation for carousel
         document.addEventListener('keydown', function(event) {
