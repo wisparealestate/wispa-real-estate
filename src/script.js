@@ -1,19 +1,10 @@
 // Provide a site-wide API base and apiFetch helper so pages (property-detail, etc.)
 // call the deployed backend when the frontend is served from a different origin.
-// Default API base: prefer an explicitly configured value, but when running
-// locally (file:// or localhost) point to the local backend so cookies work
-// during development without changing production behavior.
+// Default API base: use configured value or the production host. Do NOT
+// automatically switch to localhost—this app is DB/API-only in production.
 const _defaultRemote = 'https://wispa-real-estate-2ew3.onrender.com';
 const _configured = window.WISPA_API_BASE || _defaultRemote;
-let _autoBase = _configured;
-try {
-    const loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
-    if (loc) {
-        const isLocalhost = loc.protocol === 'file:' || loc.hostname === 'localhost' || loc.hostname === '127.0.0.1';
-        if (isLocalhost) _autoBase = 'http://localhost:3001';
-    }
-} catch (e) {}
-window.WISPA_API_BASE = window.WISPA_API_BASE || _autoBase;
+window.WISPA_API_BASE = window.WISPA_API_BASE || _configured;
 // Ensure legacy pages that use `API_URL` pick up the same base.
 window.API_URL = window.API_URL || window.WISPA_API_BASE;
 if (!window.apiFetch) {
