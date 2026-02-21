@@ -47,19 +47,12 @@ async function writeJson(name, data){
 app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
   try {
-    // Try DB first, fallback to file storage. If userId is missing, return all notifications.
-    try {
-      const result = userId
-        ? await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId])
-        : await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
-      return res.json({ notifications: result.rows });
-    } catch (err) {
-      const all = await readJson('notifications.json');
-      const filtered = userId ? all.filter(n => String(n.userId) === String(userId)) : all;
-      return res.json({ notifications: filtered });
-    }
+    const result = userId
+      ? await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId])
+      : await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+    return res.json({ notifications: result.rows });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Database error fetching notifications', details: err.message });
   }
 });
 
@@ -67,120 +60,61 @@ app.get("/api/notifications", async (req, res) => {
 app.get("/api/conversations", async (req, res) => {
   const userId = req.query.userId;
   try {
-    // DB-first, fallback to file. Return all if userId not provided.
-    try {
-      const result = userId
-        ? await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId])
-        : await pool.query('SELECT * FROM conversations ORDER BY updated DESC');
-      return res.json({ conversations: result.rows });
-    } catch (err) {
-      const all = await readJson('conversations.json');
-      const filtered = userId ? all.filter(c => String(c.userId) === String(userId)) : all;
-      return res.json({ conversations: filtered });
-    }
+    const result = userId
+      ? await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId])
+      : await pool.query('SELECT * FROM conversations ORDER BY updated DESC');
+    return res.json({ conversations: result.rows });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Database error fetching conversations', details: err.message });
   }
 });
 
 // File-backed admin endpoints (notifications/chat/sent-notifs/profile/requests/contacts/reactions/alerts)
 app.get('/api/admin/sent-notifications', async (req, res) => {
-  const arr = await readJson('adminSentNotifications.json');
-  res.json({ sent: arr });
+  res.status(501).json({ error: 'Admin sent-notifications endpoint not implemented on server. Configure a DB-backed store.' });
 });
 app.post('/api/admin/sent-notifications', async (req, res) => {
-  const note = req.body;
-  const arr = await readJson('adminSentNotifications.json');
-  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, note));
-  await writeJson('adminSentNotifications.json', arr);
-  res.json({ success: true });
+  res.status(501).json({ error: 'Admin sent-notifications endpoint not implemented on server. Configure a DB-backed store.' });
 });
 
 app.get('/api/admin/profile', async (req, res) => {
-  const p = await readJson('adminProfile.json');
-  res.json({ profile: p[0] || {} });
+  res.status(501).json({ error: 'Admin profile endpoint not implemented on server. Configure a DB-backed store.' });
 });
 app.post('/api/admin/profile', async (req, res) => {
-  const profile = req.body;
-  await writeJson('adminProfile.json', [profile]);
-  res.json({ success: true });
+  res.status(501).json({ error: 'Admin profile endpoint not implemented on server. Configure a DB-backed store.' });
 });
 
 app.get('/api/property-requests', async (req, res) => {
-  const arr = await readJson('propertyRequests.json');
-  res.json({ requests: arr });
+  res.status(501).json({ error: 'Property requests endpoint not implemented on server. Configure a DB-backed store.' });
 });
 app.post('/api/property-requests', async (req, res) => {
-  const obj = req.body;
-  const arr = await readJson('propertyRequests.json');
-  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
-  await writeJson('propertyRequests.json', arr);
-  res.json({ success: true });
+  res.status(501).json({ error: 'Property requests endpoint not implemented on server. Configure a DB-backed store.' });
 });
 
 app.get('/api/contact-messages', async (req, res) => {
-  const arr = await readJson('contactMessages.json');
-  res.json({ contacts: arr });
+  res.status(501).json({ error: 'Contact messages endpoint not implemented on server. Configure a DB-backed store.' });
 });
 app.post('/api/contact-messages', async (req, res) => {
-  const obj = req.body;
-  const arr = await readJson('contactMessages.json');
-  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
-  await writeJson('contactMessages.json', arr);
-  res.json({ success: true });
+  res.status(501).json({ error: 'Contact messages endpoint not implemented on server. Configure a DB-backed store.' });
 });
 
 app.get('/api/notification-reactions', async (req, res) => {
-  const arr = await readJson('notificationReactions.json');
-  res.json({ reactions: arr });
+  res.status(501).json({ error: 'Notification reactions endpoint not implemented on server. Configure a DB-backed store.' });
 });
 app.post('/api/notification-reactions', async (req, res) => {
-  const obj = req.body;
-  const arr = await readJson('notificationReactions.json');
-  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
-  await writeJson('notificationReactions.json', arr);
-  res.json({ success: true });
+  res.status(501).json({ error: 'Notification reactions endpoint not implemented on server. Configure a DB-backed store.' });
 });
 
 app.get('/api/system-alerts', async (req, res) => {
-  const arr = await readJson('systemAlerts.json');
-  res.json({ alerts: arr });
+  res.status(501).json({ error: 'System alerts endpoint not implemented on server. Configure a DB-backed store.' });
 });
 app.post('/api/system-alerts', async (req, res) => {
-  const obj = req.body;
-  const arr = await readJson('systemAlerts.json');
-  arr.unshift(Object.assign({ id: Date.now(), created_at: new Date().toISOString() }, obj));
-  await writeJson('systemAlerts.json', arr);
-  res.json({ success: true });
+  res.status(501).json({ error: 'System alerts endpoint not implemented on server. Configure a DB-backed store.' });
 });
 
-// Generic admin sync endpoint to overwrite a named file
+// Generic admin sync endpoint removed: file-backed sync is not allowed in DB-only mode
 app.post('/api/admin/sync', async (req, res) => {
-  const { key, value } = req.body || {};
-  if (!key) return res.status(400).json({ error: 'Missing key' });
-  const mapping = {
-    'adminSentNotifications': 'adminSentNotifications.json',
-    'adminProfile': 'adminProfile.json',
-    'propertyRequests': 'propertyRequests.json',
-    'contactMessages': 'contactMessages.json',
-    'notificationReactions': 'notificationReactions.json',
-    'systemAlerts': 'systemAlerts.json',
-    'notifications': 'notifications.json',
-    'conversations': 'conversations.json'
-  };
-  // Allow writing arbitrary safe keys to disk as fallback (useful for admin UI)
-  let file = mapping[key];
-  if (!file) {
-    // sanitize key to a filename (allow letters, numbers, dash, underscore)
-    const safe = String(key).replace(/[^a-zA-Z0-9_-]/g, '_');
-    file = safe + '.json';
-  }
-  try {
-    await writeJson(file, value || []);
-    res.json({ success: true, file });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.status(501).json({ error: 'admin/sync disabled: file-backed admin sync is not allowed. Implement DB-backed admin sync.' });
 });
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -204,20 +138,13 @@ app.post('/api/notifications', async (req, res) => {
   const { userId, notification } = req.body || {};
   if (!userId || !notification) return res.status(400).json({ error: 'Missing userId or notification' });
   try {
-    try {
-      const result = await pool.query(
-        'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-        [userId, notification.title || null, notification.message || notification.fullMessage || null, JSON.stringify(notification || {}), notification.timestamp || new Date().toISOString(), notification.read ? true : false]
-      );
-      return res.json({ notification: result.rows[0] });
-    } catch (e) {
-      const all = await readJson('notifications.json');
-      all.unshift(Object.assign({ userId: userId }, notification));
-      await writeJson('notifications.json', all);
-      return res.json({ notification: notification });
-    }
+    const result = await pool.query(
+      'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [userId, notification.title || null, notification.message || notification.fullMessage || null, JSON.stringify(notification || {}), notification.timestamp || new Date().toISOString(), notification.read ? true : false]
+    );
+    return res.json({ notification: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Database error creating notification', details: err.message });
   }
 });
 
@@ -226,27 +153,13 @@ app.post('/api/conversations/messages', async (req, res) => {
   const { convId, message } = req.body || {};
   if (!convId || !message) return res.status(400).json({ error: 'Missing convId or message' });
   try {
-    try {
-      const result = await pool.query(
-        'INSERT INTO messages (conversation_id, sender, body, meta, sent_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-        [convId, message.sender || null, message.text || message.body || null, JSON.stringify(message || {}), message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]
-      );
-      return res.json({ message: result.rows[0] });
-    } catch (e) {
-      const all = await readJson('conversations.json');
-      let conv = all.find(c => c.id === convId);
-      if (!conv) {
-        conv = { id: convId, messages: [] };
-        all.push(conv);
-      }
-      conv.messages = conv.messages || [];
-      conv.messages.push(message);
-      conv.updated = Date.now();
-      await writeJson('conversations.json', all);
-      return res.json({ message });
-    }
+    const result = await pool.query(
+      'INSERT INTO messages (conversation_id, sender, body, meta, sent_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [convId, message.sender || null, message.text || message.body || null, JSON.stringify(message || {}), message.ts ? new Date(message.ts).toISOString() : new Date().toISOString()]
+    );
+    return res.json({ message: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Database error appending message', details: err.message });
   }
 });
 
@@ -329,54 +242,12 @@ app.post("/api/properties", async (req, res) => {
     }
   }
 
-  // Idempotency support: accept an Idempotency-Key header or body.idempotencyKey / clientId
-  const idempotencyKey = (req.get('Idempotency-Key') || req.get('idempotency-key') || body.idempotencyKey || body.clientId || body.client_id) || null;
-  if (idempotencyKey) {
-    try {
-      const mappings = await readJson('idempotency.json');
-      const found = Array.isArray(mappings) ? mappings.find(m => m && String(m.key) === String(idempotencyKey)) : null;
-      if (found) {
-        // If we have a stored property object, return it immediately
-        if (found.property) return res.json({ property: found.property, propertyId: found.propertyId });
-        // Otherwise, attempt to load from DB by id
-        if (found.propertyId) {
-          try {
-            const pr = await pool.query('SELECT * FROM properties WHERE id = $1', [found.propertyId]);
-            if (pr.rows && pr.rows.length) {
-              const row = pr.rows[0];
-              // fetch photos
-              try {
-                const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [row.id]);
-                row.images = photosRes.rows.map(p => p.photo_url).filter(Boolean);
-              } catch (e) {}
-              return res.json({ property: row, propertyId: row.id });
-            }
-          } catch (e) {
-            // ignore DB lookup errors and fallthrough to return stored mapping if available
-          }
-        }
-      }
-    } catch (e) {
-      // ignore idempotency read errors
-    }
-  }
+  // Note: idempotency file mapping has been removed — rely on DB uniqueness and advisory locks.
 
   try {
     const resObj = await addPropertyWithPhotos(property, photoUrls);
     // resObj contains { property, propertyId }
-    // Persist idempotency mapping when key provided
-    if (idempotencyKey) {
-      try {
-        const mappings = await readJson('idempotency.json');
-        const arr = Array.isArray(mappings) ? mappings : [];
-        arr.unshift({ key: idempotencyKey, propertyId: resObj.propertyId || (resObj.property && resObj.property.id) || null, property: resObj.property || null, created_at: new Date().toISOString() });
-        // keep mapping list reasonable length
-        if (arr.length > 1000) arr.length = 1000;
-        await writeJson('idempotency.json', arr);
-      } catch (e) {
-        // ignore write errors
-      }
-    }
+    // No file-backed idempotency persistence; rely on DB-side protections.
     // Trigger async document generation for the created/updated property (fire-and-forget)
     try {
       const createdId = resObj.propertyId || (resObj.property && resObj.property.id) || null;
@@ -407,21 +278,8 @@ app.post("/api/properties", async (req, res) => {
     if (resObj && resObj.propertyId) return res.json({ propertyId: resObj.propertyId });
     return res.json({ propertyId: resObj });
   } catch (err) {
-    // Include stack in response for local debugging (remove in production)
     console.error('addPropertyWithPhotos error:', err && err.stack ? err.stack : err);
-    // Fallback: if DB is unavailable (e.g., local dev without DATABASE_URL), persist to file-backed properties.json
-    try {
-      const allProps = await readJson('properties.json');
-      const newId = Date.now();
-      const toSave = Object.assign({ id: newId, created_at: new Date().toISOString() }, property || {});
-      if (Array.isArray(photoUrls) && photoUrls.length) toSave.images = photoUrls;
-      allProps.unshift(toSave);
-      await writeJson('properties.json', allProps);
-      return res.json({ property: toSave, propertyId: newId, fallback: true });
-    } catch (e) {
-      // If fallback also fails, return original error
-      return res.status(500).json({ error: err.message, stack: err.stack });
-    }
+    return res.status(500).json({ error: 'Database error creating/updating property', details: err.message });
   }
 });
 
@@ -498,15 +356,7 @@ app.get("/api/properties", async (req, res) => {
     try {
       const result = await pool.query("SELECT * FROM properties ORDER BY created_at DESC");
       let rows = result.rows || [];
-      // Load file-backed properties to merge extra fields (type, location, images) when present
-      const fileProps = await readJson('properties.json');
-      const fileMap = {};
-      if (Array.isArray(fileProps)) {
-        for (const fp of fileProps) {
-          if (fp && fp.id) fileMap[String(fp.id)] = fp;
-        }
-      }
-      // For each DB row, fetch photos and merge missing fields from file-backed props
+      // For each DB row, fetch photos and include them
       for (let i = 0; i < rows.length; i++){
         const r = rows[i];
         try {
@@ -516,23 +366,12 @@ app.get("/api/properties", async (req, res) => {
         } catch(e) {
           // ignore photo fetch errors
         }
-        // Merge common fallbacks from file-backed property
-        const fp = fileMap[String(r.id)];
-        if (fp) {
-          if (!r.type && (fp.type || fp.postTo || fp.property_type || fp.saleRent)) r.type = fp.type || fp.postTo || fp.property_type || fp.saleRent;
-          if (!r.location && (fp.location || fp.address)) r.location = fp.location || fp.address;
-          if ((!r.images || !r.images.length) && Array.isArray(fp.images) && fp.images.length) r.images = fp.images;
-          if (!r.bedrooms && fp.bedrooms) r.bedrooms = fp.bedrooms;
-          if (!r.bathrooms && fp.bathrooms) r.bathrooms = fp.bathrooms;
-        }
         // Use address column as location when present
         if (!r.location && r.address) r.location = r.address;
       }
       return res.json({ properties: rows });
     } catch (e) {
-      // Fallback to file-backed properties
-      const all = await readJson('properties.json');
-      return res.json({ properties: all });
+      return res.status(500).json({ error: 'Database error fetching properties', details: e.message });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -545,21 +384,13 @@ app.delete('/api/properties/:id', async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing id' });
   try {
-    try {
-      // Delete photos first (cascade may handle it depending on schema)
-      await pool.query('DELETE FROM property_photos WHERE property_id = $1', [id]);
-      const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
-      if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
-      return res.json({ success: true, deleted: result.rows[0] });
-    } catch (e) {
-      // Fallback to file-based store
-      const all = await readJson('properties.json');
-      const filtered = all.filter(p => String(p.id) !== String(id));
-      await writeJson('properties.json', filtered);
-      return res.json({ success: true });
-    }
+    // Delete photos first (cascade may handle it depending on schema)
+    await pool.query('DELETE FROM property_photos WHERE property_id = $1', [id]);
+    const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    return res.json({ success: true, deleted: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Database error deleting property', details: err.message });
   }
 });
 
@@ -582,19 +413,14 @@ app.post('/api/properties/:id/generate-document', async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing property id' });
   try {
-    // Try DB first
+    // Load property from DB
     let prop = null;
     try {
       const pRes = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
       if (pRes.rows && pRes.rows.length) prop = pRes.rows[0];
-    } catch (e) { /* ignore DB errors */ }
-
-    // Fallback to file-backed store
-    if (!prop) {
-      const all = await readJson('properties.json');
-      prop = (all || []).find(x => String(x.id) === String(id)) || null;
+    } catch (e) {
+      return res.status(500).json({ error: 'Database error fetching property', details: e.message });
     }
-
     if (!prop) return res.status(404).json({ error: 'Property not found' });
 
     // Gather photos if DB available

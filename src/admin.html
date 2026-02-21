@@ -3382,9 +3382,8 @@ reports@wispa.com | +EU-SUPPORT-LINE
                         console.debug('admin.saveProperties: skipping sync due to add-property submit');
                         return;
                     }
-                    // load tombstoned (deleted) server ids to avoid re-posting them
+                    // No localStorage tombstones in DB-only mode
                     let tombstones = [];
-                    try { tombstones = JSON.parse(localStorage.getItem('deletedPropertyIds') || '[]') || []; } catch(e){ tombstones = []; }
                     for (let idx = 0; idx < props.length; idx++) {
                         const p = props[idx];
                         if (!p) continue;
@@ -3582,15 +3581,9 @@ reports@wispa.com | +EU-SUPPORT-LINE
                             if (isNumeric) {
                                 try {
                                     const del = await (window.apiFetch ? window.apiFetch(`/api/properties/${id}`, { method: 'DELETE' }) : fetch(`/api/properties/${id}`, { method: 'DELETE' }));
+                                    // if server delete succeeded, nothing else to persist client-side
                                     if (del && del.ok) {
-                                        // persist tombstone to avoid re-posts
-                                        try {
-                                            const existing = JSON.parse(localStorage.getItem('deletedPropertyIds') || '[]') || [];
-                                            if (existing.indexOf(String(id)) === -1) {
-                                                existing.push(String(id));
-                                                localStorage.setItem('deletedPropertyIds', JSON.stringify(existing));
-                                            }
-                                        } catch (e) { /* ignore */ }
+                                        /* no local tombstone persistence in DB-only mode */
                                     }
                                 } catch (e) {
                                     // ignore remote delete failure; continue to remove local copy anyway
