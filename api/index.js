@@ -329,9 +329,54 @@ app.post("/api/properties", async (req, res) => {
     }
   }
 
+  // Idempotency support: accept an Idempotency-Key header or body.idempotencyKey / clientId
+  const idempotencyKey = (req.get('Idempotency-Key') || req.get('idempotency-key') || body.idempotencyKey || body.clientId || body.client_id) || null;
+  if (idempotencyKey) {
+    try {
+      const mappings = await readJson('idempotency.json');
+      const found = Array.isArray(mappings) ? mappings.find(m => m && String(m.key) === String(idempotencyKey)) : null;
+      if (found) {
+        // If we have a stored property object, return it immediately
+        if (found.property) return res.json({ property: found.property, propertyId: found.propertyId });
+        // Otherwise, attempt to load from DB by id
+        if (found.propertyId) {
+          try {
+            const pr = await pool.query('SELECT * FROM properties WHERE id = $1', [found.propertyId]);
+            if (pr.rows && pr.rows.length) {
+              const row = pr.rows[0];
+              // fetch photos
+              try {
+                const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [row.id]);
+                row.images = photosRes.rows.map(p => p.photo_url).filter(Boolean);
+              } catch (e) {}
+              return res.json({ property: row, propertyId: row.id });
+            }
+          } catch (e) {
+            // ignore DB lookup errors and fallthrough to return stored mapping if available
+          }
+        }
+      }
+    } catch (e) {
+      // ignore idempotency read errors
+    }
+  }
+
   try {
     const resObj = await addPropertyWithPhotos(property, photoUrls);
     // resObj contains { property, propertyId }
+    // Persist idempotency mapping when key provided
+    if (idempotencyKey) {
+      try {
+        const mappings = await readJson('idempotency.json');
+        const arr = Array.isArray(mappings) ? mappings : [];
+        arr.unshift({ key: idempotencyKey, propertyId: resObj.propertyId || (resObj.property && resObj.property.id) || null, property: resObj.property || null, created_at: new Date().toISOString() });
+        // keep mapping list reasonable length
+        if (arr.length > 1000) arr.length = 1000;
+        await writeJson('idempotency.json', arr);
+      } catch (e) {
+        // ignore write errors
+      }
+    }
     if (resObj && resObj.property) return res.json({ property: resObj.property, propertyId: resObj.propertyId });
     if (resObj && resObj.propertyId) return res.json({ propertyId: resObj.propertyId });
     return res.json({ propertyId: resObj });

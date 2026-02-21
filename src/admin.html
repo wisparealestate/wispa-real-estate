@@ -1812,6 +1812,9 @@ document.addEventListener('DOMContentLoaded', function(){
             async function handleAddPropertySubmit(e){
                 e.preventDefault();
                 const form = e.target;
+                // Prevent the admin background sync loop from posting the same data
+                // while the add-property form is submitting.
+                try { window._adminSubmitting = true; } catch (e) {}
                 const id = form.querySelector('input[name="property-id"]').value || undefined;
                 const title = (form.querySelector('#property-title').value || '').trim();
                 const type = (form.querySelector('#property-type').value || '').trim();
@@ -1872,6 +1875,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 } catch (err) {
                     console.error('Failed to save property', err);
                     alert('Failed to save property. See console for details.');
+                } finally {
+                    try { window._adminSubmitting = false; } catch(e){}
                 }
             }
 
@@ -3363,8 +3368,14 @@ reports@wispa.com | +EU-SUPPORT-LINE
                 if (typeof window === 'undefined') return;
                 const poster = window.apiFetch ? window.apiFetch : fetch;
 
+                // If the add-property form is actively submitting, skip the background sync
+                // to avoid racing and duplicate posts.
                 // Run a serialized sync loop to avoid parallel POSTs and retries
                 (async () => {
+                    if (typeof window !== 'undefined' && window._adminSubmitting) {
+                        console.debug('admin.saveProperties: skipping sync due to add-property submit');
+                        return;
+                    }
                     for (let idx = 0; idx < props.length; idx++) {
                         const p = props[idx];
                         if (!p) continue;
