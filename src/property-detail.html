@@ -644,22 +644,16 @@
         const propertyId = urlParams.get('id') || 'Unknown';
         const category = urlParams.get('category') || 'available';
 
-        // Use only admin-saved properties (persisted in localStorage).
-        // System-generated sample properties are disabled so only admin posts are visible.
+        // Use only admin-saved properties (populated from the API).
+        // No client-side persistent `localStorage` usage — use in-memory maps instead.
         const propertiesMap = {};
 
-        // Merge in any admin-saved properties from localStorage (array of properties)
-        try {
-            const storedProps = JSON.parse(localStorage.getItem('properties') || '[]');
-            if (Array.isArray(storedProps)) {
-                storedProps.forEach(p => {
-                    if (p && p.id != null) {
-                        propertiesMap[String(p.id)] = p;
-                    }
-                });
-            }
-        } catch (err) {
-            console.warn('property-detail: failed to parse stored properties', err);
+        // Helper to read all liked properties across users (in-memory)
+        function getAllLikedProperties() {
+            const map = window._wispaLikedProperties || {};
+            const out = [];
+            Object.values(map).forEach(arr => { if (Array.isArray(arr)) out.push(...arr); });
+            return out;
         }
 
         // Inline fallback SVG image (avoids external DNS failures like via.placeholder.com)
@@ -877,129 +871,80 @@
         })();
 
         // Keyboard navigation for carousel
-        document.addEventListener('keydown', function(event) {
-            if (propertyImages.length <= 1) return;
-            if (event.key === 'ArrowLeft') {
-                prevImage();
-            } else if (event.key === 'ArrowRight') {
-                nextImage();
+        window.openChat = async function() {
+            const modal = document.getElementById('propertyDetailChatModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const messagesDiv = document.getElementById('propertyDetailChatMessages');
+
+                // Get user ID from server session
+                const userObj = await window.getCurrentUser();
+                const userId = userObj && userObj.id ? userObj.id : null;
+                if (!userId) {
+                    messagesDiv.innerHTML = '<p style="text-align:center;color:var(--secondary);">Please log in to chat with an agent.</p>';
+                    return;
+                }
+
+                // Render existing conversation for this property
+                const convId = 'property-' + propertyId;
+                function renderList(list){
+                    messagesDiv.innerHTML = '';
+                    (list || []).forEach(m => {
+                        const el = document.createElement('div');
+                        if (m.sender === 'user') {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
+                            el.textContent = m.text;
+                        } else {
+                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                            el.textContent = m.text;
+                        }
+                        messagesDiv.appendChild(el);
+                    });
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                };
+
+                // Load existing messages from in-memory store or subscription
+                const messagesKey = 'wispaMessages_' + userId + '_' + convId;
+                window._wispaMessages = window._wispaMessages || {};
+                const existingMessages = window._wispaMessages[messagesKey] || (window.getConversationMessages ? window.getConversationMessages(convId) : []);
+
+                // If first-time chat (no messages), show quick-message chooser (same UI path)
+                if (!existingMessages || existingMessages.length === 0) {
+                    const chooser = document.createElement('div');
+                    chooser.id = 'quickMessageChooser';
+                    chooser.style.cssText = 'position:absolute;left:16px;right:16px;top:80px;background:var(--white);padding:14px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:2000;max-width:420px;margin:0 auto;';
+                    // content omitted intentionally (keeps previous UI)
+                    const existingChooser = document.getElementById('quickMessageChooser');
+                    if (existingChooser) existingChooser.remove();
+                    const modalContent = modal.firstElementChild || modal;
+                    modalContent.appendChild(chooser);
+                }
+
+                // Load and display all existing messages
+                renderList(existingMessages || []);
+
+                // Set up polling interval to check for new messages from admin (every 2 seconds)
+                const pollInterval = setInterval(function(){
+                    const currentMessages = window._wispaMessages[messagesKey] || [];
+                    renderList(currentMessages);
+                }, 2000);
+
+                // Store interval on modal so it can be cleared when closed
+                modal._pollInterval = pollInterval;
+
+                // Subscribe for live updates
+                if (window.subscribeConversation) {
+                    window.subscribeConversation(convId, (list) => renderList(list || []));
+                }
+
+                loadPropertyDocuments();
+
+                const input = document.getElementById('propertyDetailChatInput');
+                if (input) {
+                    input.focus();
+                }
             }
-        });
-
-        // Populate the page
-        document.getElementById('propertyTitle').textContent = property.title;
-        document.getElementById('propertyPrice').textContent = property.price;
-        document.getElementById('propertyLocation').textContent = property.location;
-        document.title = property.title + ' - Wispa Real Estate';
-
-        // Display category badge
-        const categoryBadge = document.getElementById('categoryBadge');
-        const categoryLabels = {
-            'hot': '🔥 Hot Property',
-            'featured': '⭐ Featured Property',
-            'available': '✓ Available Property'
         };
-        categoryBadge.textContent = categoryLabels[category] || categoryLabels['available'];
-        categoryBadge.className = 'property-category-badge ' + category;
-
-        // Display post badge from stored property when available
-        const postBadge = document.getElementById('postBadge');
-        try {
-            const postTo = property.postTo || property.postto || null;
-            if (postTo && postTo !== '') {
-                postBadge.textContent = categoryLabels[postTo] || postTo.toUpperCase();
-                postBadge.className = 'property-post-badge ' + postTo;
-                postBadge.style.display = 'inline-block';
-                // hide the URL-category badge when a stored post badge exists
-                if (categoryBadge) categoryBadge.style.display = 'none';
-            } else {
-                postBadge.style.display = 'none';
-            }
-        } catch (e) {
-            postBadge.style.display = 'none';
-        }
-
-        // Initialize like button
-        function initializeLikeButton() {
-            const wispaUser = localStorage.getItem('wispaUser');
-            if (!wispaUser) {
-                const likeBtn = document.getElementById('detailLikeBtn');
-                likeBtn.textContent = '♡';
-                likeBtn.classList.remove('liked');
-                return;
-            }
-            
-            const userData = JSON.parse(wispaUser);
-            const userId = userData.id;
-            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
-            const likeBtn = document.getElementById('detailLikeBtn');
-            
-            if (likedProperties.includes(parseInt(propertyId))) {
-                likeBtn.textContent = '♥';
-                likeBtn.classList.add('liked');
-            } else {
-                likeBtn.textContent = '♡';
-                likeBtn.classList.remove('liked');
-            }
-        }
-
-        // Toggle like on detail page
-        window.toggleLikeDetail = function(event) {
-            event.preventDefault();
-            
-            const wispaUser = localStorage.getItem('wispaUser');
-            if (!wispaUser) {
-                alert('Please log in to like properties');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            const userData = JSON.parse(wispaUser);
-            const userId = userData.id;
-            const btn = document.getElementById('detailLikeBtn');
-            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
-            const propId = parseInt(propertyId);
-            const index = likedProperties.indexOf(propId);
-            
-            if (index > -1) {
-                // Unlike
-                likedProperties.splice(index, 1);
-                btn.textContent = '♡';
-                btn.classList.remove('liked');
-            } else {
-                // Like
-                likedProperties.push(propId);
-                btn.textContent = '♥';
-                btn.classList.add('liked');
-            }
-            
-            localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties));
-        };
-
-        // Initialize like button on page load
-        initializeLikeButton();
-
-        // Function to find similar properties based on location and price
-        function findSimilarProperties() {
-            const currentPropId = parseInt(propertyId);
-            const currentLocation = property.location;
-            
-            // Extract price as number (remove €, spaces, and commas)
-            const priceStr = String(property.price).replace(/[€\s,]/g, '');
-            const currentPrice = parseInt(priceStr) || 0;
-            const priceRange = currentPrice * 0.25; // ±25% price range
-
-            // Get property categories
-            const getCategory = (id) => {
-                if (id >= 1 && id <= 20) return 'hot';
-                if (id >= 21 && id <= 30) return 'featured';
-                return 'available';
-            };
-
-            // Check if coming from likes page
-            const urlParams = new URLSearchParams(window.location.search);
-            const fromLikes = urlParams.get('fromLikes') === 'true';
-            const likedProperties = fromLikes ? JSON.parse(localStorage.getItem('likedProperties') || '[]') : [];
 
             const similarProps = [];
 
@@ -1041,7 +986,7 @@
             });
 
             return similarProps.slice(0, 8);
-        }
+        
 
         // Display similar properties
         function displaySimilarProperties() {
@@ -1064,9 +1009,9 @@
                 sectionHeading.textContent = 'Similar Properties You Might Like';
             }
 
+            const allLiked = getAllLikedProperties();
             container.innerHTML = similarProps.map(prop => {
-                const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
-                const isLiked = likedProperties.includes(prop.id);
+                const isLiked = allLiked.includes(prop.id);
                 const imageCount = prop.images ? prop.images.length : 1;
                 const imageCountBadge = imageCount > 1 ? `<div style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; z-index: 5;">${imageCount} 📷</div>` : '';
                 
@@ -1096,14 +1041,20 @@
         }
 
         // Toggle like for similar properties
-        window.toggleSimilarPropertyLike = function(event, propertyId) {
+        window.toggleSimilarPropertyLike = async function(event, propertyId) {
             event.stopPropagation();
             event.preventDefault();
-            
             const btn = event.target;
-            const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            const userObj = await window.getCurrentUser();
+            if (!userObj) {
+                alert('Please log in to like properties');
+                window.location.href = 'login.html';
+                return;
+            }
+            const userId = userObj.id;
+            window._wispaLikedProperties = window._wispaLikedProperties || {};
+            const likedProperties = window._wispaLikedProperties[userId] || [];
             const index = likedProperties.indexOf(propertyId);
-            
             if (index > -1) {
                 likedProperties.splice(index, 1);
                 btn.textContent = '♡';
@@ -1113,8 +1064,7 @@
                 btn.textContent = '♥';
                 btn.classList.add('liked');
             }
-            
-            localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
+            window._wispaLikedProperties[userId] = likedProperties;
         };
 
         // Display similar properties on page load
@@ -1405,23 +1355,22 @@
         }
 
         // Send chat message
-        window.sendPropertyDetailMessage = function() {
+        window.sendPropertyDetailMessage = async function() {
             const input = document.getElementById('propertyDetailChatInput');
             const messagesDiv = document.getElementById('propertyDetailChatMessages');
             const convId = 'property-' + propertyId;
 
             if (!input || input.value.trim() === '') return;
 
-            // Get logged-in user info
-            const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-            const userName = wispaUser.username || wispaUser.email || 'Anonymous User';
-            const userEmail = wispaUser.email || '';
-            const userId = wispaUser.id || null;
+            // Get logged-in user info from server session
+            const wispaUser = await window.getCurrentUser();
+            const userName = (wispaUser && (wispaUser.username || wispaUser.email)) || 'Anonymous User';
+            const userEmail = (wispaUser && wispaUser.email) || '';
+            const userId = wispaUser && wispaUser.id ? wispaUser.id : null;
 
             // Save user message into conversation store
             if (window.saveConversationMessage) {
                 window.saveConversationMessage(convId, 'user', input.value.trim());
-                // immediately render the updated list so user sees the message without waiting for subscription
                 if (window.getConversationMessages) {
                     const updated = window.getConversationMessages(convId) || [];
                     messagesDiv.innerHTML = '';
@@ -1440,12 +1389,11 @@
                 if (typeof showNotification === 'function') showNotification('Message sent');
             } else if (userId) {
                 const key = 'wispaMessages_' + userId + '_' + convId;
-                const cur = JSON.parse(localStorage.getItem(key) || '[]');
-                cur.push({ sender: 'user', text: input.value.trim(), ts: Date.now(), userName: userName, userEmail: userEmail });
-                localStorage.setItem(key, JSON.stringify(cur));
-                try { localStorage.setItem(key + '_backup', JSON.stringify(cur)); } catch(e){}
+                window._wispaMessages = window._wispaMessages || {};
+                window._wispaMessages[key] = window._wispaMessages[key] || [];
+                window._wispaMessages[key].push({ sender: 'user', text: input.value.trim(), ts: Date.now(), userName: userName, userEmail: userEmail });
                 // render fallback-saved messages immediately
-                const updated = JSON.parse(localStorage.getItem(key) || '[]');
+                const updated = window._wispaMessages[key] || [];
                 messagesDiv.innerHTML = '';
                 updated.forEach(m => {
                     const el = document.createElement('div');

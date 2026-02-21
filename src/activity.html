@@ -252,10 +252,11 @@
             }
         }
 
-        const user = safeParse('wispaUser');
-        if(!user || !user.username) {
-            window.location.href = 'login.html';
-        }
+        (async function(){
+            let user = safeParse('wispaUser');
+            if(!user || !user.username){ try{ const u = await window.getCurrentUser(); if(u) user = u; }catch(e){} }
+            if(!user || !user.username){ window.location.href = 'login.html'; return; }
+        })();
 
         const viewedCountEl = document.getElementById('viewedCount');
         const searchCountEl = document.getElementById('searchCount');

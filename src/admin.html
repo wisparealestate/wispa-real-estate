@@ -2565,16 +2565,16 @@ document.addEventListener('DOMContentLoaded', function(){
                                 const currentUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                                 if (currentUser && (currentUser.email === userId || currentUser.username === userId || currentUser.id === userId)) {
                                     const key = 'notifications_' + userId;
-                                    const userNotifications = JSON.parse(localStorage.getItem(key) || '[]');
+                                    const userNotifications = (window.adminLoadKeySync ? (window.adminLoadKeySync(key) || []) : (window._adminCache && window._adminCache[key] ? JSON.parse(window._adminCache[key]) : []));
                                     userNotifications.push(notification);
-                                    localStorage.setItem(key, JSON.stringify(userNotifications));
-                                    try { localStorage.setItem('notifications_signal_' + userId, String(Date.now())); } catch(e){}
+                                    if (window.adminSaveKeySync) window.adminSaveKeySync(key, userNotifications); else if (window._adminCache) window._adminCache[key] = JSON.stringify(userNotifications);
+                                    try { if (window.adminSaveKeySync) window.adminSaveKeySync('notifications_signal_' + userId, String(Date.now())); else if (window._adminCache) window._adminCache['notifications_signal_' + userId] = String(Date.now()); } catch(e){}
                                 } else {
                                     const pendingKey = 'pendingUserNotifications';
-                                    const pendingNotifications = JSON.parse(localStorage.getItem(pendingKey) || '{}');
+                                    const pendingNotifications = (window.adminLoadKeySync ? (window.adminLoadKeySync(pendingKey) || {}) : (window._adminCache && window._adminCache[pendingKey] ? JSON.parse(window._adminCache[pendingKey]) : {}));
                                     if (!pendingNotifications[userId]) pendingNotifications[userId] = [];
                                     pendingNotifications[userId].push(notification);
-                                    localStorage.setItem(pendingKey, JSON.stringify(pendingNotifications));
+                                    if (window.adminSaveKeySync) window.adminSaveKeySync(pendingKey, pendingNotifications); else if (window._adminCache) window._adminCache[pendingKey] = JSON.stringify(pendingNotifications);
                                 }
                             } catch (err) { console.warn('Failed to persist notification locally', err); }
                         }
@@ -2590,7 +2590,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     })();
             
             // Track sent notification in admin panel
-            let adminSentNotifications = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]');
+            let adminSentNotifications = (window.adminLoadKeySync ? (window.adminLoadKeySync('adminSentNotifications') || []) : (window._adminCache && window._adminCache['adminSentNotifications'] ? JSON.parse(window._adminCache['adminSentNotifications']) : []));
             const sentRecord = {
                 id: 'sent-' + Date.now(),
                 targetUser: userId,
@@ -2602,7 +2602,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 file: notification.file || null
             };
             adminSentNotifications.push(sentRecord);
-            localStorage.setItem('adminSentNotifications', JSON.stringify(adminSentNotifications));
+            if (window.adminSaveKeySync) window.adminSaveKeySync('adminSentNotifications', adminSentNotifications); else if (window._adminCache) window._adminCache['adminSentNotifications'] = JSON.stringify(adminSentNotifications);
 
             // Also create a conversation / chat message for the target user so it shows in their chat list
             try {
@@ -2616,7 +2616,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 // If the recipient is the currently logged-in user (on this tab), write directly to their conversation storage
                 if (wispaUser && (wispaUser.email === userId || wispaUser.username === userId)) {
                     const convsKey = 'conversations_' + userId;
-                    const convs = JSON.parse(localStorage.getItem(convsKey) || '[]');
+                    const convs = (window.adminLoadKeySync ? (window.adminLoadKeySync(convsKey) || []) : (window._adminCache && window._adminCache[convsKey] ? JSON.parse(window._adminCache[convsKey]) : []));
                     const existing = convs.find(c => c.id === convId);
                     const now = Date.now();
                     if (existing) {
@@ -2626,16 +2626,16 @@ document.addEventListener('DOMContentLoaded', function(){
                     } else {
                         convs.unshift({ id: convId, agent: 'Administrator', last: String(msg.text).slice(0,140), unread: 1, updated: now });
                     }
-                    localStorage.setItem(convsKey, JSON.stringify(convs));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync(convsKey, convs); else if (window._adminCache) window._adminCache[convsKey] = JSON.stringify(convs);
 
                     // Save the conversation messages under the per-conversation key
                     const convKey = 'wispaMessages_' + userId + '_' + convId;
-                    const list = JSON.parse(localStorage.getItem(convKey) || '[]');
+                    const list = (window.adminLoadKeySync ? (window.adminLoadKeySync(convKey) || []) : (window._adminCache && window._adminCache[convKey] ? JSON.parse(window._adminCache[convKey]) : []));
                     list.push(msg);
-                    localStorage.setItem(convKey, JSON.stringify(list));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync(convKey, list); else if (window._adminCache) window._adminCache[convKey] = JSON.stringify(list);
 
                     // Also record as unread chatNotification so admin chat nav shows badge
-                    const chatNotifs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                    const chatNotifs = (window.adminLoadKeySync ? (window.adminLoadKeySync('chatNotifications') || []) : (window._adminCache && window._adminCache['chatNotifications'] ? JSON.parse(window._adminCache['chatNotifications']) : []));
                     const chatIdx = chatNotifs.findIndex(c => c.id === convId);
                     const chatEntry = {
                         id: convId,
@@ -2646,17 +2646,17 @@ document.addEventListener('DOMContentLoaded', function(){
                         read: false
                     };
                     if(chatIdx > -1) chatNotifs[chatIdx] = chatEntry; else chatNotifs.unshift(chatEntry);
-                    localStorage.setItem('chatNotifications', JSON.stringify(chatNotifs));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync('chatNotifications', chatNotifs); else if (window._adminCache) window._adminCache['chatNotifications'] = JSON.stringify(chatNotifs);
 
                     // signal other tabs and trigger badge update in this tab
-                    try { localStorage.setItem('wispaMessageSignal_' + userId, String(Date.now())); } catch(e){}
+                    try { if (window.adminSaveKeySync) window.adminSaveKeySync('wispaMessageSignal_' + userId, String(Date.now())); else if (window._adminCache) window._adminCache['wispaMessageSignal_' + userId] = String(Date.now()); } catch(e){}
                     if(window.updateNavUnreadCounts) window.updateNavUnreadCounts();
                 } else {
                     // For other (offline) users, record pending conversations so they'll be processed on login
-                    const pendingConvs = JSON.parse(localStorage.getItem('pendingUserConversations') || '{}');
+                    const pendingConvs = (window.adminLoadKeySync ? (window.adminLoadKeySync('pendingUserConversations') || {}) : (window._adminCache && window._adminCache['pendingUserConversations'] ? JSON.parse(window._adminCache['pendingUserConversations']) : {}));
                     if (!pendingConvs[userId]) pendingConvs[userId] = [];
                     pendingConvs[userId].push({ id: convId, agent: 'Administrator', last: String(msg.text).slice(0,140), unread: 1, updated: Date.now(), messages: [msg] });
-                    localStorage.setItem('pendingUserConversations', JSON.stringify(pendingConvs));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync('pendingUserConversations', pendingConvs); else if (window._adminCache) window._adminCache['pendingUserConversations'] = JSON.stringify(pendingConvs);
                     // Trigger badge update
                     if(window.updateNavUnreadCounts) window.updateNavUnreadCounts();
                 }
@@ -2665,7 +2665,7 @@ document.addEventListener('DOMContentLoaded', function(){
             }
             
             // Track activity
-            let activityLog = JSON.parse(localStorage.getItem('activityLog') || '[]');
+            let activityLog = (window.adminLoadKeySync ? (window.adminLoadKeySync('activityLog') || []) : (window._adminCache && window._adminCache['activityLog'] ? JSON.parse(window._adminCache['activityLog']) : []));
             activityLog.push({
                 type: 'admin-notification-sent',
                 targetUser: userId,
@@ -2673,7 +2673,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 timestamp: new Date().toISOString(),
                 details: `Alert sent to ${userId}`
             });
-            localStorage.setItem('activityLog', JSON.stringify(activityLog));
+            if (window.adminSaveKeySync) window.adminSaveKeySync('activityLog', activityLog); else if (window._adminCache) window._adminCache['activityLog'] = JSON.stringify(activityLog);
         }
 
         function switchAlertTab(tabName){
@@ -2712,7 +2712,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
             // CHATS: simple message notifications
             if (filterType === 'all' || filterType === 'chats') {
-                const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                const chats = (window.adminLoadKeySync ? (window.adminLoadKeySync('chatNotifications') || []) : (window._adminCache && window._adminCache['chatNotifications'] ? JSON.parse(window._adminCache['chatNotifications']) : []));
                 chats.forEach(chat => notifications.push({
                     type: '💬 Message',
                     source: 'Conversation',
@@ -2725,12 +2725,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
             // INBOX: property requests (scan property conversation keys)
             if (filterType === 'all' || filterType === 'inbox') {
-                for (let i = 0; i < localStorage.length; i++){
-                    const key = localStorage.key(i);
+                const cacheKeys = Object.keys(window._adminCache || {});
+                for (let i = 0; i < cacheKeys.length; i++){
+                    const key = cacheKeys[i];
                     if(!key) continue;
                     if(/^wispaMessages_[^_]+_property-/.test(key)){
                         try{
-                            const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+                            const msgs = (window.adminLoadKeySync ? (window.adminLoadKeySync(key) || []) : (window._adminCache && window._adminCache[key] ? JSON.parse(window._adminCache[key]) : []));
                             if(!Array.isArray(msgs) || msgs.length === 0) continue;
                             const last = msgs[msgs.length-1];
                             const userMsg = msgs.find(m => (m.sender === 'user' || m.from === 'user')) || last;
@@ -2751,7 +2752,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
             // CONTACTS: contact form messages
             if (filterType === 'all' || filterType === 'contacts') {
-                const contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+                const contacts = (window.adminLoadKeySync ? (window.adminLoadKeySync('contactMessages') || []) : (window._adminCache && window._adminCache['contactMessages'] ? JSON.parse(window._adminCache['contactMessages']) : []));
                 contacts.forEach(contact => notifications.push({
                     type: '✉️ Contact',
                     source: 'Contact Form',

@@ -46,6 +46,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     } catch (e) { window.properties = []; }
 });
+// Helper to get current authenticated user from server (caches result in-memory)
+window._wispaCurrentUser = null;
+window.getCurrentUser = async function(force){
+    if(window._wispaCurrentUser && !force) return window._wispaCurrentUser;
+    try{
+        const r = window.apiFetch ? await window.apiFetch('/api/me') : await fetch('/api/me');
+        if(r && r.ok){ const j = await r.json(); if(j && j.user){ window._wispaCurrentUser = j.user; return j.user; } }
+    }catch(e){}
+    window._wispaCurrentUser = null;
+    return null;
+};
+
+// Ensure user is authenticated or redirect to login
+window.requireLogin = async function(){
+    const u = await window.getCurrentUser();
+    if(!u){ window.location.href = 'login.html'; return null; }
+    return u;
+};
 // Render admin chat list in the chat tab
 
 // Open chat conversation in fullview
@@ -203,26 +221,52 @@ function upsertBadge(hostEl, id, count, opts = {}){
     badge.textContent = String(count);
 }
 
-function updateNavUnreadCounts(){
+async function updateNavUnreadCounts(){
     try{
-        const wispaUserRaw = localStorage.getItem('wispaUser');
         let userId = null;
-        if(wispaUserRaw){
-            try{ userId = JSON.parse(wispaUserRaw).id; }catch(e){}
+        try{
+            const wispaUserRaw = localStorage.getItem('wispaUser');
+            if(wispaUserRaw){ try{ userId = JSON.parse(wispaUserRaw).id; }catch(e){} }
+        }catch(e){}
+        // If localStorage is disabled (DB-only mode) or empty, ask server for current user via /api/me
+        if(!userId){
+            try{
+                const r = window.apiFetch ? await window.apiFetch('/api/me') : await fetch('/api/me');
+                if(r && r.ok){ const j = await r.json(); if(j && j.user) userId = j.user.id; }
+            }catch(e){}
         }
 
-        // user notifications
+        // user notifications (prefer server-backed endpoints)
         let notifCount = 0;
-        if(userId){
-            const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
-            notifCount = notes.filter(n => !n.read).length;
-        }
-
-        // user chat unread (sum of conversation.unread)
         let chatCount = 0;
-        if(userId){
-            const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
-            chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
+        if (userId) {
+            try {
+                const nr = window.apiFetch ? await window.apiFetch('/api/notifications?userId=' + encodeURIComponent(userId)) : await fetch('/api/notifications?userId=' + encodeURIComponent(userId));
+                if (nr && nr.ok) {
+                    const nj = await nr.json();
+                    const notes = nj.notifications || nj || [];
+                    notifCount = Array.isArray(notes) ? notes.filter(n => !n.read).length : 0;
+                } else {
+                    const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
+                    notifCount = notes.filter(n => !n.read).length;
+                }
+            } catch (e) {
+                try { const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); notifCount = notes.filter(n => !n.read).length; } catch(e){}
+            }
+
+            try {
+                const cr = window.apiFetch ? await window.apiFetch('/api/conversations?userId=' + encodeURIComponent(userId)) : await fetch('/api/conversations?userId=' + encodeURIComponent(userId));
+                if (cr && cr.ok) {
+                    const cj = await cr.json();
+                    const convs = cj.conversations || cj || [];
+                    if (Array.isArray(convs)) chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
+                } else {
+                    const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
+                    chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
+                }
+            } catch (e) {
+                try { const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0); } catch(e){}
+            }
         }
 
         // header notification button
@@ -1575,13 +1619,16 @@ if (typeof propertyImageIds === 'undefined') {
     // Get user-specific conversation key
     function _getUserId() {
         try {
-            const wispaUser = localStorage.getItem('wispaUser');
+            // Prefer cached server-provided user if available
+            if (window._wispaCurrentUser && window._wispaCurrentUser.id) return window._wispaCurrentUser.id;
+            // Trigger an async fetch to populate cache for future calls
+            if (window.getCurrentUser) window.getCurrentUser().catch(()=>{});
+            // Fallback to localStorage only if present (admin pages shim this)
+            const wispaUser = (typeof localStorage !== 'undefined') ? localStorage.getItem('wispaUser') : null;
             if (!wispaUser) return null;
             const userData = JSON.parse(wispaUser);
             return userData.id;
-        } catch (e) {
-            return null;
-        }
+        } catch (e) { return null; }
     }
 
     function _convKey(convId) { 
@@ -1610,10 +1657,12 @@ if (typeof propertyImageIds === 'undefined') {
         const msg = { sender: sender, text: String(text), ts: now };
         if (sender === 'user') {
             try {
-                const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-                if (wispaUser.username) msg.userName = wispaUser.username;
-                if (wispaUser.email) msg.userEmail = wispaUser.email;
-                if (wispaUser.id) msg.userId = wispaUser.id;
+                const u = (window._wispaCurrentUser) ? window._wispaCurrentUser : (JSON.parse(localStorage.getItem('wispaUser') || '{}'));
+                if (u) {
+                    if (u.username) msg.userName = u.username;
+                    if (u.email) msg.userEmail = u.email;
+                    if (u.id) msg.userId = u.id;
+                }
             } catch (e) { /* ignore */ }
         }
 

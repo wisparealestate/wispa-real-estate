@@ -51,22 +51,20 @@
 
   <script src="script.js"></script>
   <script>
-    (function(){
+    (async function(){
       const list = document.getElementById('liked-list');
       if (!list) return;
-      
-      // Get current user
-      const wispaUser = localStorage.getItem('wispaUser');
-      if (!wispaUser) {
+      // Get current user via server session
+      const userObj = await window.getCurrentUser();
+      if (!userObj) {
         list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text);">Please log in to view your liked properties. <a href="login.html">Login here</a></p>';
         return;
       }
-      
-      const userData = JSON.parse(wispaUser);
-      const userId = userData.id;
-      
-      // Get user-specific liked property IDs from localStorage
-      const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+      const userId = userObj.id;
+
+      // Use in-memory liked properties map (no localStorage)
+      window._wispaLikedProperties = window._wispaLikedProperties || {};
+      const liked = window._wispaLikedProperties[userId] || [];
       
       if (!Array.isArray(liked) || liked.length === 0) {
         list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text);">You have no liked properties yet. <a href="search.html">Browse listings</a> to save favourites.</p>';
@@ -138,17 +136,17 @@
         });
       });
 
-      // remove like helper
+      // remove like helper (updates in-memory store)
       window.removeLike = function(id){
-        const wispaUser = localStorage.getItem('wispaUser');
-        if (!wispaUser) return;
-        
-        const userData = JSON.parse(wispaUser);
-        const userId = userData.id;
-        const arr = JSON.parse(localStorage.getItem('likedProperties_' + userId)||'[]');
+        const user = window._wispaCurrentUser || null;
+        const userId = user && user.id ? user.id : null;
+        if (!userId) return;
+        window._wispaLikedProperties = window._wispaLikedProperties || {};
+        const arr = window._wispaLikedProperties[userId] || [];
         const idx = arr.indexOf(String(id)) !== -1 ? arr.indexOf(String(id)) : arr.indexOf(Number(id));
-        if(idx>-1) arr.splice(idx,1);
-        localStorage.setItem('likedProperties_' + userId, JSON.stringify(arr));
+        if (idx > -1) arr.splice(idx,1);
+        window._wispaLikedProperties[userId] = arr;
+        // re-render list without full page reload
         location.reload();
       };
     })();

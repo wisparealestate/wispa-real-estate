@@ -269,13 +269,18 @@
             location: '',
             joined: (new Date()).toISOString() 
         };
-        const stored = safeParse('wispaUser');
-        const user = stored && stored.username ? stored : defaultUser;
-
-        if(!user || !user.username) {
-            window.location.href = 'login.html';
-        }
-
+        let user = defaultUser;
+        (async function(){
+            const stored = safeParse('wispaUser');
+            user = stored && stored.username ? stored : defaultUser;
+            // If localStorage is empty, try server session
+            if(!user || !user.username){
+                try{ const u = await window.getCurrentUser(); if(u) user = u; }catch(e){}
+            }
+            if(!user || !user.username){ window.location.href = 'login.html'; return; }
+            // expose user to the rest of this script if needed
+            window.__accountUser = user;
+        })();
         const displayNameInput = document.getElementById('displayName');
         const displayEmailInput = document.getElementById('displayEmail');
         const bioInput = document.getElementById('bioInput');
@@ -287,6 +292,7 @@
         const lastUpdated = document.getElementById('lastUpdated');
 
         function initializeUI() {
+            if(window.__accountUser && window.__accountUser.username) user = window.__accountUser;
             displayNameInput.value = user.username || '';
             displayEmailInput.value = user.email || '';
             bioInput.value = user.bio || '';

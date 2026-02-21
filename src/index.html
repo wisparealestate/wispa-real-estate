@@ -1,10 +1,11 @@
     <script>
-    // Require user login before accessing the site
-    document.addEventListener('DOMContentLoaded', function() {
-        const user = localStorage.getItem('wispaUser');
-        if (!user) {
-            window.location.href = 'login.html';
-        }
+    // Require user login before accessing the site (DB-only: ask server)
+    document.addEventListener('DOMContentLoaded', async function() {
+        try{
+            const API_BASE = window.WISPA_API_BASE || '';
+            const r = API_BASE ? await fetch(API_BASE + '/api/me') : await fetch('/api/me');
+            if(!r || !r.ok) { window.location.href = 'login.html'; }
+        }catch(e){ window.location.href = 'login.html'; }
     });
     </script>
 <!DOCTYPE html>
@@ -807,61 +808,40 @@
             const acceptBtn = document.getElementById('accept-agreements');
             const declineBtn = document.getElementById('decline-agreements');
             
-            // Check if user is logged in and hasn't accepted agreements
-            const wispaUser = localStorage.getItem('wispaUser');
-            
-            if (wispaUser) {
-                const userData = JSON.parse(wispaUser);
-                
+            (async function(){
+                const user = await window.getCurrentUser();
+                if (!user) return;
                 // Show modal if user hasn't accepted agreements yet
-                if (!userData.agreementsAccepted) {
+                if (!user.agreementsAccepted) {
                     agreementsModal.style.display = 'flex';
-                    
-                    // Prevent background scrolling when modal is open
                     document.body.style.overflow = 'hidden';
-                    
-                    // Accept button handler
-                    acceptBtn.addEventListener('click', function() {
-                        // Update user data
-                        userData.agreementsAccepted = true;
-                        userData.agreementsAcceptedAt = new Date().toISOString();
-                        localStorage.setItem('wispaUser', JSON.stringify(userData));
-                        
-                        // Close modal
+
+                    acceptBtn.addEventListener('click', async function() {
+                        // Prefer calling server to persist acceptance (best-effort)
+                        try { await (window.apiFetch ? window.apiFetch('/api/users/accept-agreements', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) }) : fetch('/api/users/accept-agreements', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) })); } catch(e){}
+                        // Close modal (will not persist if server endpoint missing)
                         agreementsModal.style.display = 'none';
                         document.body.style.overflow = 'auto';
                     });
-                    
-                    // Decline button handler
+
                     declineBtn.addEventListener('click', function() {
-                        // Clear user data and redirect to login
-                        localStorage.removeItem('wispaUser');
                         agreementsModal.style.display = 'none';
                         document.body.style.overflow = 'auto';
                         window.location.href = 'login.html';
                     });
                 }
-            }
+            })();
         });
     </script>
     <script>
         // Like/Unlike functionality
-        function toggleLike(event, propertyId) {
+        async function toggleLike(event, propertyId) {
             event.stopPropagation();
             event.preventDefault();
-            
             const btn = event.target;
-            const wispaUser = localStorage.getItem('wispaUser');
-            
-            // Check if user is logged in
-            if (!wispaUser) {
-                alert('Please log in to like properties');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            const userData = JSON.parse(wispaUser);
-            const userId = userData.id;
+            const userObj = await window.getCurrentUser();
+            if (!userObj) { alert('Please log in to like properties'); window.location.href = 'login.html'; return; }
+            const userId = userObj.id;
             
             // Use user-specific liked properties
             const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
@@ -1022,20 +1002,18 @@
             // Restructure cards first
             restructurePropertyCards();
             
-            // Load liked status for current user
-            const wispaUser = localStorage.getItem('wispaUser');
-            if (wispaUser) {
-                const userData = JSON.parse(wispaUser);
-                const userId = userData.id;
-                const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
-                likedProperties.forEach(id => {
-                    const btn = document.querySelector(`.like-btn[data-property-id="${id}"]`);
-                    if (btn) {
-                        btn.textContent = '♥';
-                        btn.classList.add('liked');
-                    }
-                });
-            }
+            // Load liked status for current user (use server session)
+            (async function(){
+                const u = await window.getCurrentUser();
+                if (!u) return;
+                try{
+                    const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + u.id) || '[]');
+                    likedProperties.forEach(id => {
+                        const btn = document.querySelector(`.like-btn[data-property-id="${id}"]`);
+                        if (btn) { btn.textContent = '♥'; btn.classList.add('liked'); }
+                    });
+                }catch(e){}
+            })();
         });
     </script>
     <script>

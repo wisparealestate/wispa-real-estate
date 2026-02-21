@@ -38,16 +38,15 @@
 
     <script src="script.js"></script>
     <script>
-        (function(){
-            // Check if user is logged in
-            const wispaUser = localStorage.getItem('wispaUser');
-            if (!wispaUser) {
+        (async function(){
+            // Check if user is logged in via server session
+            const userObj = await window.getCurrentUser();
+            if (!userObj) {
                 document.getElementById('conversationsList').innerHTML = '<p style="padding:20px;text-align:center;color:var(--text);">Please <a href="login.html">login</a> to view conversations.</p>';
                 return;
             }
 
-            const userData = JSON.parse(wispaUser);
-            const userId = userData.id;
+            const userId = userObj.id;
 
             // Use user-specific conversations key
             const KEY = 'conversations_' + userId;

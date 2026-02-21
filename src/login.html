@@ -345,11 +345,9 @@
                 if (data.error) {
                     showError(data.error);
                 } else {
-                    localStorage.setItem('wispaUser', JSON.stringify(data.user));
+                    // Server sets a secure session cookie; just redirect on success.
                     showSuccess('Login successful! Redirecting...');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1500);
+                    setTimeout(() => { window.location.href = 'index.html'; }, 800);
                 }
             })
             .catch(() => showError('Login failed. Please try again.'));

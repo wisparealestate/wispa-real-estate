@@ -7,6 +7,7 @@ import cors from "cors";
 import upload from "./upload.js";
 import path from "path";
 import fs from 'fs/promises';
+import crypto from 'crypto';
 
 const { Pool } = pkg;
 export const pool = new Pool({
@@ -29,6 +30,42 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 const dataDir = path.join(process.cwd(), 'data');
 async function ensureDataDir(){
   try{ await fs.mkdir(dataDir, { recursive: true }); }catch(e){}
+}
+// Simple stateless session token using HMAC (no extra deps)
+const SESSION_SECRET = process.env.SESSION_SECRET || 'wispa_default_secret_change_me';
+function base64url(input){ return Buffer.from(input).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,''); }
+function signPayload(payload){
+  const h = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64');
+  return h.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
+}
+function createSessionToken(userId, expiresInSec = 7*24*3600){
+  const payload = JSON.stringify({ uid: userId, exp: Math.floor(Date.now()/1000) + expiresInSec });
+  const b = base64url(payload);
+  const sig = signPayload(b);
+  return b + '.' + sig;
+}
+function parseSessionToken(token){
+  if(!token) return null;
+  const parts = token.split('.'); if(parts.length !== 2) return null;
+  const [b, sig] = parts;
+  const expected = signPayload(b);
+  if(!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  try{ const payload = JSON.parse(Buffer.from(b, 'base64').toString('utf8')); return payload; }catch(e){ return null; }
+}
+function readCookie(req, name){
+  const header = req.headers && req.headers.cookie; if(!header) return null;
+  const m = header.split(';').map(c=>c.trim()).find(c=>c.startsWith(name+'='));
+  if(!m) return null; return decodeURIComponent(m.split('=').slice(1).join('='));
+}
+async function getSessionUser(req){
+  const token = readCookie(req, 'wispa_session');
+  if(!token) return null;
+  const payload = parseSessionToken(token);
+  if(!payload || !payload.uid || payload.exp < Math.floor(Date.now()/1000)) return null;
+  try{
+    const r = await pool.query('SELECT id, username, email, full_name, role, created_at FROM users WHERE id = $1', [payload.uid]);
+    return r.rows[0] || null;
+  }catch(e){ return null; }
 }
 async function readJson(name){
   try{
@@ -313,10 +350,24 @@ app.post("/api/login", async (req, res) => {
     const user = result.rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
+    // Create session cookie
+    try{
+      const token = createSessionToken(user.id);
+      res.cookie('wispa_session', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7*24*3600*1000 });
+    }catch(e){ /* ignore cookie set errors */ }
     res.json({ user: { id: user.id, username: user.username, email: user.email, full_name: user.full_name, role: user.role, created_at: user.created_at } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Who am I - return currently authenticated user based on session cookie
+app.get('/api/me', async (req, res) => {
+  try{
+    const user = await getSessionUser(req);
+    if(!user) return res.status(401).json({ error: 'Not authenticated' });
+    return res.json({ user });
+  }catch(e){ res.status(500).json({ error: 'Error checking session' }); }
 });
 
 // Admin login

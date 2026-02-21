@@ -483,21 +483,24 @@
         let currentFilter = 'all';
 
         // Generate notifications from user activities (user-specific)
-        function generateNotifications() {
+        async function generateNotifications() {
             const notifies = [];
-            const user = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-            
-            if (!user.id) {
+            const user = await window.getCurrentUser();
+
+            if (!user || !user.id) {
                 return notifies;
             }
-            
-            const userId = user.id;
-            const likedProps = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
-            const purchases = JSON.parse(localStorage.getItem('purchases_' + userId) || '[]');
-            const conversations = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
-            const activityLog = JSON.parse(localStorage.getItem('activityLog_' + userId) || '[]');
 
-            // 1. Login Activity Notifications
+            const userId = user.id;
+
+            // Server-backed endpoints for likes, purchases, conversations and activity
+            // are not implemented yet; use empty arrays to avoid localStorage.
+            const likedProps = [];
+            const purchases = [];
+            const conversations = [];
+            const activityLog = [];
+
+            // 1. Login Activity Notifications (none available without activityLog)
             if (activityLog && activityLog.length > 0) {
                 activityLog.slice(0, 3).forEach((activity, idx) => {
                     if (activity.type === 'login') {
@@ -519,9 +522,8 @@
                 });
             }
 
-            // 2. Liked Properties Notifications
+            // 2. Liked Properties Notifications (no client-side store)
             if (likedProps && likedProps.length > 0) {
-                // Show recent likes
                 const recentLikes = likedProps.slice(-3);
                 recentLikes.forEach((propId, idx) => {
                     notifies.push({
@@ -541,7 +543,7 @@
                 });
             }
 
-            // 3. Chat/Message Notifications
+            // 3. Chat/Message Notifications (no client-side store)
             if (conversations && conversations.length > 0) {
                 conversations.slice(0, 3).forEach((conv, idx) => {
                     const lastMsg = conv.messages && conv.messages.length > 0 ? 
@@ -598,7 +600,7 @@
                 }
             ];
 
-            // 5. Listing Notifications
+            // 5. Listing Notifications (no client-side purchases store)
             if (purchases && purchases.length > 0) {
                 const listingNotify = {
                     id: 'lst-1',
@@ -624,27 +626,28 @@
         }
 
         // Initialize notifications - load user-specific notifications
-        function init() {
-            const user = JSON.parse(localStorage.getItem('wispaUser') || '{}');
-            
-            if (!user.id) {
+        async function init() {
+            const user = await window.getCurrentUser();
+
+            if (!user || !user.id) {
                 console.log('User not logged in');
                 return;
             }
-            
+
             const userId = user.id;
-            
-            // Load user-specific notifications
-            let stored = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
-            notifications = stored.length > 0 ? stored : generateNotifications();
-            
-            // Save all notifications
-            localStorage.setItem('notifications_' + userId, JSON.stringify(notifications));
+
+            // No client-side persistent store; build notifications in-memory
+            const generated = await generateNotifications();
+            notifications = generated;
+
+            // Persist in-memory for this session
+            window._wispaNotifications = notifications;
             renderNotifications();
         }
 
         function saveNotifications() {
-            localStorage.setItem('wispaNotifications', JSON.stringify(notifications));
+            // persist in-memory only; server-backed persistence should replace this
+            window._wispaNotifications = notifications;
         }
 
         function formatTime(date) {

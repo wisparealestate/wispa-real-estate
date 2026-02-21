@@ -59,19 +59,35 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       }
     }
     if (!propertyRow) {
-      // Basic duplicate detection: if a property with same title+address+price
-      // was created recently, treat this as an update to avoid rapid duplicate inserts.
+      // Strong duplicate protection:
+      // - Acquire a transaction-scoped advisory lock on a hash of the dedupe key
+      // - Look for any existing property with same normalized title+address+price
+      // - If found, update it; otherwise insert a new row
       try {
         const titleNorm = (p.title || '').trim().toLowerCase();
         const addrNorm = (p.address || p.location || '').trim().toLowerCase();
         const priceNorm = p.price != null ? Number(p.price) : 0;
         if (titleNorm && addrNorm) {
+          const key = `${titleNorm}::${addrNorm}::${priceNorm}`;
+          // simple 32-bit hash for advisory lock
+          let h = 0;
+          for (let i = 0; i < key.length; i++) {
+            h = ((h << 5) - h) + key.charCodeAt(i);
+            h |= 0;
+          }
+          // Acquire an advisory lock for the duration of the transaction to prevent races
+          try {
+            await client.query('SELECT pg_advisory_xact_lock($1)', [h]);
+          } catch (e) {
+            // If advisory locks not allowed, ignore and continue (best-effort)
+          }
+
+          // Now look for any existing property (no time window)
           const dupRes = await client.query(
-            `SELECT id FROM properties WHERE lower(trim(coalesce(title,''))) = $1 AND lower(trim(coalesce(address,''))) = $2 AND coalesce(price,0) = $3 AND created_at > NOW() - INTERVAL '10 minutes' LIMIT 1`,
+            `SELECT id FROM properties WHERE lower(trim(coalesce(title,''))) = $1 AND lower(trim(coalesce(address,''))) = $2 AND coalesce(price,0) = $3 LIMIT 1`,
             [titleNorm, addrNorm, priceNorm]
           );
           if (dupRes.rows && dupRes.rows.length) {
-            // Found a recent duplicate — update it instead of inserting a new row
             const existingId = dupRes.rows[0].id;
             const updateRes = await client.query(
               `UPDATE properties SET
@@ -101,30 +117,33 @@ export async function addPropertyWithPhotos(property, photoUrls) {
           }
         }
       } catch (e) {
-        // ignore duplicate detection errors and proceed to insert
+        // ignore dup-protection errors and fall back to insert
       }
-      const propRes = await client.query(
-        `INSERT INTO properties
-        (user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-       RETURNING *`,
-        [
-          p.user_id || null,
-          p.title || null,
-          p.description || null,
-          p.price != null ? p.price : null,
-          p.address || p.location || null,
-          p.image_url || p.image || null,
-          p.bedrooms != null ? p.bedrooms : null,
-          p.bathrooms != null ? p.bathrooms : null,
-          p.type || null,
-          p.area != null ? p.area : null,
-          p.sale_rent || null,
-          p.post_to || null
-        ]
-      );
-      propertyRow = propRes.rows[0];
-      propertyId = propertyRow.id;
+
+      if (!propertyRow) {
+        const propRes = await client.query(
+          `INSERT INTO properties
+          (user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         RETURNING *`,
+          [
+            p.user_id || null,
+            p.title || null,
+            p.description || null,
+            p.price != null ? p.price : null,
+            p.address || p.location || null,
+            p.image_url || p.image || null,
+            p.bedrooms != null ? p.bedrooms : null,
+            p.bathrooms != null ? p.bathrooms : null,
+            p.type || null,
+            p.area != null ? p.area : null,
+            p.sale_rent || null,
+            p.post_to || null
+          ]
+        );
+        propertyRow = propRes.rows[0];
+        propertyId = propertyRow.id;
+      }
     }
 
     // Replace photos for this property: delete existing then insert provided list (avoids duplicates)

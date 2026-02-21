@@ -929,10 +929,11 @@
             localStorage.setItem('wispaUser', JSON.stringify(user));
         }
 
-        // Check if user is logged in
-        if(!user || !user.username) {
-            window.location.href = 'login.html';
-        }
+        // Check if user is logged in (try server session if local missing)
+        (async function(){
+            if(!user || !user.username){ try{ const u = await window.getCurrentUser(); if(u) user = u; }catch(e){} }
+            if(!user || !user.username){ window.location.href = 'login.html'; }
+        })();
 
         // DOM Elements - Profile Header
         const profilePic = document.getElementById('profilePic');
