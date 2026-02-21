@@ -592,7 +592,7 @@
                                             if (backNav) {
                                                 backNav.style.display = 'inline-flex';
                                                 backNav.textContent = '← Back to Chat';
-                                                backNav.href = convId ? `admin-conversation.html?id=${encodeURIComponent(convId)}` : 'admin-chat.html';
+                                                backNav.href = convId ? 'admin-conversation.html?id=' + encodeURIComponent(convId) : 'admin-chat.html';
                                             }
                                             // Hide settings button
                                             if (settingsBtn) settingsBtn.style.display = 'none';
@@ -609,8 +609,8 @@
                                     </script>
                     <div class="profile-header-content">
                         <div class="profile-avatar-wrapper">
-                            <img id="profilePic" src="https://via.placeholder.com/140?text=Profile" alt="Profile" class="profile-avatar">
-                            <div class="avatar-upload-hint">📷</div>
+                            <img id="profilePic" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=' alt="Profile" class="profile-avatar" onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4='>
+                            <div class="avatar-upload-hint">&#128247;</div>
                             <input id="avatarInput" type="file" accept="image/*">
                         </div>
                         <div class="profile-header-info">
@@ -902,7 +902,7 @@
 
     <script>
         // Utility function to safely parse JSON
-        function safeParse(key) {
+        function safeParseJSON(key) {
             try { 
                 return JSON.parse(localStorage.getItem(key)); 
             } catch(e) { 
@@ -920,7 +920,7 @@
             location: '',
             joined: (new Date()).toISOString() 
         };
-        let stored = safeParse('wispaUser');
+        let stored = safeParseJSON('wispaUser');
         let user = stored && stored.username ? stored : defaultUser;
 
         // Ensure user has a joined date (for older accounts without this field)
@@ -974,27 +974,27 @@
         const agreeOk = document.getElementById('agreeOk');
 
         // Get activity data from localStorage (real account records)
-        let liked = safeParse('likedProperties') || [];
-        let purchases = safeParse('purchases') || safeParse('transactions') || [];
-        let savedSearches = safeParse('savedSearches') || [];
+        let liked = safeParseJSON('likedProperties') || [];
+        let purchases = safeParseJSON('purchases') || safeParseJSON('transactions') || [];
+        let savedSearches = safeParseJSON('savedSearches') || [];
 
         // Initialize empty arrays in localStorage if they don't exist
-        if (!safeParse('likedProperties')) {
+        if (!safeParseJSON('likedProperties')) {
             localStorage.setItem('likedProperties', JSON.stringify(liked));
         }
-        if (!safeParse('purchases') && !safeParse('transactions')) {
+        if (!safeParseJSON('purchases') && !safeParseJSON('transactions')) {
             localStorage.setItem('purchases', JSON.stringify(purchases));
         }
-        if (!safeParse('savedSearches')) {
+        if (!safeParseJSON('savedSearches')) {
             localStorage.setItem('savedSearches', JSON.stringify(savedSearches));
         }
 
         // ========== Initialize UI ==========
         function initializeUI() {
             // Reload latest data from localStorage
-            liked = safeParse('likedProperties') || [];
-            purchases = safeParse('purchases') || safeParse('transactions') || [];
-            savedSearches = safeParse('savedSearches') || [];
+            liked = safeParseJSON('likedProperties') || [];
+            purchases = safeParseJSON('purchases') || safeParseJSON('transactions') || [];
+            savedSearches = safeParseJSON('savedSearches') || [];
             
             // Profile header
             headerName.textContent = user.username || 'Your Name';
@@ -1007,7 +1007,14 @@
             bioInput.value = user.bio || '';
             phoneInput.value = user.phone || '';
             locationInput.value = user.location || '';
-            profilePic.src = user.avatar || 'https://via.placeholder.com/140?text=Profile';
+            // Use inline placeholder and attach error handler to avoid external DNS failures
+            const PROFILE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
+            if (profilePic) {
+                profilePic.src = user.avatar || PROFILE_PLACEHOLDER;
+                profilePic.onerror = function(){ if (this.src !== PROFILE_PLACEHOLDER) this.src = PROFILE_PLACEHOLDER; };
+            } else {
+                console.warn('profilePic element not found');
+            }
             
             // Date info
             joinedAtEl.textContent = user.joined ? new Date(user.joined).toLocaleDateString() : '—';
@@ -1024,9 +1031,9 @@
         // ========== Refresh Stats Function ==========
         function refreshStats() {
             // Reload real data from localStorage
-            liked = safeParse('likedProperties') || [];
-            purchases = safeParse('purchases') || safeParse('transactions') || [];
-            savedSearches = safeParse('savedSearches') || [];
+            liked = safeParseJSON('likedProperties') || [];
+            purchases = safeParseJSON('purchases') || safeParseJSON('transactions') || [];
+            savedSearches = safeParseJSON('savedSearches') || [];
             
             // Update stats display - show count of admin-posted properties liked by user
             likedCountEl.textContent = Array.isArray(liked) ? liked.length : 0;
@@ -1035,9 +1042,10 @@
         }
 
         // ========== Avatar Upload ==========
-        profilePic.addEventListener('click', () => avatarInput.click());
-        
-        avatarInput.addEventListener('change', function(e) {
+        if (profilePic && avatarInput) {
+            profilePic.addEventListener('click', () => avatarInput.click());
+
+            avatarInput.addEventListener('change', function(e) {
             const file = e.target.files && e.target.files[0];
             if(!file) return;
             
@@ -1048,7 +1056,11 @@
                 localStorage.setItem('wispaUser', JSON.stringify(user));
             };
             reader.readAsDataURL(file);
-        });
+            });
+        } else {
+            if (!profilePic) console.warn('profilePic element missing — avatar upload disabled');
+            if (!avatarInput) console.warn('avatarInput element missing — avatar upload disabled');
+        }
 
         // ========== Settings Sidebar ==========
         const profileSettingsBtn = document.getElementById('profileSettingsBtn');
@@ -1066,25 +1078,29 @@
             sidebarOverlay.classList.remove('active');
         }
 
-        profileSettingsBtn.addEventListener('click', openSidebar);
-        sidebarCloseBtn.addEventListener('click', closeSidebar);
-        sidebarOverlay.addEventListener('click', closeSidebar);
+        if (profileSettingsBtn) profileSettingsBtn.addEventListener('click', openSidebar);
+        if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+        if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
         // Agreement button in sidebar
         const agreementBtnSidebar = document.getElementById('agreementBtnSidebar');
-        agreementBtnSidebar.addEventListener('click', function() {
-            agreementModal.style.display = 'flex';
-            closeSidebar();
-        });
+        if (agreementBtnSidebar) {
+            agreementBtnSidebar.addEventListener('click', function() {
+                if (agreementModal) agreementModal.style.display = 'flex';
+                closeSidebar();
+            });
+        }
 
         // Logout button in sidebar
         const logoutBtnSidebar = document.getElementById('logoutBtnSidebar');
-        logoutBtnSidebar.addEventListener('click', function() {
-            // Clear user data
-            localStorage.removeItem('wispaUser');
-            // Redirect to login page
-            window.location.href = 'login.html';
-        });
+        if (logoutBtnSidebar) {
+            logoutBtnSidebar.addEventListener('click', function() {
+                // Clear user data
+                localStorage.removeItem('wispaUser');
+                // Redirect to login page
+                window.location.href = 'login.html';
+            });
+        }
 
         // ========== Tab Navigation ==========
         document.querySelectorAll('.profile-tab').forEach(tab => {
@@ -1097,12 +1113,13 @@
                 
                 // Add active class to clicked tab and corresponding content
                 this.classList.add('active');
-                document.getElementById(tabName + '-tab').classList.add('active');
+                const contentEl = document.getElementById(tabName + '-tab');
+                if (contentEl) contentEl.classList.add('active');
             });
         });
 
         // ========== Account Tab Actions ==========
-        saveBtn.addEventListener('click', function() {
+        if (saveBtn) saveBtn.addEventListener('click', function() {
             user.username = displayNameInput.value.trim() || user.username;
             user.email = displayEmailInput.value.trim() || user.email;
             user.bio = bioInput.value.trim() || '';
@@ -1119,19 +1136,19 @@
             alert('Profile saved successfully! ✓');
         });
 
-        cancelBtn.addEventListener('click', function() {
+        if (cancelBtn) cancelBtn.addEventListener('click', function() {
             // Reset form to current user values
             initializeUI();
             alert('Changes cancelled.');
         });
 
         // ========== Preferences Tab ==========
-        savePreferencesBtn.addEventListener('click', function() {
+        if (savePreferencesBtn) savePreferencesBtn.addEventListener('click', function() {
             alert('Preferences saved successfully! ✓');
         });
 
         // ========== Security Tab ==========
-        changePasswordBtn.addEventListener('click', function() {
+        if (changePasswordBtn) changePasswordBtn.addEventListener('click', function() {
             const currentPass = document.getElementById('currentPassword').value;
             const newPass = document.getElementById('newPassword').value;
             const confirmPass = document.getElementById('confirmPassword').value;
@@ -1157,40 +1174,40 @@
             document.getElementById('confirmPassword').value = '';
         });
 
-        enableTwoFABtn.addEventListener('click', function() {
+        if (enableTwoFABtn) enableTwoFABtn.addEventListener('click', function() {
             alert('Two-Factor Authentication setup initiated. Check your email for next steps.');
         });
 
-        downloadSecurityBtn.addEventListener('click', function() {
+        if (downloadSecurityBtn) downloadSecurityBtn.addEventListener('click', function() {
             alert('Security report download initiated. Check your downloads folder.');
         });
 
         // ========== Modal ==========
-        agreementBtn.addEventListener('click', function() {
-            agreementModal.style.display = 'flex';
+        if (agreementBtn) agreementBtn.addEventListener('click', function() {
+            if (agreementModal) agreementModal.style.display = 'flex';
         });
 
-        closeAgreement.addEventListener('click', function() {
-            agreementModal.style.display = 'none';
+        if (closeAgreement) closeAgreement.addEventListener('click', function() {
+            if (agreementModal) agreementModal.style.display = 'none';
         });
 
-        agreeOk.addEventListener('click', function() {
-            agreementModal.style.display = 'none';
+        if (agreeOk) agreeOk.addEventListener('click', function() {
+            if (agreementModal) agreementModal.style.display = 'none';
         });
 
-        agreementModal.addEventListener('click', function(e) {
+        if (agreementModal) agreementModal.addEventListener('click', function(e) {
             if(e.target === agreementModal) {
                 agreementModal.style.display = 'none';
             }
         });
 
         // ========== Navigation Links ==========
-        privacyBtn.addEventListener('click', function() {
+        if (privacyBtn) privacyBtn.addEventListener('click', function() {
             window.location.href = 'privacy.html';
         });
 
         // ========== Logout ==========
-        logoutBtn.addEventListener('click', function() {
+        if (logoutBtn) logoutBtn.addEventListener('click', function() {
             if(confirm('Are you sure you want to logout? You will need to login again to access your profile.')) {
                 localStorage.removeItem('wispaUser');
                 window.location.href = 'index.html';
