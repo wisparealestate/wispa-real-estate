@@ -50,16 +50,21 @@
             for (const k of keys) {
                 try { const v = window.adminGet ? await window.adminGet(k) : null; window._adminCache[k] = v === null || v === undefined ? null : JSON.stringify(v); } catch(e){ window._adminCache[k] = null; }
             }
-            try {
-                localStorage.getItem = function(key) { return window._adminCache[key] ?? null; };
-                localStorage.setItem = function(key, value) {
-                    window._adminCache[key] = value;
-                    try {
-                        const parsed = JSON.parse(value);
-                        if (window.adminSet) window.adminSet(key, parsed).catch(()=>{});
-                    } catch(e) { if (window.adminSet) window.adminSet(key, value).catch(()=>{}); }
-                };
-            } catch(e) { /* ignore */ }
+            // Provide sync helpers to read/write admin cache without using localStorage
+            window.adminLoadKeySync = function(key) {
+                try {
+                    if (window._adminCache && typeof window._adminCache[key] !== 'undefined' && window._adminCache[key] !== null) {
+                        try { return JSON.parse(window._adminCache[key]); } catch(e) { return window._adminCache[key]; }
+                    }
+                } catch(e) {}
+                return null;
+            };
+            window.adminSaveKeySync = function(key, value) {
+                try {
+                    if (window.adminSet) window.adminSet(key, value).catch(()=>{});
+                    if (window._adminCache) window._adminCache[key] = JSON.stringify(value);
+                } catch(e) {}
+            };
         })();
 
         (function(){
@@ -102,7 +107,7 @@
                         const msgs = loadMessages();
                         const now = Date.now();
                         let adminProfile = {};
-                        try { adminProfile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+                        try { adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; } catch(e){}
                         for(let i=0;i<fileInput.files.length;i++){
                             const file = fileInput.files[i];
                             msgs.push({
@@ -131,8 +136,8 @@
                 const propertyId = m[1];
                 let property = null;
                 try {
-                    const props = JSON.parse(localStorage.getItem('properties') || '[]');
-                    property = props.find(p => String(p.id) === String(propertyId));
+                    const props = (window.adminLoadKeySync ? (window.adminLoadKeySync('properties') || []) : (window._adminCache && window._adminCache['properties'] ? JSON.parse(window._adminCache['properties']) : []));
+                    property = Array.isArray(props) ? props.find(p => String(p.id) === String(propertyId)) : null;
                 } catch(e){}
                 if (!property) return '';
                     // Determine badge
@@ -175,8 +180,8 @@
                 // Try to find userId from any adminChats or conversation metadata
                 let userId = null;
                 try {
-                    const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-                    const meta = adminChats.find(c => c.id === convId);
+                    const adminChats = (window.adminLoadKeySync ? (window.adminLoadKeySync('adminChats') || []) : (window._adminCache && window._adminCache['adminChats'] ? JSON.parse(window._adminCache['adminChats']) : []));
+                    const meta = Array.isArray(adminChats) ? adminChats.find(c => c.id === convId) : null;
                     if (meta && meta.userId) userId = meta.userId;
                 } catch(e){}
                 if (!userId) {
@@ -202,22 +207,22 @@
                 let all = [];
                 const seen = new Set();
                 for (let i = 0; i < keys.length; i++) {
-                    const arr = localStorage.getItem(keys[i]);
-                    if (arr) {
-                        try {
-                            const msgs = JSON.parse(arr);
-                            if (Array.isArray(msgs)) {
-                                msgs.forEach(m => {
-                                    // Avoid duplicates by unique timestamp+text+sender
-                                    const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                                    if (!seen.has(sig)) {
-                                        all.push(m);
-                                        seen.add(sig);
-                                    }
-                                });
-                            }
-                        } catch(e){}
-                    }
+                        let arr = null;
+                        try { arr = (window.adminLoadKeySync ? window.adminLoadKeySync(keys[i]) : (window._adminCache && window._adminCache[keys[i]] ? JSON.parse(window._adminCache[keys[i]]) : null)); } catch(e) { arr = null; }
+                        if (arr) {
+                            try {
+                                const msgs = Array.isArray(arr) ? arr : (typeof arr === 'string' ? JSON.parse(arr) : null);
+                                if (Array.isArray(msgs)) {
+                                    msgs.forEach(m => {
+                                        const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                                        if (!seen.has(sig)) {
+                                            all.push(m);
+                                            seen.add(sig);
+                                        }
+                                    });
+                                }
+                            } catch(e){}
+                        }
                 }
                 // Sort by time/ts ascending
                 all.sort((a,b) => {
@@ -231,7 +236,8 @@
                 // Save to all relevant keys (admin and user/agent)
                 const keys = getAllPossibleKeys();
                 for (let i = 0; i < keys.length; i++) {
-                    localStorage.setItem(keys[i], JSON.stringify(v));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync(keys[i], v);
+                    else if (window._adminCache) window._adminCache[keys[i]] = JSON.stringify(v);
                 }
             }
             function render(){
@@ -255,19 +261,19 @@
                     let profile = { username: '', avatar: '', role: '' };
                     if (senderType === 'admin') {
                         let adminProfile = {};
-                        try { adminProfile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+                        try { adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; } catch(e){}
                         profile.username = m.senderName || adminProfile.adminName || 'Admin';
                         profile.avatar = m.senderAvatar || adminProfile.adminAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username) + '&background=3498db&color=fff';
                         profile.role = m.senderRole || adminProfile.adminRole || 'Manager';
                     } else if (senderType === 'agent') {
                         let agentProfile = null;
-                        try { agentProfile = JSON.parse(localStorage.getItem('agentProfile')) || null; } catch(e) { agentProfile = null; }
+                        try { agentProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('agentProfile') : (window._adminCache && window._adminCache['agentProfile'] ? JSON.parse(window._adminCache['agentProfile']) : null)) || null; } catch(e) { agentProfile = null; }
                         profile.username = m.senderName || (agentProfile && (agentProfile.agentName || agentProfile.name)) || m.sender || 'Agent';
                         profile.avatar = m.senderAvatar || (agentProfile && (agentProfile.agentAvatar || agentProfile.avatar)) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username);
                         profile.role = m.senderRole || (agentProfile && (agentProfile.agentRole || agentProfile.role)) || 'Agent';
                     } else {
                         let userProfile = null;
-                        try { userProfile = JSON.parse(localStorage.getItem('wispaUser')) || null; } catch(e) { userProfile = null; }
+                        try { userProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('wispaUser') : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : null)) || null; } catch(e) { userProfile = null; }
                         profile.username = m.senderName || (userProfile && (userProfile.name || userProfile.username)) || m.sender || 'User';
                         profile.avatar = m.senderAvatar || (userProfile && userProfile.avatar) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username);
                         profile.role = m.senderRole || '';
@@ -320,7 +326,7 @@
                 const now = Date.now();
                 // Get current admin profile
                 let adminProfile = {};
-                try { adminProfile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){}
+                try { adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; } catch(e){}
                 msgs.push({
                     sender: 'admin',
                     senderName: adminProfile.adminName || 'Admin',
@@ -332,10 +338,11 @@
                 saveMessages(msgs);
                 inputEl.value = '';
                 render();
-                // Also trigger storage event for all keys for real-time update
+                // Also persist keys via adminSaveKeySync for real-time update hooks
                 const keys = getAllPossibleKeys();
                 for (let i = 0; i < keys.length; i++) {
-                    localStorage.setItem(keys[i], localStorage.getItem(keys[i]));
+                    const cur = (window.adminLoadKeySync ? (window.adminLoadKeySync(keys[i]) || []) : (window._adminCache && window._adminCache[keys[i]] ? JSON.parse(window._adminCache[keys[i]]) : null));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync(keys[i], cur || []);
                 }
             });
             inputEl.addEventListener('keydown', function(e){
@@ -343,7 +350,9 @@
             });
             window.addEventListener('storage', function(e){
                 if (!e.key) return;
-                if (e.key === getMessageKey()) render();
+                if (typeof getMessageKey === 'function') {
+                    if (e.key === getMessageKey()) render();
+                }
             });
             // If no messages, show a placeholder
             if (loadMessages().length === 0) {
@@ -368,7 +377,7 @@
         let updated = false;
         for (let i = 0; i < keys.length; i++) {
             let arr = [];
-            try { arr = JSON.parse(localStorage.getItem(keys[i]) || '[]'); } catch(e){}
+            try { arr = (window.adminLoadKeySync ? (window.adminLoadKeySync(keys[i]) || []) : (window._adminCache && window._adminCache[keys[i]] ? JSON.parse(window._adminCache[keys[i]]) : [])); } catch(e){}
             for (let j = 0; j < arr.length; j++) {
                 if ((arr[j].time||arr[j].ts) === (m.time||m.ts) && arr[j].text === m.text && arr[j].sender === m.sender) {
                     arr[j].pending = false;
@@ -376,7 +385,10 @@
                     updated = true;
                 }
             }
-            if (updated) localStorage.setItem(keys[i], JSON.stringify(arr));
+            if (updated) {
+                if (window.adminSaveKeySync) window.adminSaveKeySync(keys[i], arr);
+                else if (window._adminCache) window._adminCache[keys[i]] = JSON.stringify(arr);
+            }
         }
         // Rerender
         if (typeof render === 'function') render();

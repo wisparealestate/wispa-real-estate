@@ -17,8 +17,9 @@
                                 properties = [];
                             }
                         } catch (e) {
-                            // fallback to localStorage only when API is unreachable
-                            try { properties = JSON.parse(localStorage.getItem('properties') || '[]'); } catch (e2) { properties = []; }
+                            // API unreachable — do not fallback to file-backed localStorage (DB/API-only)
+                            console.warn('renderPropertyDocuments: API unavailable, skipping property list');
+                            properties = [];
                         }
                         const docs = (properties || []).filter(p => p && (p.document || p.documentUrl || p.document_url));
                         if (!docs || docs.length === 0) {
@@ -246,7 +247,7 @@
                             // Restore last opened tab from localStorage
                             if (window.location.pathname.endsWith('admin.html')) {
                                 var savedTab = '';
-                                try { savedTab = localStorage.getItem('adminCurrentTab'); } catch(e){}
+                                try { savedTab = (window.adminLoadKeySync ? window.adminLoadKeySync('adminCurrentTab') : (window._adminCache && window._adminCache['adminCurrentTab'] ? JSON.parse(window._adminCache['adminCurrentTab']) : null)) || ''; } catch(e){}
                                 if (savedTab && document.getElementById(savedTab)) {
                                     setTimeout(function() { switchTab(savedTab); }, 50);
                                     // Update hash for consistency
@@ -452,20 +453,39 @@
                 } catch (e) { window._adminCache[k] = null; }
             }
             try {
-                localStorage.getItem = function(key) { return window._adminCache[key] ?? null; };
-                localStorage.setItem = function(key, value) {
-                    window._adminCache[key] = value;
+                // Provide synchronous helpers to read/write the admin in-memory cache
+                window.adminLoadKeySync = function(key) {
                     try {
-                        const parsed = JSON.parse(value);
-                        // Do not write the `properties` key to file-backed admin sync; use DB endpoints instead
-                        if (key === 'properties') return true;
-                        if (window.adminSet) window.adminSet(key, parsed).catch(()=>{});
-                    } catch (e) {
-                        if (key === 'properties') return true;
-                        if (window.adminSet) window.adminSet(key, value).catch(()=>{});
-                    }
+                        if (window._adminCache && typeof window._adminCache[key] !== 'undefined' && window._adminCache[key] !== null) {
+                            try { return JSON.parse(window._adminCache[key]); } catch(e) { return window._adminCache[key]; }
+                        }
+                    } catch(e) {}
+                    return null;
+                };
+                window.adminSaveKeySync = function(key, value) {
+                    try {
+                        // Keep properties managed by DB endpoints only
+                        if (key === 'properties') {
+                            if (window._adminCache) window._adminCache[key] = JSON.stringify(value);
+                            return;
+                        }
+                        if (window.adminSet) {
+                            try { window.adminSet(key, value).catch(()=>{}); } catch(e){}
+                        }
+                        if (window._adminCache) window._adminCache[key] = JSON.stringify(value);
+                    } catch(e) {}
                 };
             } catch (e) { /* ignore */ }
+            // Also populate wispaUser in the admin in-memory cache from server session
+            try {
+                (async function(){
+                    try{
+                        const u = await (window.getCurrentUser ? window.getCurrentUser() : null);
+                        if(u){ window._adminCache['wispaUser'] = JSON.stringify(u); }
+                        else { window._adminCache['wispaUser'] = null; }
+                    }catch(e){ window._adminCache['wispaUser'] = null; }
+                })();
+            } catch(e){}
         })();
         </script>
     <!-- MAIN ADMIN LAYOUT -->
@@ -798,13 +818,7 @@
                                     function formatEightIdLocal(v){ const s = String(v||''); if (s.length>=8) return s.slice(-8); return s.padStart(8,'0'); }
                                     let found = all.find(p => String(p.id) === String(id) || formatEightIdLocal(p.id) === String(id) || String(p.propertyId) === String(id));
                                     if (!found) {
-                                        // Try file-backed localStorage fallback
-                                        try {
-                                            const local = JSON.parse(localStorage.getItem('properties')||'[]');
-                                            found = local.find(p => String(p.id) === String(id) || formatEightIdLocal(p.id) === String(id) || String(p.propertyId) === String(id));
-                                        } catch(e){}
-                                    }
-                                    if (!found) {
+                                        // Do not fallback to file-backed properties — DB-only
                                         alert('Property not found for edit: ' + id);
                                         return;
                                     }
@@ -836,12 +850,7 @@
                             try {
                                     const r = await window.apiFetch(`/api/properties/${id}`, { method: 'DELETE' });
                                     if (!r || !r.ok) throw new Error('Delete failed');
-                                    // Remove from local cache to prevent background sync from re-posting
-                                    try {
-                                        const stored = JSON.parse(localStorage.getItem('properties') || '[]');
-                                        const filtered = (Array.isArray(stored) ? stored : []).filter(pp => String(pp.id) !== String(id) && String(pp.propertyId) !== String(id) && String(formatEightIdLocal(pp.id)) !== String(id));
-                                        localStorage.setItem('properties', JSON.stringify(filtered));
-                                    } catch (e) {}
+                                    // No local file-backed cache to clean — rely on server state
                                     renderPropertiesWithDocButton();
                                     if (typeof renderPropertyDocuments === 'function') renderPropertyDocuments();
                             } catch (e) {
@@ -1330,7 +1339,7 @@
                     <script>
                     // Render All Alerts (combines sent and received)
                     function renderAllAlerts() {
-                        const sent = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]');
+                        const sent = (function(){ try{ const s = window._adminCache && window._adminCache['adminSentNotifications']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                         const received = getReceivedAlerts();
                         const all = [
                             ...sent.map(s => ({
@@ -1361,7 +1370,7 @@
 
                     // Render Sent Alerts (full width)
                     function renderSentAlerts() {
-                        const sent = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]');
+                        const sent = (function(){ try{ const s = window._adminCache && window._adminCache['adminSentNotifications']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                         const tbody = document.getElementById('sent-alerts-tbody');
                         if (!tbody) return;
                         tbody.innerHTML = sent.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:#aaa;">No sent alerts</td></tr>' :
@@ -1382,7 +1391,7 @@
                         const received = [];
                         try {
                             // System Alerts
-                            const systemAlerts = JSON.parse(localStorage.getItem('systemAlerts') || '[]');
+                            const systemAlerts = (function(){ try{ const s = window._adminCache && window._adminCache['systemAlerts']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             systemAlerts.forEach(a => received.push({
                                 type: 'System',
                                 source: a.source || 'System',
@@ -1392,7 +1401,7 @@
                                 actions: ''
                             }));
                             // Chats
-                            const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                            const chats = (function(){ try{ const s = window._adminCache && window._adminCache['chatNotifications']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             chats.forEach(c => received.push({
                                 type: 'Chat',
                                 source: c.userName || c.participantName || c.participantId || 'User',
@@ -1402,7 +1411,7 @@
                                 actions: ''
                             }));
                             // Property Reactions
-                            const reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
+                            const reactions = (function(){ try{ const s = window._adminCache && window._adminCache['notificationReactions']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             reactions.forEach(r => received.push({
                                 type: 'Reaction',
                                 source: r.user || 'User',
@@ -1412,7 +1421,7 @@
                                 actions: ''
                             }));
                             // Attacker Attempts
-                            const attackers = JSON.parse(localStorage.getItem('systemAttackers') || '[]');
+                            const attackers = (function(){ try{ const s = window._adminCache && window._adminCache['systemAttackers']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             attackers.forEach(a => received.push({
                                 type: 'Attacker',
                                 source: a.ip || a.user || 'Unknown',
@@ -1422,7 +1431,7 @@
                                 actions: ''
                             }));
                             // Property Requests
-                            const requests = JSON.parse(localStorage.getItem('propertyRequests') || '[]');
+                            const requests = (function(){ try{ const s = window._adminCache && window._adminCache['propertyRequests']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             requests.forEach(req => received.push({
                                 type: 'Property Request',
                                 source: req.user || req.email || 'User',
@@ -1432,7 +1441,7 @@
                                 actions: ''
                             }));
                             // Contacts
-                            const contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+                            const contacts = (function(){ try{ const s = window._adminCache && window._adminCache['contactMessages']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             contacts.forEach(msg => received.push({
                                 type: 'Contact',
                                 source: msg.name || msg.email || 'User',
@@ -1442,7 +1451,7 @@
                                 actions: ''
                             }));
                             // Post Creation Status
-                            const postStatus = JSON.parse(localStorage.getItem('postCreationStatus') || '[]');
+                            const postStatus = (function(){ try{ const s = window._adminCache && window._adminCache['postCreationStatus']; return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
                             postStatus.forEach(p => received.push({
                                 type: 'Post Creation',
                                 source: p.user || 'User',
@@ -1528,11 +1537,11 @@
 <script>
 // Render All Alerts (combines sent and received)
 function renderAllAlerts() {
-    const sent = JSON.parse(localStorage.getItem('adminSentNotifications') || '[]');
+    const sent = (window.adminLoadKeySync ? (window.adminLoadKeySync('adminSentNotifications') || []) : (window._adminCache && window._adminCache['adminSentNotifications'] ? JSON.parse(window._adminCache['adminSentNotifications']) : []));
     const received = [];
     // Combine received from various sources
     try {
-        const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+        const chats = (window.adminLoadKeySync ? (window.adminLoadKeySync('chatNotifications') || []) : (window._adminCache && window._adminCache['chatNotifications'] ? JSON.parse(window._adminCache['chatNotifications']) : []));
         chats.forEach(c => received.push({
             type: 'Chat',
             source: c.userName || c.participantName || c.participantId || 'User',
@@ -1541,7 +1550,7 @@ function renderAllAlerts() {
             status: c.read ? 'Read' : 'Unread',
             actions: ''
         }));
-        const reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
+        const reactions = (window.adminLoadKeySync ? (window.adminLoadKeySync('notificationReactions') || []) : (window._adminCache && window._adminCache['notificationReactions'] ? JSON.parse(window._adminCache['notificationReactions']) : []));
         reactions.forEach(r => received.push({
             type: 'Reaction',
             source: r.user || 'User',
@@ -1550,7 +1559,7 @@ function renderAllAlerts() {
             status: r.read ? 'Read' : 'Unread',
             actions: ''
         }));
-        const requests = JSON.parse(localStorage.getItem('propertyRequests') || '[]');
+        const requests = (window.adminLoadKeySync ? (window.adminLoadKeySync('propertyRequests') || []) : (window._adminCache && window._adminCache['propertyRequests'] ? JSON.parse(window._adminCache['propertyRequests']) : []));
         requests.forEach(req => received.push({
             type: 'Property Request',
             source: req.user || req.email || 'User',
@@ -1559,7 +1568,7 @@ function renderAllAlerts() {
             status: req.read ? 'Read' : 'Unread',
             actions: ''
         }));
-        const contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        const contacts = (window.adminLoadKeySync ? (window.adminLoadKeySync('contactMessages') || []) : (window._adminCache && window._adminCache['contactMessages'] ? JSON.parse(window._adminCache['contactMessages']) : []));
         contacts.forEach(msg => received.push({
             type: 'Contact',
             source: msg.name || msg.email || 'User',
@@ -1568,7 +1577,7 @@ function renderAllAlerts() {
             status: msg.read ? 'Read' : 'Unread',
             actions: ''
         }));
-        const attackers = JSON.parse(localStorage.getItem('systemAttackers') || '[]');
+        const attackers = (window.adminLoadKeySync ? (window.adminLoadKeySync('systemAttackers') || []) : (window._adminCache && window._adminCache['systemAttackers'] ? JSON.parse(window._adminCache['systemAttackers']) : []));
         attackers.forEach(a => received.push({
             type: 'Attacker',
             source: a.ip || a.user || 'Unknown',
@@ -2164,7 +2173,7 @@ document.addEventListener('DOMContentLoaded', function(){
         
         function loadAllUsers() {
             // Get all users from the system
-            const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+            const wispaUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
             const users = [];
             
             // Add current logged-in user
@@ -2189,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const results = [];
             const queryLower = query.toLowerCase();
             // Check wispaUser
-            const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+            const wispaUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
             if (wispaUser && (wispaUser.email?.toLowerCase().includes(queryLower) || wispaUser.username?.toLowerCase().includes(queryLower))) {
                 results.push({ id: wispaUser.email || wispaUser.username, username: wispaUser.username, email: wispaUser.email, avatar: wispaUser.avatar || '👤', type: 'user' });
             }
@@ -2204,7 +2213,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const q = query.trim().toLowerCase();
             const results = [];
             // Load users directly from localStorage to avoid depending on loadUsers()
-            let users = JSON.parse(localStorage.getItem('users') || 'null');
+            let users = (window.adminLoadKeySync ? window.adminLoadKeySync('users') : (window._adminCache && window._adminCache['users'] ? JSON.parse(window._adminCache['users']) : null));
             if(!users || !Array.isArray(users)) users = [];
             users.forEach(u=>{
                 const email = (u.email||'').toLowerCase();
@@ -2214,7 +2223,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
             });
             try{
-                const wispa = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                const wispa = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                 if(wispa && (wispa.email || wispa.username)){
                     const ident = (wispa.email||wispa.username||'').toLowerCase();
                     if(ident.includes(q)){
@@ -2389,7 +2398,7 @@ document.addEventListener('DOMContentLoaded', function(){
             
             if (recipientType === 'all-users') {
                 // Get all users from localStorage
-                const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                const wispaUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                 if (wispaUser && wispaUser.email) {
                     recipients.push({
                         id: wispaUser.email,
@@ -2400,7 +2409,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
             } else if (recipientType === 'agents') {
                 // Get all agents
-                const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                const wispaUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                 if (wispaUser && wispaUser.role === 'agent') {
                     recipients.push({
                         id: wispaUser.email,
@@ -2553,7 +2562,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         } catch (e) {
                             // fallback: keep existing localStorage behavior
                             try {
-                                const currentUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                                const currentUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                                 if (currentUser && (currentUser.email === userId || currentUser.username === userId || currentUser.id === userId)) {
                                     const key = 'notifications_' + userId;
                                     const userNotifications = JSON.parse(localStorage.getItem(key) || '[]');
@@ -3348,7 +3357,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
             // Load properties: return cached copy synchronously and refresh from server asynchronously
             function loadProperties(){
                 let props = [];
-                try { props = JSON.parse(localStorage.getItem('properties') || 'null') || []; } catch(e){ props = []; }
+                try { props = (window.adminLoadKeySync ? (window.adminLoadKeySync('properties') || []) : (window._adminCache && window._adminCache['properties'] ? JSON.parse(window._adminCache['properties']) : [])) || []; } catch(e){ props = []; }
                 // Async refresh from server to keep cache in sync with DB-backed endpoint
                 (async () => {
                     try {
@@ -3604,23 +3613,23 @@ reports@wispa.com | +EU-SUPPORT-LINE
             }
 
             function loadUsers(){
-                let users = JSON.parse(localStorage.getItem('users') || 'null');
+                let users = (window.adminLoadKeySync ? window.adminLoadKeySync('users') : (window._adminCache && window._adminCache['users'] ? JSON.parse(window._adminCache['users']) : null));
                 if(!users || !Array.isArray(users)){
                     users = [
                         {id:1,name:'John Smith',email:'john@example.com',role:'Admin',joined:'Jan 15, 2024',status:'Active'},
                         {id:2,name:'Sarah Johnson',email:'sarah@example.com',role:'Agent',joined:'Feb 1, 2024',status:'Active'},
                     ];
-                    localStorage.setItem('users', JSON.stringify(users));
+                    if (window.adminSaveKeySync) window.adminSaveKeySync('users', users); else if (window._adminCache) window._adminCache['users'] = JSON.stringify(users);
                 }
                 // Merge currently signed-up user (wispaUser) if present
                 try{
-                    const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                    const wispaUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                     if(wispaUser && (wispaUser.email || wispaUser.username)){
                         const ident = wispaUser.email || wispaUser.username;
                         const exists = users.find(u => (u.email || '').toLowerCase() === (ident||'').toLowerCase() || (u.name || '').toLowerCase() === (ident||'').toLowerCase());
                         if(!exists){
                             users.unshift({ id: Date.now(), name: wispaUser.username || ident, email: wispaUser.email || '', role: 'User', joined: new Date().toLocaleDateString(), status: 'Active' });
-                            localStorage.setItem('users', JSON.stringify(users));
+                            if (window.adminSaveKeySync) window.adminSaveKeySync('users', users); else if (window._adminCache) window._adminCache['users'] = JSON.stringify(users);
                         }
                     }
                 }catch(e){}
@@ -4631,10 +4640,10 @@ reports@wispa.com | +EU-SUPPORT-LINE
             if(!container) return;
             
             // Load registered users to filter property chats
-            let users = JSON.parse(localStorage.getItem('users') || 'null');
+            let users = (window.adminLoadKeySync ? window.adminLoadKeySync('users') : (window._adminCache && window._adminCache['users'] ? JSON.parse(window._adminCache['users']) : null));
             if(!users || !Array.isArray(users)) users = [];
             try{
-                const wispaUser = JSON.parse(localStorage.getItem('wispaUser') || '{}');
+                const wispaUser = (window.adminLoadKeySync ? (window.adminLoadKeySync('wispaUser') || {}) : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : {}));
                 if(wispaUser && (wispaUser.email || wispaUser.username)){
                     const ident = wispaUser.email || wispaUser.username;
                     const exists = users.find(u => (u.email || '').toLowerCase() === (ident||'').toLowerCase() || (u.name || '').toLowerCase() === (ident||'').toLowerCase());

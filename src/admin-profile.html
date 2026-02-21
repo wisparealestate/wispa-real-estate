@@ -72,20 +72,41 @@
             // For demo, just redirect to admin login page
             window.location.href = 'admin-login.html';
         }
-        // Load admin profile from server or fallback to localStorage
+        // Admin storage helpers: prefer server-backed adminGet/adminSet, fallback to in-memory _adminCache
+        async function adminLoadKey(key) {
+            try {
+                if (window.adminGet) return await window.adminGet(key);
+                if (window._adminCache && typeof window._adminCache[key] !== 'undefined' && window._adminCache[key] !== null) {
+                    try { return JSON.parse(window._adminCache[key]); } catch(e) { return window._adminCache[key]; }
+                }
+            } catch(e) {}
+            return null;
+        }
+        function adminSaveKey(key, value) {
+            try {
+                if (window.adminSet) window.adminSet(key, value).catch(()=>{});
+                if (window._adminCache) window._adminCache[key] = JSON.stringify(value);
+            } catch(e) {}
+        }
+
+        // Load admin profile from server
         async function updateProfile() {
             let profile = {};
             try {
-                // prefer apiFetch which handles API_BASE
                 const getter = window.apiFetch || fetch;
                 const res = await getter('/api/admin/profile');
                 if (res && res.ok) {
                     const j = await res.json();
                     profile = j.profile || j || {};
+                    adminSaveKey('adminProfile', profile);
                 } else {
-                    profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+                    const p = await adminLoadKey('adminProfile');
+                    profile = p || {};
                 }
-            } catch (e) { try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){ profile = {}; } }
+            } catch (e) {
+                const p = await adminLoadKey('adminProfile');
+                profile = p || {};
+            }
             document.getElementById('adminName').textContent = profile.adminName || 'Terry Franklin';
             document.getElementById('adminRole').textContent = profile.adminRole || 'Manager';
             document.getElementById('adminEmail').textContent = 'Email: ' + (profile.adminEmail || 'admin@wispa.com');
@@ -114,15 +135,16 @@
                         if (res && res.ok) {
                             const j = await res.json(); profile = j.profile || j || {};
                         } else {
-                            profile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+                            const p = await adminLoadKey('adminProfile'); profile = p || {};
                         }
-                    } catch (e) { try { profile = JSON.parse(localStorage.getItem('adminProfile') || '{}'); } catch(e){ profile = {}; } }
+                    } catch (e) { const p = await adminLoadKey('adminProfile'); profile = p || {}; }
                     profile.adminAvatar = evt.target.result;
                     try {
                         const poster = window.apiFetch || fetch;
                         await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
+                        adminSaveKey('adminProfile', profile);
                     } catch (e) {
-                        try { localStorage.setItem('adminProfile', JSON.stringify(profile)); } catch(e){}
+                        adminSaveKey('adminProfile', profile);
                     }
                     updateProfile();
                 };
