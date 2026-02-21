@@ -284,6 +284,28 @@ app.get("/api/admin/messages", async (req, res) => {
   }
 });
 
+// Get messages for a specific conversation
+app.get('/api/conversations/:id/messages', async (req, res) => {
+  const convId = req.params.id;
+  if (!convId) return res.status(400).json({ error: 'Missing conversation id' });
+  try {
+    // Prefer conversation_id column
+    const result = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 ORDER BY sent_at ASC', [convId]);
+    // If no rows, attempt a fallback that matches conversation_id or legacy mapping
+    if (!result.rows || result.rows.length === 0) {
+      try {
+        const fallback = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 OR (meta->>\'legacy_sender_id\' = $2) OR (meta->>\'legacy_receiver_id\' = $2) ORDER BY sent_at ASC', [convId, convId.replace(/^user-/, '')]);
+        return res.json({ messages: fallback.rows });
+      } catch (e) {
+        return res.json({ messages: [] });
+      }
+    }
+    return res.json({ messages: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error fetching conversation messages', details: err.message });
+  }
+});
+
 
 // Property upload endpoint
 app.post("/api/properties", async (req, res) => {
