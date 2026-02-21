@@ -1337,7 +1337,7 @@
             }
         }
 
-        // Send chat message
+        // Send chat message (API-backed with in-memory fallback)
         window.sendPropertyDetailMessage = async function() {
             const input = document.getElementById('propertyDetailChatInput');
             const messagesDiv = document.getElementById('propertyDetailChatMessages');
@@ -1346,35 +1346,70 @@
             if (!input || input.value.trim() === '') return;
 
             // Get logged-in user info from server session
-            const wispaUser = await window.getCurrentUser();
+            const wispaUser = (window.getCurrentUser ? await window.getCurrentUser() : null);
             const userName = (wispaUser && (wispaUser.username || wispaUser.email)) || 'Anonymous User';
             const userEmail = (wispaUser && wispaUser.email) || '';
             const userId = wispaUser && wispaUser.id ? wispaUser.id : null;
 
-            // Save user message into conversation store
-            if (window.saveConversationMessage) {
-                window.saveConversationMessage(convId, 'user', input.value.trim());
-                if (window.getConversationMessages) {
-                    const updated = window.getConversationMessages(convId) || [];
-                    messagesDiv.innerHTML = '';
-                    updated.forEach(m => {
-                        const el = document.createElement('div');
-                        if (m.sender === 'user') {
-                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
-                            el.textContent = m.text;
-                        } else {
-                            el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
-                            el.textContent = m.text;
-                        }
-                        messagesDiv.appendChild(el);
-                    });
+            const text = input.value.trim();
+
+            // Build message payload including property metadata for admin
+            const payload = {
+                convId: convId,
+                message: {
+                    sender: 'user',
+                    text: text,
+                    meta: {
+                        propertyId: propertyId,
+                        title: property && property.title ? property.title : (window.__currentProperty && window.__currentProperty.title) || '',
+                        price: property && property.price ? property.price : (window.__currentProperty && window.__currentProperty.price) || null,
+                        url: window.location.href
+                    }
                 }
-                if (typeof showNotification === 'function') showNotification('Message sent');
-            } else if (userId) {
+            };
+
+            // Try sending to server API
+            try {
+                const fetcher = window.apiFetch ? window.apiFetch : (url, opts) => fetch(url, opts);
+                const res = await fetcher('/api/conversations/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res && res.ok) {
+                    const body = await res.json();
+                    // server may return { message } or { messages: [...] }
+                    const msgs = Array.isArray(body.messages) ? body.messages : (body.message ? [body.message] : []);
+                    // Render returned messages (append newest)
+                    if (msgs.length > 0) {
+                        msgs.forEach(m => {
+                            const el = document.createElement('div');
+                            if (m.sender === 'user' || m.sender === 'client' ) {
+                                el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
+                                el.textContent = m.text || m.body || m.content || text;
+                            } else {
+                                el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
+                                el.textContent = m.text || m.body || m.content || text;
+                            }
+                            messagesDiv.appendChild(el);
+                        });
+                    }
+                    if (typeof showNotification === 'function') showNotification('Message sent');
+                    input.value = '';
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    return;
+                }
+            } catch (e) {
+                // fall through to in-memory fallback
+            }
+
+            // Fallback: save in-memory for user if API unavailable
+            if (userId) {
                 const key = 'wispaMessages_' + userId + '_' + convId;
                 window._wispaMessages = window._wispaMessages || {};
                 window._wispaMessages[key] = window._wispaMessages[key] || [];
-                window._wispaMessages[key].push({ sender: 'user', text: input.value.trim(), ts: Date.now(), userName: userName, userEmail: userEmail });
+                window._wispaMessages[key].push({ sender: 'user', text: text, ts: Date.now(), userName: userName, userEmail: userEmail });
                 // render fallback-saved messages immediately
                 const updated = window._wispaMessages[key] || [];
                 messagesDiv.innerHTML = '';
@@ -1389,11 +1424,10 @@
                     }
                     messagesDiv.appendChild(el);
                 });
-                if (typeof showNotification === 'function') showNotification('Message sent');
+                if (typeof showNotification === 'function') showNotification('Message queued');
+                input.value = '';
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
             }
-
-            input.value = '';
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         };
 
         // Close modal when clicking outside
