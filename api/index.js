@@ -510,21 +510,32 @@ app.post('/api/logout', async (req, res) => {
   }
 });
 
-// Admin login
+// Admin login (authenticate against `users` table and set session cookie)
 app.post("/api/admin-login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
   try {
-    // Accept either username or email
+    // Find admin user in users table (by username or email) and require role = 'admin'
     const result = await pool.query(
-      "SELECT * FROM admin_logins WHERE username = $1 OR email = $1",
+      "SELECT * FROM users WHERE (username = $1 OR email = $1) AND role = 'admin'",
       [username]
     );
-    if (result.rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
+    if (result.rows.length === 0) return res.status(401).json({ error: "Invalid credentials or not an admin" });
     const admin = result.rows[0];
-    const match = await bcrypt.compare(password, admin.password_hash);
-    if (!match) return res.status(401).json({ error: "Invalid credentials" });
-    res.json({ admin: { id: admin.id, username: admin.username, email: admin.email, created_at: admin.created_at } });
+    const match = await bcrypt.compare(password, admin.password_hash || '');
+    if (!match) return res.status(401).json({ error: "Invalid credentials or not an admin" });
+    // Create session cookie (same behavior as /api/login)
+    try{
+      const token = createSessionToken(admin.id);
+      const cookieOpts = {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7*24*3600*1000
+      };
+      res.cookie('wispa_session', token, cookieOpts);
+    }catch(e){ /* ignore cookie set errors */ }
+    res.json({ user: { id: admin.id, username: admin.username, email: admin.email, full_name: admin.full_name, role: admin.role, created_at: admin.created_at } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
