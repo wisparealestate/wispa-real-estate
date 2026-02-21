@@ -1044,11 +1044,11 @@ if (typeof propertyImageIds === 'undefined') {
             return !p.hot && !p.featured;
         });
 
-        // Sort newest first when ids are numeric strings
+        // Sort ascending by numeric id (oldest -> newest) when ids are numeric strings
         availableProps.sort((a, b) => {
             const ai = parseInt(a.id, 10) || 0;
             const bi = parseInt(b.id, 10) || 0;
-            return bi - ai;
+            return ai - bi;
         });
 
         // Clear existing and enable slider behavior

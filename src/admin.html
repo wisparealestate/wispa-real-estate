@@ -567,8 +567,9 @@
                             if (Array.isArray(data)) props = data; else if (data && Array.isArray(data.properties)) props = data.properties; else props = [];
                         } catch (e) { props = []; }
 
-                        props.sort((a, b) => new Date(b.posted || b.created || b.date || 0) - new Date(a.posted || a.created || a.date || 0));
-                        const recent = props.slice(0, 5);
+                        // Sort ascending (oldest -> newest) then take the last 5 as the most recent
+                        props.sort((a, b) => new Date(a.posted || a.created || a.date || 0) - new Date(b.posted || b.created || b.date || 0));
+                        const recent = props.slice(-5);
                         tbody.innerHTML = '';
                         if (recent.length === 0) {
                             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;">No recent properties found</td></tr>';
@@ -713,6 +714,8 @@
                                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;">No properties found</td></tr>';
                                 return;
                             }
+                            // Ensure ascending order (oldest -> newest) for the full properties list
+                            props.sort((a, b) => new Date(a.posted || a.created || a.date || 0) - new Date(b.posted || b.created || b.date || 0));
                             props.forEach(p => {
                                 const displayId = formatEightId(p.id || p.propertyId || Date.now());
                                 const title = p.title || p.name || p.title || 'Untitled';

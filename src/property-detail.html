@@ -661,7 +661,15 @@
             console.warn('property-detail: failed to parse stored properties', err);
         }
 
-        const property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: ['https://via.placeholder.com/800x500'] };
+        // Inline fallback SVG image (avoids external DNS failures like via.placeholder.com)
+        const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500">'
+            + '<rect width="100%" height="100%" fill="#f3f4f6"/>'
+            + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-family="Arial, Helvetica, sans-serif" font-size="24">Image not available</text>'
+            + '</svg>'
+        );
+
+        const property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: [FALLBACK_IMAGE] };
 
         // Normalize price string for display
         if (typeof property.price === 'number') {
@@ -710,6 +718,11 @@
                     }
                     return `<img src="${src}" alt="Property image" class="carousel-image">`;
                 }).join('');
+
+                // Attach error handler to any carousel images to replace with inline fallback on load error
+                Array.from(carouselImagesDiv.querySelectorAll('img.carousel-image')).forEach(el => {
+                    el.addEventListener('error', function() { if (this.src !== FALLBACK_IMAGE) this.src = FALLBACK_IMAGE; });
+                });
                 
                 // Set total images count
                 document.getElementById('totalImages').textContent = propertyImages.length;
@@ -733,7 +746,7 @@
                 carousel.style.display = 'none';
                 singleImage.style.display = 'block';
                 // If single media is a video, render a video element instead
-                const singleSrc = property.images && property.images.length > 0 ? property.images[0] : (property.image || 'https://via.placeholder.com/800x500');
+                const singleSrc = property.images && property.images.length > 0 ? property.images[0] : (property.image || FALLBACK_IMAGE);
                 const isVideoSingle = typeof singleSrc === 'string' && singleSrc.indexOf('data:video') === 0 || (typeof singleSrc === 'string' && singleSrc.match(/\.(mp4|webm|ogg)(\?|$)/i));
                 if (isVideoSingle) {
                     singleImage.style.display = 'none';
@@ -752,6 +765,7 @@
                     if (existing) existing.remove();
                     singleImage.style.display = 'block';
                     singleImage.src = singleSrc;
+                    singleImage.addEventListener('error', function(){ if (this.src !== FALLBACK_IMAGE) this.src = FALLBACK_IMAGE; });
                 }
             }
         }
