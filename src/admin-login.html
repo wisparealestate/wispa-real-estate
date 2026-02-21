@@ -52,20 +52,21 @@
                 return;
             }
             try {
-                // Use regular login which sets session cookie; server's /api/login returns the user including `role`.
-                const res = await fetch('/api/login', {
+                // Call the admin-login endpoint which authenticates against `users` (role='admin')
+                const postFn = window.apiFetch || fetch;
+                const res = await postFn('/api/admin-login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: email, password })
                 });
-                if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
+                if (!res || !res.ok) {
+                    const data = res ? await res.json().catch(() => ({})) : {};
                     errorDiv.textContent = data.error || 'Invalid credentials.';
                     errorDiv.style.display = 'block';
                     return;
                 }
                 const data = await res.json().catch(() => ({}));
-                const user = data && data.user;
+                const user = data && (data.user || data.admin || data.user);
                 if (!user || user.role !== 'admin') {
                     errorDiv.textContent = 'Account is not an admin.';
                     errorDiv.style.display = 'block';
