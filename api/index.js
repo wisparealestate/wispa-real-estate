@@ -559,7 +559,7 @@ app.post("/api/admin-login", async (req, res) => {
       };
       res.cookie('wispa_session', token, cookieOpts);
     }catch(e){ /* ignore cookie set errors */ }
-    res.json({ user: { id: admin.id, username: admin.username, email: admin.email, full_name: admin.full_name, role: admin.role, created_at: admin.created_at } });
+    res.json({ user: { id: admin.id, username: admin.username, email: admin.email, full_name: admin.full_name || 'Administrator', role: 'admin', created_at: admin.created_at } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
