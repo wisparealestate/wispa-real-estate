@@ -781,9 +781,20 @@
           try{
             const titleNotif = 'New property: ' + title;
             const bodyNotif = (description && description.slice(0,240)) || ('Check out our new property: '+ title);
-            await safeApi('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: titleNotif, body: bodyNotif, data: { url: window.location.origin + '/src/property-detail.html?id='+ (newProp.id||'') , property: newProp } }) });
+            await safeApi('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: titleNotif, body: bodyNotif, data: { url: window.location.origin + '/src/property-detail.html?id='+ (newProp.id||''), property: newProp } }) });
             status.textContent = 'Post created and users notified.';
-          }catch(e){ status.textContent = 'Post created but failed to notify users.'; }
+          }catch(e){
+            console.error('Notification send failed, queuing for retry', e);
+            try{
+              const pendingKey = 'pendingNotifications';
+              const item = { title: 'New property: ' + title, body: (description && description.slice(0,240)) || ('Check out our new property: '+ title), data: { url: window.location.origin + '/src/property-detail.html?id='+ (newProp.id||''), property: newProp }, createdAt: Date.now(), attempts: 0 };
+              let pending = [];
+              try{ pending = JSON.parse(localStorage.getItem(pendingKey) || '[]'); }catch(err){ pending = []; }
+              pending.push(item);
+              try{ localStorage.setItem(pendingKey, JSON.stringify(pending)); }catch(err){}
+              status.textContent = 'Post created; notification queued and will retry when online.';
+            }catch(err2){ console.error('Failed to queue notification', err2); status.textContent = 'Post created but failed to notify users.'; }
+          }
         }
       }catch(err){
         console.error(err);

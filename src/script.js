@@ -141,6 +141,39 @@ async function processLocalPhotosQueue(){
 window.addEventListener('online', () => { try{ processLocalPhotosQueue(); }catch(e){} });
 // Also poll occasionally
 try{ setInterval(()=>{ try{ processLocalPhotosQueue(); }catch(e){} }, 60000); }catch(e){}
+
+// Process pending admin notifications stored in localStorage under 'pendingNotifications'
+async function processPendingNotifications(){
+    try{
+        const key = 'pendingNotifications';
+        let pending = [];
+        try{ pending = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ pending = []; }
+        if(!Array.isArray(pending) || pending.length === 0) return;
+        if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
+        const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+        const remaining = [];
+        for(const item of pending){
+            try{
+                const resp = await poster('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: item.title, body: item.body, data: item.data }) });
+                if(resp && resp.ok){
+                    // success — skip
+                    continue;
+                } else {
+                    item.attempts = (item.attempts || 0) + 1;
+                    remaining.push(item);
+                }
+            }catch(e){
+                item.attempts = (item.attempts || 0) + 1;
+                remaining.push(item);
+            }
+        }
+        try{ localStorage.setItem(key, JSON.stringify(remaining)); }catch(e){}
+    }catch(e){ console.warn('processPendingNotifications failed', e); }
+}
+
+// Retry pending notifications on network online and periodically
+window.addEventListener('online', () => { try{ processPendingNotifications(); }catch(e){} });
+try{ setInterval(()=>{ try{ processPendingNotifications(); }catch(e){} }, 60000); }catch(e){}
 // Helper to get current authenticated user from server (caches result in-memory)
 window._wispaCurrentUser = null;
 window.getCurrentUser = async function(force){
