@@ -1,3 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Redirecting...</title>
+  <script>
+    (function(){
+      const search = location.search || '';
+      const target = '/admin.html#conversation' + search;
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body>Redirecting to admin conversation...</body>
+</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,7 +297,7 @@
 
                     // Profile link
                     let profileLink = '#';
-                    if (senderType === 'admin') profileLink = 'admin-profile.html';
+                    if (senderType === 'admin') profileLink = 'admin.html#profile';
                     else if (senderType === 'agent') profileLink = 'agent-profile.html';
                     else {
                         const convIdParam = encodeURIComponent(convId);

@@ -38,6 +38,49 @@
         } catch (e) {
             console.error('auth check failed', e);
         }
+
+        // Load admin profile into the profile tab
+        async function loadAdminProfile(){
+            try{
+                const res = window.apiFetch ? await window.apiFetch('/api/admin/profile') : await fetch('/api/admin/profile');
+                if(!res || !res.ok) return;
+                const j = await res.json();
+                const p = j && j.profile ? j.profile : {};
+                document.getElementById('adminNameDisplay').textContent = p.adminName || p.adminEmail || 'Administrator';
+                document.getElementById('adminRoleDisplay').textContent = p.adminRole || 'Admin';
+                document.getElementById('adminEmailDisplay').textContent = p.adminEmail || '';
+                document.getElementById('adminSinceDisplay').textContent = p.adminSince ? ('Since: ' + new Date(p.adminSince).toLocaleDateString()) : '';
+                if(p.adminAvatar) document.getElementById('adminAvatarImg').src = p.adminAvatar;
+                // populate edit form
+                const en = document.getElementById('editAdminName'); if(en) en.value = p.adminName || '';
+                const ee = document.getElementById('editAdminEmail'); if(ee) ee.value = p.adminEmail || '';
+            }catch(e){ console.warn('loadAdminProfile error', e); }
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            const editForm = document.getElementById('editProfileForm');
+            if(editForm){
+                editForm.addEventListener('submit', async function(ev){
+                    ev.preventDefault();
+                    try{
+                        const name = document.getElementById('editAdminName').value;
+                        const email = document.getElementById('editAdminEmail').value;
+                        // For now, save only client-side and refresh UI — server endpoint not implemented
+                        document.getElementById('adminNameDisplay').textContent = name || email || 'Administrator';
+                        document.getElementById('adminEmailDisplay').textContent = email || '';
+                        alert('Profile saved (client-only). Implement server-side save to persist changes.');
+                        switchTab('profile');
+                    }catch(e){ console.error(e); }
+                });
+            }
+            // reload profile when switching to profile tab
+            const obs = new MutationObserver(()=>{});
+            window.addEventListener('hashchange', function(){
+                const h = location.hash.replace('#','');
+                if(h === 'profile') loadAdminProfile();
+                if(h === 'edit-profile') loadAdminProfile();
+            });
+        });
     });
 </script>
                     <script>
@@ -272,7 +315,7 @@
                 </label>
                 <div class="menu-dropdown" style="display:none; position:absolute; top:40px; right:0; background:var(--white); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); min-width:180px; z-index:100;">
                     <a href="#overview" class="menu-link" data-page="overview" style="display:block; padding:12px 18px; text-decoration:none;">Overview</a>
-                    <a href="admin-profile.html" class="menu-link" target="_blank" style="display:block; padding:12px 18px; text-decoration:none;">Profile</a>
+                    <a href="admin.html#profile" class="menu-link" style="display:block; padding:12px 18px; text-decoration:none;">Profile</a>
                     <a href="#properties" class="menu-link" data-page="properties" style="display:block; padding:12px 18px; text-decoration:none;">Properties</a>
                     <a href="#users" class="menu-link" data-page="users" style="display:block; padding:12px 18px; text-decoration:none;">Users</a>
                     <a href="#agents" class="menu-link" data-page="agents" style="display:block; padding:12px 18px; text-decoration:none;">Agents</a>
@@ -329,7 +372,7 @@
                         searchIcon.addEventListener('click', function(){
                             animateIcon(searchIcon);
                             setTimeout(function(){
-                                window.location.href = 'admin-search.html';
+                                window.location.href = 'admin.html#search';
                             }, 300);
                         });
                     }
@@ -351,7 +394,7 @@
                         chatIcon.addEventListener('click', function(){
                             animateIcon(chatIcon);
                             setTimeout(function(){
-                                window.location.href = 'admin-chat.html';
+                                window.location.href = 'admin.html#chat';
                             }, 300);
                         });
                     }
@@ -545,6 +588,52 @@
                 <div class="dashboard-header" style="border: none;">
                     <h2 style="font-weight: 500;">Dashboard</h2>
                     <h5 style="font-weight: 500;">Welcome to the Wispa Real Estate Admin Panel</h5>
+                </div>
+            </div>
+
+            <!-- PROFILE TAB -->
+            <div id="profile" class="admin-tab" style="display:none;">
+                <div class="dashboard-header" style="border:none;">
+                    <h2 id="profileTitle" style="font-weight:500;color:var(--admin-text);">Admin Profile</h2>
+                    <p id="profileSubtitle" style="color:var(--admin-text);">Manage your administrator account</p>
+                </div>
+                <div class="admin-section">
+                    <div style="display:flex;gap:20px;align-items:center;">
+                        <img id="adminAvatarImg" src="https://ui-avatars.com/api/?name=Admin&background=0e76a8&color=fff" alt="Avatar" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid var(--admin-primary);">
+                        <div>
+                            <div style="font-size:20px;font-weight:700;color:var(--admin-text);" id="adminNameDisplay">Administrator</div>
+                            <div style="color:var(--admin-text);margin-top:6px;" id="adminRoleDisplay">Admin</div>
+                            <div style="color:var(--admin-text);margin-top:8px;" id="adminEmailDisplay">admin@example.com</div>
+                            <div style="color:var(--admin-text);margin-top:8px;" id="adminSinceDisplay"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;">
+                        <button class="btn-primary" onclick="switchTab('edit-profile')">Edit Profile</button>
+                        <button class="btn-sm" style="background:var(--admin-accent);color:#000;margin-left:10px;" onclick="window.location.href='admin.html#logout'">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EDIT PROFILE TAB -->
+            <div id="edit-profile" class="admin-tab" style="display:none;">
+                <div class="dashboard-header" style="border:none;">
+                    <h2 style="font-weight:500;color:var(--admin-text);">Edit Profile</h2>
+                </div>
+                <div class="admin-section">
+                    <form id="editProfileForm">
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" id="editAdminName" />
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="editAdminEmail" />
+                        </div>
+                        <div style="margin-top:12px;">
+                            <button type="submit" class="btn-primary">Save</button>
+                            <button type="button" class="btn-sm" style="margin-left:8px;" onclick="switchTab('profile')">Cancel</button>
+                        </div>
+                    </form>
                 </div>
                 <div class="quick-actions">
                     <div class="action-card" onclick="openModal('addProperty')">
@@ -4829,7 +4918,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
                 existing = chat;
             }
             renderAdminChatList();
-            window.location.href = 'admin-chat.html?chat=' + encodeURIComponent(existing.id);
+            window.location.href = 'admin.html#chat?chat=' + encodeURIComponent(existing.id);
         }
 
         function openAdminChat(chatId){
@@ -4898,7 +4987,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
             }
             renderAdminChatList();
             // open the conversation in its own page
-            window.location.href = 'admin-chat.html?chat=' + encodeURIComponent(chat.id);
+            window.location.href = 'admin.html#chat?chat=' + encodeURIComponent(chat.id);
         }
 
         function sendAdminMessage(){
@@ -4960,7 +5049,7 @@ reports@wispa.com | +EU-SUPPORT-LINE
         function openChatFullView(chatId){
             // deprecated: open conversations in separate page now
             if(!chatId) return;
-            window.location.href = 'admin-chat.html?chat=' + encodeURIComponent(chatId);
+            window.location.href = 'admin.html#chat?chat=' + encodeURIComponent(chatId);
         }
 
         function backToChatList(){

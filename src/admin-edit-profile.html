@@ -67,7 +67,7 @@
             </div>
             <div class="edit-profile-actions">
                 <button type="submit">Save Changes</button>
-                <button type="button" onclick="window.location.href='admin-chat.html'" style="margin-left:12px;background:#e5e7eb;color:#333;">Cancel</button>
+                <button type="button" onclick="window.location.href='admin.html#chat'" style="margin-left:12px;background:#e5e7eb;color:#333;">Cancel</button>
             </div>
         </form>
     </div>
@@ -98,12 +98,12 @@
                 try { if (window.adminSet) await window.adminSet('adminProfile', profile); } catch(e) { /* ignore */ }
                 if (window._adminCache) window._adminCache['adminProfile'] = JSON.stringify(profile);
                 alert('Profile updated!');
-                window.location.href = 'admin-profile.html';
+                window.location.href = 'admin.html#profile';
             } catch (err) {
                 try { if (window.adminSet) await window.adminSet('adminProfile', profile); } catch(e) { /* ignore */ }
                 if (window._adminCache) window._adminCache['adminProfile'] = JSON.stringify(profile);
                 alert('Profile updated (offline fallback)');
-                window.location.href = 'admin-profile.html';
+                window.location.href = 'admin.html#profile';
             }
         });
 

@@ -3,6 +3,22 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Redirecting...</title>
+    <script>
+        (function(){
+            const search = location.search || '';
+            const target = '/admin.html#chat' + search;
+            location.replace(target);
+        })();
+    </script>
+</head>
+<body>Redirecting to admin chat...</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Admin Chat - Wispa</title>
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -267,7 +283,7 @@
                 }
                 convs.forEach(c => {
                     const a = document.createElement('a');
-                    a.href = `admin-conversation.html?id=${encodeURIComponent(c.id)}`;
+                    a.href = `admin.html#conversation?id=${encodeURIComponent(c.id)}`;
                     a.className = 'conversation-item';
                     a.innerHTML = `
                         <div class="avatar">${(c.participantName||c.userName||'U').split(' ').map(n=>n[0]).join('')}</div>

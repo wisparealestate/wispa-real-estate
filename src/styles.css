@@ -2,6 +2,17 @@
 .admin-header .header-right, .admin-header .hamburger-menu { display: flex !important; visibility: visible !important; opacity: 1 !important; }
 /* Force admin header and hamburger menu always visible */
 .admin-header, .hamburger-menu, .header-right { display: flex !important; visibility: visible !important; opacity: 1 !important; }
+/* Admin theme variables for a consistent professional look */
+:root {
+    --admin-primary: #0e76a8;
+    --admin-accent: #ffb400;
+    --admin-bg: #f7fbff;
+    --admin-text: #0b2236;
+}
+
+/* Apply admin theme to dashboard header */
+.admin-header { background: linear-gradient(90deg, var(--admin-primary), #07689f); color: #fff; }
+.admin-header .header-left span { color: #fff !important; }
 /* ==================================================
      ADMIN DASHBOARD LAYOUT & COMPONENTS
      ================================================== */

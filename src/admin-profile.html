@@ -1,3 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Redirecting...</title>
+  <script>
+    (function(){
+      const search = location.search || '';
+      const hash = location.hash || '';
+      const target = '/admin.html#profile' + search + hash;
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body>Redirecting to admin profile...</body>
+</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -52,7 +69,7 @@
         <div class="profile-info" id="adminEmail">Email: admin@wispa.com</div>
         <div class="profile-info" id="adminBio">Bio: Responsible for managing the Wispa Real Estate platform, users, and agents.</div>
         <div class="profile-actions" style="margin-bottom:0; display: flex; justify-content: center; gap: 16px;">
-            <button onclick="window.location.href='admin-edit-profile.html'">Edit Profile</button>
+            <button onclick="window.location.href='admin.html#edit-profile'">Edit Profile</button>
             <button onclick="logoutAdmin()" style="background:#e74c3c;color:#fff;">Logout</button>
         </div>
         <div class="profile-extra" style="margin-top: 24px; text-align: center;">
@@ -70,7 +87,7 @@
         function logoutAdmin() {
             // Optionally clear admin session or localStorage keys here
             // For demo, just redirect to admin login page
-            window.location.href = 'admin-login.html';
+            window.location.href = 'admin.html#login';
         }
         // Admin storage helpers: prefer server-backed adminGet/adminSet, fallback to in-memory _adminCache
         async function adminLoadKey(key) {
