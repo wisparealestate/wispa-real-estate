@@ -5,6 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin — Wispa Real Estate</title>
   <link rel="stylesheet" href="styles.css">
+  <style id="admin-overview-styles">
+  /* Admin Overview - responsive, clean dashboard styles */
+  :root{ --overview-bg: #f7fbff; --overview-card:#ffffff; --overview-border:#e9f0f6; --overview-accent:#0e76a8 }
+
+  #overviewContent{ display:flex; flex-direction:column; gap:14px; }
+
+  #overviewStats{ display:flex; gap:14px; flex-wrap:wrap; align-items:stretch }
+  #overviewStats > div{ flex:1 1 160px; min-width:140px; background:var(--overview-card); padding:14px; border-radius:10px; box-shadow:0 6px 18px rgba(11,34,54,0.06); border:1px solid var(--overview-border); }
+  #overviewStats > div div{ font-weight:700; font-size:1.25rem; color:var(--overview-accent) }
+
+  #overviewRecents{ display:flex; gap:18px; flex-wrap:wrap }
+  #overviewRecents > div{ background:var(--overview-card); padding:12px; border-radius:8px; min-width:220px; flex:1 1 260px; box-shadow:0 6px 14px rgba(0,0,0,0.04); }
+
+  #companyDashboard{ padding:14px; border-radius:10px; background: linear-gradient(180deg, #fff, #fbfdff); border:1px solid var(--overview-border); }
+
+  #companyMetrics{ display:flex; gap:12px; flex-wrap:wrap; align-items:stretch }
+  .metric-card, #companyMetrics > div { min-width:140px; background:var(--overview-card); padding:12px; border-radius:8px; box-shadow:0 6px 12px rgba(0,0,0,0.04); text-align:center; flex:1 1 160px; border:1px solid var(--overview-border) }
+  .metric-card > div{ font-weight:700; font-size:1.1rem; color:var(--overview-accent) }
+
+  #companyBreakdown{ display:flex; gap:18px; flex-wrap:wrap; margin-top:12px }
+  #companyBreakdown > div{ background:var(--overview-card); padding:12px; border-radius:8px; min-width:220px; flex:1 1 220px; box-shadow:0 6px 12px rgba(0,0,0,0.04); border:1px solid var(--overview-border) }
+
+  #overviewIntro{ font-size:1rem; color:var(--text); margin-bottom:6px }
+
+  /* Small tweaks for property & users lists inside admin panels */
+  #propertiesList > div:first-child, #usersList > div:first-child{ margin-bottom:8px }
+  #propertiesList ul, #usersList ul{ margin:0; padding-left:18px }
+  #propertiesList li, #usersList li{ padding:8px 0; border-bottom:1px dashed rgba(0,0,0,0.03) }
+
+  /* Delete button styling (small and clear) */
+  button.delete-prop{ margin-left:10px; background:#ff4d4f; color:#fff; border:none; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:12px }
+  button.delete-prop:hover{ opacity:0.95 }
+
+  /* Accessibility: focus outlines */
+  #overview a:focus, #overview button:focus, #overview input:focus{ outline:3px solid rgba(14,118,168,0.12); outline-offset:2px }
+
+  /* Responsive breakpoints */
+  @media (max-width: 900px){
+    #overviewStats{ gap:10px }
+    #overviewStats > div{ flex:1 1 45%; min-width:140px }
+    #overviewRecents{ flex-direction:column }
+    #companyBreakdown{ flex-direction:column }
+    .metric-card{ min-width:100% }
+  }
+
+  @media (max-width: 480px){
+    #overviewStats{ flex-direction:column }
+    #overviewStats > div{ flex:1 1 100%; min-width:100% }
+    #companyMetrics{ flex-direction:column }
+    #overviewRecents > div, #companyBreakdown > div{ min-width:100% }
+    #overviewContent{ padding:6px }
+  }
+
+  /* Small utility to keep layout airy on very large screens */
+  @media (min-width:1400px){
+    #overviewStats{ gap:20px }
+  }
+  </style>
   <style>
     /* Minimal overrides to ensure header/hamburger visible */
     .admin-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--brand, #1e88e5); color:#fff; }
