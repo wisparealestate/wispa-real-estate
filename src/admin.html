@@ -329,19 +329,25 @@
           metricsEl.innerHTML = '';
           breakdownEl.innerHTML = '';
           const propRows = props && Array.isArray(props.properties) ? props.properties : [];
-          // avg price
-          let avgPrice = 0;
-          try{ const prices = propRows.map(p=>Number((p.price||0))); const valid = prices.filter(n=>!isNaN(n) && n>0); avgPrice = valid.length ? (valid.reduce((s,v)=>s+v,0)/valid.length) : 0; }catch(e){ avgPrice = 0 }
-          function metricCard(label, value){ return `<div style="min-width:160px;padding:10px;border-radius:8px;background:#f8fafc"><div style="font-weight:700;font-size:1.15rem">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#555">${escapeHtml(label)}</div></div>` }
-          metricsEl.innerHTML = metricCard('Total Properties', pCount) + metricCard('Total Users', uCount) + metricCard('Open Requests', rCount) + metricCard('Avg Price', avgPrice ? ('$'+Number(avgPrice).toFixed(2)) : 'N/A');
-          // breakdown by property type
-          const typeMap = {};
-          for(const p of propRows){ const t = (p.type||'unknown'); typeMap[t] = (typeMap[t]||0)+1 }
-          const typeHtml = `<div style="min-width:220px"><h4>Properties by Type</h4><ul>` + Object.keys(typeMap).map(k=>`<li>${escapeHtml(k)}: ${typeMap[k]}</li>`).join('') + `</ul></div>`;
-          // recent signups
-          const recentUsers = users && Array.isArray(users.users) ? users.users.slice(0,5) : [];
-          const signupsHtml = `<div style="min-width:260px"><h4>Recent Signups</h4>` + (recentUsers.length?'<ul>'+recentUsers.map(u=>`<li>${escapeHtml(u.email||u.username||'user')} — ${new Date(u.created_at).toLocaleDateString()}</li>`).join('')+'</ul>':'<div>No recent signups</div>') + `</div>`;
-          breakdownEl.innerHTML = typeHtml + signupsHtml;
+          // if there's no data at all, show a friendly message
+          if (!pCount && !uCount && !rCount && !aCount && !mCount && !nCount) {
+            metricsEl.innerHTML = '<div style="padding:12px;color:#666">No company data yet.</div>';
+            breakdownEl.innerHTML = '';
+          } else {
+            // avg price
+            let avgPrice = 0;
+            try{ const prices = propRows.map(p=>Number((p.price||0))); const valid = prices.filter(n=>!isNaN(n) && n>0); avgPrice = valid.length ? (valid.reduce((s,v)=>s+v,0)/valid.length) : 0; }catch(e){ avgPrice = 0 }
+            function metricCard(label, value){ return `<div style="min-width:160px;padding:10px;border-radius:8px;background:#f8fafc"><div style="font-weight:700;font-size:1.15rem">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#555">${escapeHtml(label)}</div></div>` }
+            metricsEl.innerHTML = metricCard('Total Properties', pCount) + metricCard('Total Users', uCount) + metricCard('Open Requests', rCount) + metricCard('Avg Price', avgPrice ? ('$'+Number(avgPrice).toFixed(2)) : 'N/A');
+            // breakdown by property type
+            const typeMap = {};
+            for(const p of propRows){ const t = (p.type||'unknown'); typeMap[t] = (typeMap[t]||0)+1 }
+            const typeHtml = `<div style="min-width:220px"><h4>Properties by Type</h4><ul>` + Object.keys(typeMap).map(k=>`<li>${escapeHtml(k)}: ${typeMap[k]}</li>`).join('') + `</ul></div>`;
+            // recent signups
+            const recentUsers = users && Array.isArray(users.users) ? users.users.slice(0,5) : [];
+            const signupsHtml = `<div style="min-width:260px"><h4>Recent Signups</h4>` + (recentUsers.length?'<ul>'+recentUsers.map(u=>`<li>${escapeHtml(u.email||u.username||'user')} — ${new Date(u.created_at).toLocaleDateString()}</li>`).join('')+'</ul>':'<div>No recent signups</div>') + `</div>`;
+            breakdownEl.innerHTML = typeHtml + signupsHtml;
+          }
         }catch(e){ /* ignore dashboard render errors */ }
       }catch(e){
         intro.textContent = 'Failed to load overview.';
