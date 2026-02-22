@@ -20,9 +20,17 @@ import { addPropertyWithPhotos } from "./property.js";
 
 const app = express();
 // Allow configured origin(s) and credentials for cross-site session cookies
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://wispa-real-estate-one.vercel.app';
+// Support multiple origins via comma-separated `CORS_ORIGINS` env var or sensible defaults
+const DEFAULT_CORS = (process.env.CORS_ORIGINS || 'https://wispa-real-estate-one.vercel.app,https://wispa-real-estate-2ew3.onrender.com,http://localhost:3000,http://localhost:3001').split(',').map(s=>s.trim()).filter(Boolean);
+console.log('[startup] allowed CORS origins:', DEFAULT_CORS);
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: function(origin, callback){
+    // allow non-browser tools (no origin)
+    if(!origin) return callback(null, true);
+    if(DEFAULT_CORS.indexOf(origin) !== -1) return callback(null, true);
+    console.warn('[cors] blocked origin', origin);
+    return callback(new Error('CORS origin not allowed'), false);
+  },
   credentials: true
 }));
 // Allow larger JSON payloads (but prefer file uploads for images)
