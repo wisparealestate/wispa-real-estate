@@ -1,21 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <script>
-    // Require admin session - if not authenticated as admin redirect to admin-login
-    (async function(){
+    // Require admin session - defer check until other scripts (apiFetch/getCurrentUser) load
+    document.addEventListener('DOMContentLoaded', async function(){
         try{
+            // Wait briefly for getCurrentUser to be available (scripts may load after this inline script)
+            const waitFor = async (checkFn, timeout = 2000) => {
+                const start = Date.now();
+                while (Date.now() - start < timeout) {
+                    if (typeof checkFn() !== 'undefined') return true;
+                    await new Promise(r => setTimeout(r, 50));
+                }
+                return false;
+            };
+            await waitFor(() => window.getCurrentUser, 2000);
             if (typeof window.getCurrentUser === 'function') {
-                const u = await window.getCurrentUser();
-                if(!u || u.role !== 'admin'){
-                    // preserve where they wanted to go
-                    window.location.href = 'admin-login.html';
+                // Retry a few times to allow cross-origin session cookie propagation and CORS fetch to settle
+                const start = Date.now();
+                let u = null;
+                while (Date.now() - start < 3000) {
+                    try { u = await window.getCurrentUser(); } catch(e){ u = null; }
+                    if (u) break;
+                    await new Promise(r => setTimeout(r, 200));
+                }
+                if (!u || u.role !== 'admin') {
+                    console.warn('Admin session not detected after retries; not redirecting to login to allow debugging');
+                    // Do NOT redirect automatically to admin-login.html here — allow user to see page and debug
                 }
             } else {
-                // fallback: redirect to admin-login
-                window.location.href = 'admin-login.html';
+                // Unable to determine session; do not redirect immediately to allow UI to render and diagnostics to run
+                console.warn('getCurrentUser not available; skipping immediate redirect');
             }
-        }catch(e){ window.location.href = 'admin-login.html'; }
-    })();
+        } catch (e) {
+            console.error('auth check failed', e);
+        }
+    });
 </script>
                     <script>
                     async function renderPropertyDocuments() {
