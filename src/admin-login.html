@@ -79,6 +79,10 @@
                     errorDiv.style.display = 'block';
                     return;
                 }
+                // Immediate UI fallback: if server returned an admin user, navigate right away
+                try{
+                    window.location.href = 'admin.html';
+                }catch(e){ /* ignore */ }
                 // Verify session was set by asking /api/me with credentials included
                 try {
                     const meRes = await fetch(apiBase ? apiBase + '/api/me' : '/api/me', { credentials: 'include' });
