@@ -785,7 +785,10 @@
             status.textContent = 'Post created and users notified.';
           }catch(e){ status.textContent = 'Post created but failed to notify users.'; }
         }
-      }catch(err){ status.textContent = 'Failed to create post.'; console.error(err); }
+      }catch(err){
+        console.error(err);
+        try{ status.textContent = 'Failed to create post: ' + (err && err.message ? err.message : String(err)); }catch(e){ status.textContent = 'Failed to create post.' }
+      }
       btn.disabled = false;
     });
 
