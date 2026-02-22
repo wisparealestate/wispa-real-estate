@@ -55,7 +55,11 @@
     <section id="overview" class="tab-panel">
       <h2>Overview</h2>
       <p id="overviewIntro">Loading admin overview…</p>
-      <div id="overviewContent"></div>
+      <p><button id="refreshOverview">Refresh Overview</button></p>
+      <div id="overviewContent">
+        <div id="overviewStats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px"></div>
+        <div id="overviewRecents" style="display:flex;gap:18px;flex-wrap:wrap"></div>
+      </div>
     </section>
 
     <section id="profile" class="tab-panel">
@@ -145,6 +149,7 @@
     }
 
     document.getElementById('refreshProfile').addEventListener('click', loadProfile);
+    document.getElementById('refreshOverview').addEventListener('click', loadOverview);
 
     // Data loaders for new panels
     async function safeApi(path){
@@ -233,6 +238,50 @@
       }catch(e){ out.textContent = 'Failed to load users.' }
     }
 
+    // Overview
+    async function loadOverview(){
+      const intro = document.getElementById('overviewIntro');
+      const statsEl = document.getElementById('overviewStats');
+      const recentsEl = document.getElementById('overviewRecents');
+      intro.textContent = 'Loading admin overview…';
+      statsEl.innerHTML = '';
+      recentsEl.innerHTML = '';
+      try{
+        const [props, users, reqs, alerts, adminMsgs, sentNotifs] = await Promise.all([
+          safeApi('/api/properties').catch(()=>null),
+          safeApi('/api/users').catch(()=>null),
+          safeApi('/api/property-requests').catch(()=>null),
+          safeApi('/api/system-alerts').catch(()=>null),
+          safeApi('/api/admin/messages').catch(()=>null),
+          safeApi('/api/admin/sent-notifications').catch(()=>null)
+        ]);
+
+        const pCount = props && Array.isArray(props.properties) ? props.properties.length : 0;
+        const uCount = users && Array.isArray(users.users) ? users.users.length : 0;
+        const rCount = reqs && Array.isArray(reqs.requests) ? reqs.requests.length : 0;
+        const aCount = alerts && Array.isArray(alerts.alerts) ? alerts.alerts.length : 0;
+        const mCount = adminMsgs && Array.isArray(adminMsgs.messages) ? adminMsgs.messages.length : 0;
+        const nCount = sentNotifs && Array.isArray(sentNotifs.notifications) ? sentNotifs.notifications.length : 0;
+
+        function statCard(label, value){
+          return `<div style="min-width:140px;padding:12px;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06)"><div style="font-size:1.25rem;font-weight:700">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#666;margin-top:6px">${escapeHtml(label)}</div></div>`;
+        }
+
+        statsEl.innerHTML = statCard('Properties', pCount)+statCard('Users', uCount)+statCard('Requests', rCount)+statCard('Alerts', aCount)+statCard('Admin messages', mCount)+statCard('Sent notifications', nCount);
+
+        // Recents: show up to 3 recent properties and users
+        const recentProps = props && Array.isArray(props.properties) ? props.properties.slice(0,3) : [];
+        const recentUsers = users && Array.isArray(users.users) ? users.users.slice(0,3) : [];
+        let rpHtml = '<div style="min-width:260px"><h3>Recent Properties</h3>'+(recentProps.length?'<ul>'+recentProps.map(p=>`<li>${escapeHtml(p.title||p.address||('Property #'+(p.id||'')))}</li>`).join('')+'</ul>':'<div>No properties.</div>')+'</div>';
+        let ruHtml = '<div style="min-width:260px"><h3>Recent Users</h3>'+(recentUsers.length?'<ul>'+recentUsers.map(u=>`<li>${escapeHtml(u.full_name||u.username||u.email||'User')}</li>`).join('')+'</ul>':'<div>No users.</div>')+'</div>';
+        recentsEl.innerHTML = rpHtml + ruHtml;
+
+        intro.textContent = `Overview — showing ${pCount} properties and ${uCount} users.`;
+      }catch(e){
+        intro.textContent = 'Failed to load overview.';
+      }
+    }
+
     // Small helper to avoid XSS in rendered strings
     function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 
@@ -247,6 +296,7 @@
     const initial = (location.hash && location.hash.slice(1)) || 'overview';
     switchTab(initial);
     loadProfile();
+    loadOverview();
     loadRequests();
     loadMessages();
     loadAlerts();
