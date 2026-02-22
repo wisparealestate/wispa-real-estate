@@ -55,7 +55,87 @@ document.addEventListener('DOMContentLoaded', async function() {
             window.properties = [];
         }
     } catch (e) { window.properties = []; }
+    // After loading properties, attempt to process any locally-stored photos (upload & migrate to remote)
+    try { processLocalPhotosQueue(); } catch (e) { console.warn('processLocalPhotosQueue init failed', e); }
 });
+
+// Convert a dataURL to a Blob
+function dataURLToBlob(dataURL){
+    try{
+        const parts = dataURL.split(',');
+        const meta = parts[0];
+        const b64 = parts[1];
+        const mime = meta.match(/:(.*?);/)[1] || 'application/octet-stream';
+        const byteChars = atob(b64);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: mime });
+    }catch(e){ return null; }
+}
+
+// Upload data: photos stored under a localPhotos_<key> storage key and attach remote URLs back to property
+async function uploadLocalPhotosForProperty(property){
+    if(!property || !property._localPhotosKey) return null;
+    const key = property._localPhotosKey;
+    let stored = null;
+    try{ stored = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){ stored = null; }
+    if(!stored || !Array.isArray(stored) || stored.length===0) return null;
+    // convert to blobs
+    const blobs = stored.map(d => dataURLToBlob(d)).filter(Boolean);
+    if(!blobs.length) return null;
+    try{
+        const form = new FormData();
+        blobs.forEach((b,idx)=> form.append('files', b, `photo-${Date.now()}-${idx}.jpg`));
+        const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+        const resp = await poster('/api/upload-photos', { method: 'POST', body: form });
+        if(!resp || !resp.ok) throw new Error('upload failed');
+        const j = await resp.json();
+        const urls = Array.isArray(j.urls) ? j.urls : (j && j.uploaded ? j.uploaded : []);
+        if(urls && urls.length){
+            // replace local photos with remote urls on the property
+            property.images = urls;
+            property.photoUrls = urls;
+            // remove local marker
+            delete property._localPhotosKey;
+            // persist locally
+            try{
+                // update window.properties and localStorage copy
+                if(Array.isArray(window.properties)){
+                    const idx = window.properties.findIndex(p => String(p.id) === String(property.id));
+                    if(idx>-1) window.properties[idx] = property;
+                    try{ localStorage.setItem('properties', JSON.stringify(window.properties)); }catch(e){}
+                }
+            }catch(e){}
+            // attempt to save to server so remote property record includes photos
+            try{ await saveProperty(Object.assign({}, property, { photos: urls })); }catch(e){ /* ignore */ }
+            // remove stored data-urls to free space
+            try{ localStorage.removeItem(key); }catch(e){}
+            return urls;
+        }
+    }catch(e){ console.warn('uploadLocalPhotosForProperty error', e); }
+    return null;
+}
+
+// Process all properties with local photos and try to upload them
+async function processLocalPhotosQueue(){
+    try{
+        const props = Array.isArray(window.properties) ? window.properties : (function(){ try{ const s = localStorage.getItem('properties'); return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
+        if(!Array.isArray(props) || !props.length) return;
+        for(const p of props){
+            if(p && p._localPhotosKey){
+                // only attempt when online to reduce failures
+                if(typeof navigator !== 'undefined' && navigator.onLine === false) continue;
+                await uploadLocalPhotosForProperty(p);
+            }
+        }
+    }catch(e){ console.warn('processLocalPhotosQueue failed', e); }
+}
+
+// Trigger processing when network becomes available
+window.addEventListener('online', () => { try{ processLocalPhotosQueue(); }catch(e){} });
+// Also poll occasionally
+try{ setInterval(()=>{ try{ processLocalPhotosQueue(); }catch(e){} }, 60000); }catch(e){}
 // Helper to get current authenticated user from server (caches result in-memory)
 window._wispaCurrentUser = null;
 window.getCurrentUser = async function(force){
@@ -386,6 +466,9 @@ function processPendingForCurrentUser(){
 
 // Run processing on load so users receive admin messages created while they were offline
 document.addEventListener('DOMContentLoaded', processPendingForCurrentUser);
+
+// Poll unread counts periodically so the header badge stays up-to-date
+try{ window._navPoll = setInterval(()=>{ try{ updateNavUnreadCounts(); }catch(e){} }, 30000); }catch(e){}
 
 // ==================================================
 // PROPERTY DATA & GENERATION
@@ -1519,8 +1602,23 @@ if (typeof propertyImageIds === 'undefined') {
                     if (Array.isArray(j.urls) && j.urls.length) images = j.urls;
                 }
             } catch (e) {
-                console.warn('Image upload failed, falling back to using object URLs for preview', e);
-                images = Array.from(mediaInput.files).map(f => URL.createObjectURL(f));
+                console.warn('Image upload failed, falling back to converting files to data URLs for persistence', e);
+                // Convert files to data URLs instead of using blob/object URLs which are not persistent across reloads
+                const files = Array.from(mediaInput.files);
+                const fileToDataUrl = (file) => new Promise((resolve) => {
+                    try {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => resolve(null);
+                        reader.readAsDataURL(file);
+                    } catch (err) { resolve(null); }
+                });
+                try {
+                    const converted = await Promise.all(files.map(f => fileToDataUrl(f)));
+                    images = converted.filter(Boolean);
+                } catch (convErr) {
+                    images = [];
+                }
             }
         }
 
@@ -2050,10 +2148,23 @@ if (typeof propertyImageIds === 'undefined') {
     function saveProperty(property) {
         // Try saving to backend API first
         try {
-            const body = {
-                property: property,
-                photoUrls: Array.isArray(property.photoUrls) ? property.photoUrls : (property.photos || [])
-            };
+            // sanitize photo URLs: separate remote URLs from data-URLs and transient blob/file URLs
+            const rawPhotos = Array.isArray(property.photoUrls) ? property.photoUrls : (property.photos || []);
+            const remotePhotos = (rawPhotos || []).filter(p => typeof p === 'string' && (p.startsWith('http://') || p.startsWith('https://')));
+            const dataPhotos = (rawPhotos || []).filter(p => typeof p === 'string' && p.startsWith('data:'));
+            const transientPhotos = (rawPhotos || []).filter(p => typeof p === 'string' && (p.startsWith('blob:') || p.startsWith('file:') || p.startsWith('filesystem:')));
+            // If there are data: photos (base64) keep them locally but don't POST them to API to avoid huge payloads.
+            if (dataPhotos.length) {
+                try {
+                    const key = 'localPhotos_' + (property.id || ('tmp-' + Date.now()));
+                    localStorage.setItem(key, JSON.stringify(dataPhotos));
+                    // mark property so admin UI knows images are stored locally
+                    property._localPhotosKey = key;
+                    console.warn('Saved data-URL photos locally under', key);
+                } catch (e) { console.warn('Failed to save local photos', e); }
+            }
+            // Build body only with remote (http/https) photo URLs
+            const body = { property: property, photoUrls: remotePhotos };
             const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
             return poster('/api/properties', {
                 method: 'POST',
