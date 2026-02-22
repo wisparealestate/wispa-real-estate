@@ -166,10 +166,32 @@ app.use('/api/admin', async (req, res, next) => {
 });
 
 app.get('/api/admin/sent-notifications', async (req, res) => {
-  res.status(501).json({ error: 'Admin sent-notifications endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    // Return notifications that were sent by admins. We mark these by storing `sentByAdmin: true` inside the JSON `data` column.
+    const result = await pool.query(`SELECT * FROM notifications WHERE (data->> 'sentByAdmin') = 'true' ORDER BY created_at DESC`);
+    return res.json({ notifications: result.rows });
+  } catch (err) {
+    // If the notifications table or JSON access is not available, return a helpful error
+    return res.status(500).json({ error: 'Failed to load sent notifications', details: err.message });
+  }
 });
+
 app.post('/api/admin/sent-notifications', async (req, res) => {
-  res.status(501).json({ error: 'Admin sent-notifications endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    const admin = req.currentUser;
+    if (!admin) return res.status(401).json({ error: 'Admin authentication required' });
+    const { title, body, data } = req.body || {};
+    if (!title && !body) return res.status(400).json({ error: 'Missing title or body' });
+    const payload = Object.assign({}, data || {}, { sentByAdmin: true, adminId: admin.id });
+    const createdAt = new Date().toISOString();
+    const insert = await pool.query(
+      'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [null, title || null, body || null, JSON.stringify(payload), createdAt, false]
+    );
+    return res.json({ notification: insert.rows[0] });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to create sent notification', details: err.message });
+  }
 });
 
 app.get('/api/admin/profile', async (req, res) => {
