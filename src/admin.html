@@ -48,6 +48,8 @@
       <button class="tab-btn" data-tab="messages">Messages</button>
       <button class="tab-btn" data-tab="alerts">Alerts</button>
       <button class="tab-btn" data-tab="notifications">Notifications</button>
+      <button class="tab-btn" data-tab="properties">Properties</button>
+      <button class="tab-btn" data-tab="users">Users</button>
     </div>
 
     <section id="overview" class="tab-panel">
@@ -87,6 +89,18 @@
       <p><button id="refreshNotifications">Refresh</button></p>
       <div id="notificationsList">Loading notifications…</div>
     </section>
+
+      <section id="properties" class="tab-panel">
+        <h2>Properties</h2>
+        <p><button id="refreshProperties">Refresh</button></p>
+        <div id="propertiesList">Loading properties…</div>
+      </section>
+
+      <section id="users" class="tab-panel">
+        <h2>Users</h2>
+        <p><button id="refreshUsers">Refresh</button></p>
+        <div id="usersList">Loading users…</div>
+      </section>
   </main>
 
   <script src="script.js"></script>
@@ -184,6 +198,41 @@
       }catch(e){ out.textContent = 'Failed to load notifications.' }
     }
 
+    // Properties
+    async function loadProperties(){
+      const out = document.getElementById('propertiesList');
+      out.textContent = 'Loading…';
+      try{
+        const data = await safeApi('/api/properties');
+        if(!data) return;
+        const rows = Array.isArray(data.properties) ? data.properties : (data || []).properties || [];
+        if(!Array.isArray(rows)) rows = [];
+        out.innerHTML = rows.length ? '<ul>'+rows.map(p=>`<li><strong>${escapeHtml(p.title||p.address||('Property #'+(p.id||'')))}</strong> — id:${escapeHtml(p.id||'')}, images:${(p.images||[]).length || 0} <button data-id="${escapeHtml(p.id||'') }" class="delete-prop">Delete</button></li>`).join('')+'</ul>' : 'No properties.';
+        // wire delete buttons
+        out.querySelectorAll('.delete-prop').forEach(b=>b.addEventListener('click', async (e)=>{
+          const id = b.dataset.id || e.target.getAttribute('data-id');
+          if(!id) return alert('Missing id');
+          if(!confirm('Delete property '+id+'?')) return;
+          try{
+            const res = window.apiFetch ? await window.apiFetch('/api/properties/'+encodeURIComponent(id), { method: 'DELETE' }) : await fetch('/api/properties/'+encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+            if(res && res.ok) { loadProperties(); } else { alert('Failed to delete property'); }
+          }catch(err){ alert('Delete error'); }
+        }));
+      }catch(e){ out.textContent = 'Failed to load properties.' }
+    }
+
+    // Users
+    async function loadUsers(){
+      const out = document.getElementById('usersList');
+      out.textContent = 'Loading…';
+      try{
+        const data = await safeApi('/api/users');
+        if(!data) return;
+        const rows = Array.isArray(data.users) ? data.users : (data && data.users) || [];
+        out.innerHTML = rows.length ? '<ul>'+rows.map(u=>`<li><strong>${escapeHtml(u.full_name||u.username||'User')}</strong> — ${escapeHtml(u.email||'')} (role:${escapeHtml(u.role||'')})</li>`).join('')+'</ul>' : 'No users.';
+      }catch(e){ out.textContent = 'Failed to load users.' }
+    }
+
     // Small helper to avoid XSS in rendered strings
     function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 
@@ -191,6 +240,8 @@
     document.getElementById('refreshMessages').addEventListener('click', loadMessages);
     document.getElementById('refreshAlerts').addEventListener('click', loadAlerts);
     document.getElementById('refreshNotifications').addEventListener('click', loadNotifications);
+    document.getElementById('refreshProperties').addEventListener('click', loadProperties);
+    document.getElementById('refreshUsers').addEventListener('click', loadUsers);
 
     // Init tab from hash or default and load data
     const initial = (location.hash && location.hash.slice(1)) || 'overview';
@@ -200,6 +251,8 @@
     loadMessages();
     loadAlerts();
     loadNotifications();
+    loadProperties();
+    loadUsers();
   </script>
 </body>
 </html>
