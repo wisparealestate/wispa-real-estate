@@ -575,8 +575,8 @@ app.post('/api/admin-login-redirect', async (req, res) => {
     const admin = result.rows[0];
     const match = await bcrypt.compare(password, admin.password_hash || '');
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-    // Create a short-lived session token and return a URL that will set it on the API origin
-    const token = createSessionToken(admin.id, 60); // 60s short-lived token
+    // Create a session token (multi-day) and return a URL that will set it on the API origin
+    const token = createSessionToken(admin.id); // default expiry (7 days)
     const host = (process.env.API_HOST || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
     const redirectPath = returnTo ? encodeURIComponent(returnTo) : encodeURIComponent('/admin.html');
     const url = `${host}/set-session?st=${encodeURIComponent(token)}&r=${redirectPath}`;
