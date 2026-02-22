@@ -283,6 +283,12 @@ body {
     flex-shrink: 0;
 }
 
+/* Ensure header icons are visible on the admin header background */
+.admin-header .header-right .header-icon,
+.admin-header .hamburger-menu label span {
+    color: #fff;
+}
+
 /* Search Bar */
 .search-bar {
     display: flex;
