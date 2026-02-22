@@ -109,7 +109,14 @@ app.get("/api/notifications", async (req, res) => {
       : await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
     return res.json({ notifications: result.rows });
   } catch (err) {
-    res.status(500).json({ error: 'Database error fetching notifications', details: err.message });
+    // Fallback: deployments may not have a `notifications` table. Try file-backed store.
+    try {
+      const rows = await readJson('notifications.json');
+      const filtered = userId ? (rows.filter(r => String(r.user_id || r.userId || r.user) === String(userId))) : rows;
+      return res.json({ notifications: filtered });
+    } catch (e) {
+      res.status(500).json({ error: 'Database error fetching notifications', details: err.message });
+    }
   }
 });
 
