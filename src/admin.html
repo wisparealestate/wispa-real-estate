@@ -140,6 +140,10 @@
     <div class="header-icons" aria-hidden="false">
       <button id="quickSearchBtn" class="icon-btn" title="Quick search" aria-label="Search">🔍</button>
       <button id="notificationsBtn" class="icon-btn icon-badge" title="Notifications" aria-label="Notifications">🔔<span class="badge" id="notifBadge" style="display:none">0</span></button>
+      <div id="notifDropdown" class="menu-dropdown" style="right:70px;top:56px;min-width:320px;display:none;">
+        <div id="notifDropdownContent" style="max-height:360px;overflow:auto;padding:8px"></div>
+        <div style="padding:8px;border-top:1px solid #f1f5fb;text-align:right"><a href="#notifications" id="notifOpenFull" style="text-decoration:none">Open all</a></div>
+      </div>
       <button id="chatsBtn" class="icon-btn" title="Chats" aria-label="Chats">💬</button>
     </div>
     <div style="position:relative">
@@ -208,6 +212,28 @@
       <h2>Contact Messages</h2>
       <p><button id="refreshMessages">Refresh</button></p>
       <div id="messagesList">Loading messages…</div>
+    </section>
+
+    <section id="chat" class="tab-panel">
+      <h2>Property Chats</h2>
+      <p><button id="refreshChats">Refresh</button></p>
+      <div id="admin-chats-list">Loading chats…</div>
+      <div id="chat-fullview" style="display:none;margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div id="chat-full-title" style="font-weight:700;font-size:1.05rem">Conversation</div>
+            <div id="chat-full-sub" style="color:#666;font-size:0.9rem"></div>
+          </div>
+          <div>
+            <button id="chat-back" class="icon-btn">← Back</button>
+          </div>
+        </div>
+        <div id="chat-full-messages" style="max-height:360px;overflow:auto;padding:12px;border:1px solid #f1f5fb;margin-top:8px;background:#fff;border-radius:8px">No messages.</div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <input id="chat-full-input" placeholder="Type a reply…" style="flex:1;padding:8px;border:1px solid #e6eef7;border-radius:6px" />
+          <button id="chat-full-send" class="icon-btn">Send</button>
+        </div>
+      </div>
     </section>
 
     <section id="alerts" class="tab-panel">
@@ -312,8 +338,58 @@
 
     quickSearchInput.addEventListener('input', (e)=>{ const v=e.target.value; doQuickSearch(v); });
 
-    notificationsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('notifications'); loadNotifications(); });
-    chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('messages'); loadMessages(); });
+    // Notifications: open dropdown showing full notifications (quick view)
+    const notifDropdown = document.getElementById('notifDropdown');
+    const notifDropdownContent = document.getElementById('notifDropdownContent');
+    const notifOpenFull = document.getElementById('notifOpenFull');
+    async function renderNotifDropdown(){
+      notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
+      try{
+        const data = await safeApi('/api/admin/sent-notifications');
+        let rows = Array.isArray(data) ? data : (data && data.notifications) ? data.notifications : (data && data.items) ? data.items : [];
+        if(!rows || !rows.length) { notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">No notifications.</div>'; return }
+        notifDropdownContent.innerHTML = rows.slice(0,12).map(n=>`<div style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="font-weight:700">${escapeHtml(n.title||n.message||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:4px">${escapeHtml((n.message||'').slice(0,240))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(n.sentAt||n.createdAt||'')}</div></div>`).join('');
+      }catch(e){ notifDropdownContent.innerHTML = '<div style="padding:12px;color:#c33">Failed to load</div>' }
+    }
+    notificationsBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); if(notifDropdown.style.display==='block'){ notifDropdown.style.display='none'; } else { notifDropdown.style.display='block'; renderNotifDropdown(); } });
+    // clicking outside should close dropdown
+    window.addEventListener('click', (e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#notificationsBtn')) notifDropdown.style.display='none'; });
+    notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); loadNotifications(); });
+
+    // Chats: open property chats (admin conversations)
+    chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('chat'); renderAdminChatList(); });
+
+    // Render admin chat list from localStorage keys or fallback chatNotifications
+    async function renderAdminChatList(){
+      const out = document.getElementById('admin-chats-list');
+      out.innerHTML = 'Loading…';
+      try{
+        let convs = [];
+        try{ convs = JSON.parse(localStorage.getItem('adminChats') || '[]'); }catch(e){ convs = []; }
+        if(!convs || !convs.length){ try{ convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]') }catch(e){ convs = []; } }
+        if(!convs || !convs.length){ out.innerHTML = '<div style="padding:12px;color:#666">No conversations yet.</div>'; return }
+        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+convs.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="#" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
+        out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{ ev.preventDefault(); const id=a.dataset.id; try{ openAdminChat(id); }catch(e){ console.error(e) } }));
+      }catch(e){ out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load chats</div>'; }
+    }
+
+    document.getElementById('refreshChats').addEventListener('click', renderAdminChatList);
+    document.getElementById('chat-back').addEventListener('click', (e)=>{ e.preventDefault(); backToChatList(); });
+    document.getElementById('chat-full-send').addEventListener('click', (e)=>{ const text = document.getElementById('chat-full-input').value || ''; if(!text.trim()) return; try{ const id = (document.getElementById('chat-full-title').dataset && document.getElementById('chat-full-title').dataset.chatId) || null; if(!id){ /* try to infer from title */ } sendAdminMessage(id, text); document.getElementById('chat-full-input').value=''; }catch(err){ console.error(err) } });
+
+    function sendAdminMessage(chatId, text){
+      if(!chatId){ console.warn('Missing chatId for sendAdminMessage'); return }
+      const key = 'adminMessages_' + chatId;
+      let arr = [];
+      try{ arr = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ arr = []; }
+      const msg = { sender:'admin', text: text, timestamp: Date.now() };
+      arr.push(msg);
+      try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
+      // update adminChats meta
+      try{ const ac = JSON.parse(localStorage.getItem('adminChats') || '[]'); const meta = ac.find(a=>a.id===chatId); if(meta){ meta.lastMessage = text; meta.updated = Date.now(); meta.unread = meta.unread || 0; } localStorage.setItem('adminChats', JSON.stringify(ac)); }catch(e){}
+      // refresh fullview
+      try{ openAdminChat(chatId); }catch(e){}
+    }
 
     async function loadProfile(){
       try{

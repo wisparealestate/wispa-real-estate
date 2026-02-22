@@ -224,6 +224,7 @@ function openAdminChat(chatId) {
     document.getElementById('admin-chats-list').style.display = 'none';
     document.getElementById('chat-full-title').textContent = chat.userName || chat.conversationTitle || chat.participantName || chat.participantId;
     document.getElementById('chat-full-sub').textContent = chat.conversationTitle || chat.participantId || '';
+    try{ document.getElementById('chat-full-title').dataset.chatId = chatId; }catch(e){}
     // Render messages
     const msgsEl = document.getElementById('chat-full-messages');
     if (!messages.length) {
