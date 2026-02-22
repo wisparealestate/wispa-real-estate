@@ -9,7 +9,7 @@
     display: flex;
     flex-direction: row;
     gap: 32px;
-    width: 100vw;
+    width: 100%;
     min-height: 100vh;
     margin: 0;
     padding: 0;
@@ -35,7 +35,7 @@
     flex-direction: column;
     gap: 24px;
     min-height: 100vh;
-    width: 100vw;
+    width: 100%;
     box-sizing: border-box;
 }
 
@@ -47,7 +47,7 @@
 
 .admin-tab {
     min-height: calc(100vh - 80px); /* header height */
-    width: 100vw;
+    width: 100%;
     box-sizing: border-box;
     padding: 10px 22px;
     background: var(--light);
@@ -2066,8 +2066,8 @@ body.home .property-image-container button.like-btn {
 }
 .similar-properties-slider .similar-property-card {
     box-sizing: border-box;
-    flex: 0 0 calc(100vw - (2 * var(--slide-side-gap)));
-    width: calc(100vw - (2 * var(--slide-side-gap)));
+    flex: 0 0 calc(100% - (2 * var(--slide-side-gap)));
+    width: calc(100% - (2 * var(--slide-side-gap)));
     scroll-snap-align: start;
     margin: 0;
 }

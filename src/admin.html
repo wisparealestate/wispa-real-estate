@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="styles.css">
 <script>
     // Require admin session - defer check until other scripts (apiFetch/getCurrentUser) load
     document.addEventListener('DOMContentLoaded', async function(){
@@ -144,7 +148,7 @@
         .badge.error { background:#f8d7da; color:#721c24; }
         
         @media (max-width:768px){
-            body { overflow-x:hidden; width:100vw; }
+            body { overflow-x:hidden; width:100%; }
             .admin-layout{ flex-direction:column; width:100%; overflow-x:hidden; }
             .admin-sidebar{
                 width:100%;
@@ -175,8 +179,8 @@
             .action-card { padding:14px; font-size:14px; border-radius:4px; width:100%; }
             .action-icon { font-size:28px; margin-bottom:2px; }
             .admin-notif-tab { padding:10px 14px; font-size:12px; }
-            .modal { position:fixed; width:100vw; left:0; }
-            .modal-content { max-width:calc(100vw - 20px); width:100%; padding:12px; box-sizing:border-box; }
+            .modal { position:fixed; left:0; right:0; width:100%; }
+            .modal-content { max-width:calc(100% - 20px); width:100%; padding:12px; box-sizing:border-box; }
             .modal-header { margin-bottom:10px; }
             .modal-header h2 { font-size:16px; margin:0; }
             .action-buttons { gap:4px; flex-wrap:wrap; }
@@ -242,7 +246,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
+            width: 100%;
             z-index: 1002;
             box-sizing: border-box;
         }
