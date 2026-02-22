@@ -2193,13 +2193,25 @@ if (typeof propertyImageIds === 'undefined') {
             })
             .catch(err => {
                 console.warn('saveProperty API failed, falling back to localStorage', err);
-                properties.push(property);
+                try{
+                    if(!Array.isArray(properties)){
+                        console.warn('properties was not an array in saveProperty.catch; resetting to []', properties);
+                        properties = [];
+                    }
+                    properties.push(property);
+                }catch(e){ console.error('Failed to push property to local properties array', e, properties); }
                 try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
                 return Promise.resolve(property);
             });
         } catch (e) {
             // Fallback to localStorage
-            properties.push(property);
+            try{
+                if(!Array.isArray(properties)){
+                    console.warn('properties was not an array in saveProperty.fallback; resetting to []', properties);
+                    properties = [];
+                }
+                properties.push(property);
+            }catch(errPush){ console.error('Failed to push property to local properties array (fallback)', errPush, properties); }
             try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
             return Promise.resolve(property);
         }
