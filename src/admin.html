@@ -386,7 +386,22 @@
       arr.push(msg);
       try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
       // update adminChats meta
-      try{ const ac = JSON.parse(localStorage.getItem('adminChats') || '[]'); const meta = ac.find(a=>a.id===chatId); if(meta){ meta.lastMessage = text; meta.updated = Date.now(); meta.unread = meta.unread || 0; } localStorage.setItem('adminChats', JSON.stringify(ac)); }catch(e){}
+      try{
+        const acKey = 'adminChats';
+        let ac = [];
+        try{ ac = JSON.parse(localStorage.getItem(acKey) || '[]'); }catch(e){ ac = []; }
+        let meta = ac.find(a=>a.id===chatId);
+        const now = Date.now();
+        if(!meta){
+          meta = { id: chatId, userId: null, participantName: null, lastMessage: text, updated: now, unread: 0 };
+          ac.unshift(meta);
+        } else {
+          meta.lastMessage = text;
+          meta.updated = now;
+          meta.unread = 0;
+        }
+        try{ localStorage.setItem(acKey, JSON.stringify(ac)); }catch(e){}
+      }catch(e){}
       // refresh fullview
       try{ openAdminChat(chatId); }catch(e){}
     }

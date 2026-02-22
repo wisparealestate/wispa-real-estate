@@ -1440,6 +1440,18 @@
                     if (typeof showNotification === 'function') showNotification('Message sent');
                     input.value = '';
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    // Ensure admin conversation thread exists/updated so admin sees it
+                    try{ upsertAdminChat(convId, userId, userName, text, propertyId, (property && property.title) || null); }catch(e){}
+                    // persist returned messages to localStorage for admin visibility
+                    try{
+                        if(userId){
+                            const lk = 'wispaMessages_' + userId + '_' + convId;
+                            let arr = [];
+                            try{ arr = JSON.parse(localStorage.getItem(lk) || '[]'); }catch(e){ arr = []; }
+                            msgs.forEach(m=>arr.push(m));
+                            try{ localStorage.setItem(lk, JSON.stringify(arr)); }catch(e){}
+                        }
+                    }catch(e){}
                     return;
                 }
             } catch (e) {
@@ -1469,8 +1481,55 @@
                 if (typeof showNotification === 'function') showNotification('Message queued');
                 input.value = '';
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                // ensure admin thread exists when using fallback
+                try{ upsertAdminChat(convId, userId, userName, text, propertyId, (property && property.title) || null); }catch(e){}
+                // also persist fallback messages to localStorage so admin can read them
+                try{
+                    if(userId){
+                        const lk = 'wispaMessages_' + userId + '_' + convId;
+                        let arr2 = [];
+                        try{ arr2 = JSON.parse(localStorage.getItem(lk) || '[]'); }catch(e){ arr2 = []; }
+                        // append new messages from window._wispaMessages
+                        const newMsgs = window._wispaMessages[key] || [];
+                        newMsgs.forEach(m=>arr2.push(m));
+                        try{ localStorage.setItem(lk, JSON.stringify(arr2)); }catch(e){}
+                    }
+                }catch(e){}
             }
         };
+
+        // Create or update admin conversation metadata so admin UI sees the thread
+        function upsertAdminChat(convId, userId, userName, lastMessage, propertyId, propertyTitle){
+            try{
+                const KEY = 'adminChats';
+                let arr = [];
+                try{ arr = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){ arr = []; }
+                let meta = arr.find(a => a.id === convId);
+                const now = Date.now();
+                if(!meta){
+                    meta = { id: convId, userId: userId || null, participantName: userName || (userId?('User '+userId):'Guest'), lastMessage: lastMessage || '', updated: now, unread: 1, propertyId: propertyId || null, title: propertyTitle || null };
+                    arr.unshift(meta);
+                } else {
+                    meta.lastMessage = lastMessage || meta.lastMessage;
+                    meta.updated = now;
+                    meta.unread = (Number(meta.unread)||0) + 1;
+                    if(userId) meta.userId = userId;
+                    if(propertyId) meta.propertyId = propertyId;
+                    if(propertyTitle) meta.title = propertyTitle;
+                }
+                try{ localStorage.setItem(KEY, JSON.stringify(arr)); }catch(e){}
+                // also update chatNotifications for older admin UI paths
+                try{
+                    const KEY2 = 'chatNotifications';
+                    let notifs = [];
+                    try{ notifs = JSON.parse(localStorage.getItem(KEY2) || '[]'); }catch(e){ notifs = []; }
+                    const nIdx = notifs.findIndex(n => n.id === convId);
+                    const notif = { id: convId, title: propertyTitle || ('Conversation ' + convId), lastMessage: lastMessage || '', updated: now, unread: 1 };
+                    if(nIdx === -1) notifs.unshift(notif); else { notifs[nIdx] = Object.assign({}, notifs[nIdx], notif); }
+                    try{ localStorage.setItem(KEY2, JSON.stringify(notifs)); }catch(e){}
+                }catch(e){}
+            }catch(e){ console.warn('upsertAdminChat failed', e); }
+        }
 
         // Close modal when clicking outside
         window.addEventListener('click', function(event) {
