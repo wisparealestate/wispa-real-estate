@@ -44,8 +44,10 @@
     <div class="tabs" role="tablist">
       <button class="tab-btn" data-tab="overview">Overview</button>
       <button class="tab-btn" data-tab="profile">Profile</button>
-      <button class="tab-btn" data-tab="chat">Chat</button>
-      <button class="tab-btn" data-tab="search">Search</button>
+      <button class="tab-btn" data-tab="requests">Requests</button>
+      <button class="tab-btn" data-tab="messages">Messages</button>
+      <button class="tab-btn" data-tab="alerts">Alerts</button>
+      <button class="tab-btn" data-tab="notifications">Notifications</button>
     </div>
 
     <section id="overview" class="tab-panel">
@@ -62,14 +64,28 @@
       <button id="refreshProfile">Refresh</button>
     </section>
 
-    <section id="chat" class="tab-panel">
-      <h2>Chat</h2>
-      <p>Conversations and messages will appear here.</p>
+    <section id="requests" class="tab-panel">
+      <h2>Property Requests</h2>
+      <p><button id="refreshRequests">Refresh</button></p>
+      <div id="requestsList">Loading requests…</div>
     </section>
 
-    <section id="search" class="tab-panel">
-      <h2>Search</h2>
-      <p>Property and user search tools.</p>
+    <section id="messages" class="tab-panel">
+      <h2>Contact Messages</h2>
+      <p><button id="refreshMessages">Refresh</button></p>
+      <div id="messagesList">Loading messages…</div>
+    </section>
+
+    <section id="alerts" class="tab-panel">
+      <h2>System Alerts</h2>
+      <p><button id="refreshAlerts">Refresh</button></p>
+      <div id="alertsList">Loading alerts…</div>
+    </section>
+
+    <section id="notifications" class="tab-panel">
+      <h2>Sent Notifications</h2>
+      <p><button id="refreshNotifications">Refresh</button></p>
+      <div id="notificationsList">Loading notifications…</div>
     </section>
   </main>
 
@@ -114,10 +130,74 @@
 
     document.getElementById('refreshProfile').addEventListener('click', loadProfile);
 
-    // Init tab from hash or default
+    // Data loaders for new panels
+    async function safeApi(path){
+      const fn = window.apiFetch ? apiFetch : (p,opts)=>fetch(p, Object.assign({credentials:'include'}, opts));
+      const res = await fn(path);
+      if(!res.ok){ if(res.status===401){ location.href='/admin-login.html'; return null } throw new Error('API error '+res.status) }
+      return res.json();
+    }
+
+    async function loadRequests(){
+      const out = document.getElementById('requestsList');
+      out.textContent = 'Loading…';
+      try{
+        const data = await safeApi('/api/property-requests');
+        if(!data) return;
+        if(!Array.isArray(data)) data = data.items || [];
+        out.innerHTML = data.length ? '<ul>'+data.map(r=>`<li><strong>${escapeHtml(r.name||r.email||'Request')}</strong> — ${escapeHtml(r.message||r.comment||r.note||'')}</li>`).join('')+'</ul>' : 'No requests.';
+      }catch(e){ out.textContent = 'Failed to load requests.' }
+    }
+
+    async function loadMessages(){
+      const out = document.getElementById('messagesList');
+      out.textContent = 'Loading…';
+      try{
+        const data = await safeApi('/api/contact-messages');
+        if(!data) return;
+        if(!Array.isArray(data)) data = data.items || [];
+        out.innerHTML = data.length ? '<ul>'+data.map(m=>`<li><strong>${escapeHtml(m.email||m.from||'Sender')}</strong>: ${escapeHtml((m.message||m.body||'').slice(0,200))}</li>`).join('')+'</ul>' : 'No messages.';
+      }catch(e){ out.textContent = 'Failed to load messages.' }
+    }
+
+    async function loadAlerts(){
+      const out = document.getElementById('alertsList');
+      out.textContent = 'Loading…';
+      try{
+        const data = await safeApi('/api/system-alerts');
+        if(!data) return;
+        if(!Array.isArray(data)) data = data.items || [];
+        out.innerHTML = data.length ? '<ul>'+data.map(a=>`<li>${escapeHtml(a.title||a.message||'Alert')}</li>`).join('')+'</ul>' : 'No alerts.';
+      }catch(e){ out.textContent = 'Failed to load alerts.' }
+    }
+
+    async function loadNotifications(){
+      const out = document.getElementById('notificationsList');
+      out.textContent = 'Loading…';
+      try{
+        const data = await safeApi('/api/admin/sent-notifications');
+        if(!data) return;
+        if(!Array.isArray(data)) data = data.items || [];
+        out.innerHTML = data.length ? '<ul>'+data.map(n=>`<li>${escapeHtml(n.title||n.message||'Notification')} — ${escapeHtml(n.sentAt||n.createdAt||'')}</li>`).join('')+'</ul>' : 'No notifications.';
+      }catch(e){ out.textContent = 'Failed to load notifications.' }
+    }
+
+    // Small helper to avoid XSS in rendered strings
+    function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    document.getElementById('refreshRequests').addEventListener('click', loadRequests);
+    document.getElementById('refreshMessages').addEventListener('click', loadMessages);
+    document.getElementById('refreshAlerts').addEventListener('click', loadAlerts);
+    document.getElementById('refreshNotifications').addEventListener('click', loadNotifications);
+
+    // Init tab from hash or default and load data
     const initial = (location.hash && location.hash.slice(1)) || 'overview';
     switchTab(initial);
     loadProfile();
+    loadRequests();
+    loadMessages();
+    loadAlerts();
+    loadNotifications();
   </script>
 </body>
 </html>
