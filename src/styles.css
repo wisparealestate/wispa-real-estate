@@ -261,8 +261,10 @@ body {
 
 /* Responsive header & compact post cards for consistent alignment across devices */
 .main-header { align-items: center; }
-.main-header .search-bar { height: 36px; min-height:36px; }
+.main-header .search-bar { height: 36px; min-height:36px; margin-top: 4px; }
 .main-header .search-bar-wrapper input[type="text"] { height:36px; padding:0 36px 0 12px; box-sizing:border-box; }
+
+/* Search bar vertical alignment applied uniformly across devices; mobile override below also uses 4px */
 
 /* Compact post cards */
 .similar-property-image { height: 190px; max-height: 36vw; min-height:150px; object-fit:cover; }
@@ -271,7 +273,7 @@ body {
 /* Small screens: reduce gaps and stack when needed */
 @media (max-width: 600px) {
     .main-header { padding:8px 12px; }
-    .main-header .search-bar { max-width: 100%; flex:1; order:2; margin-top:6px; }
+    .main-header .search-bar { max-width: 100%; flex:1; order:2; margin-top:4px; }
     .header-left, .header-right { flex:0 0 auto; }
     .similar-property-image { height: 170px; }
 }
