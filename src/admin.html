@@ -156,7 +156,7 @@
         document.getElementById('profileRole').textContent = data.role || 'admin';
         document.getElementById('logged-as').textContent = data.email ? `Signed in as ${data.email}` : '';
         document.getElementById('overviewIntro').textContent = `Welcome back, ${data.name || data.email || 'Admin'}.`;
-        document.getElementById('overviewContent').textContent = 'Overview data is available.';
+        // keep existing overview content intact (do not overwrite dashboard)
       }catch(err){
         document.getElementById('overviewIntro').textContent = 'Unable to load profile — please login.';
       }
