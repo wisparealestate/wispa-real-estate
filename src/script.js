@@ -2184,68 +2184,92 @@ if (typeof propertyImageIds === 'undefined') {
             });
     }
 
-    function saveProperty(property) {
-        // Try saving to backend API first
+    async function saveProperty(property) {
+        // Try saving to backend API first; attempt to upload any data: photos immediately
         try {
             // sanitize photo URLs: separate remote URLs from data-URLs and transient blob/file URLs
             const rawPhotos = Array.isArray(property.photoUrls) ? property.photoUrls : (property.photos || []);
-            const remotePhotos = (rawPhotos || []).filter(p => typeof p === 'string' && (p.startsWith('http://') || p.startsWith('https://')));
+            let remotePhotos = (rawPhotos || []).filter(p => typeof p === 'string' && (p.startsWith('http://') || p.startsWith('https://')));
             const dataPhotos = (rawPhotos || []).filter(p => typeof p === 'string' && p.startsWith('data:'));
             const transientPhotos = (rawPhotos || []).filter(p => typeof p === 'string' && (p.startsWith('blob:') || p.startsWith('file:') || p.startsWith('filesystem:')));
-            // If there are data: photos (base64) keep them locally but don't POST them to API to avoid huge payloads.
+
+            // If there are data: photos (base64) try to upload them to the server now so
+            // the saved property contains remote URLs. If upload fails, fall back to
+            // saving them locally (localPhotos_<key>) and mark the property for background migration.
             if (dataPhotos.length) {
                 try {
-                    const key = 'localPhotos_' + (property.id || ('tmp-' + Date.now()));
-                    localStorage.setItem(key, JSON.stringify(dataPhotos));
-                    // mark property so admin UI knows images are stored locally
-                    property._localPhotosKey = key;
-                    console.warn('Saved data-URL photos locally under', key);
-                } catch (e) { console.warn('Failed to save local photos', e); }
+                    const blobs = dataPhotos.map(d => dataURLToBlob(d)).filter(Boolean);
+                    if (blobs.length) {
+                        const form = new FormData();
+                        blobs.forEach((b, idx) => {
+                            let ext = 'bin';
+                            try { if (b && b.type) { const parts = b.type.split('/'); if (parts[1]) ext = parts[1].split('+')[0]; } } catch (e) {}
+                            const name = `file-${Date.now()}-${idx}.${ext}`;
+                            form.append('files', b, name);
+                        });
+                        const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+                        const resp = await poster('/api/upload-photos', { method: 'POST', body: form });
+                        if (resp && typeof resp.json === 'function' && resp.ok) {
+                            const j = await resp.json();
+                            const urls = Array.isArray(j.urls) ? j.urls : (j && j.uploaded ? j.uploaded : []);
+                            if (urls && urls.length) {
+                                remotePhotos = remotePhotos.concat(urls);
+                                property.images = property.photoUrls = property.photos = remotePhotos;
+                            }
+                        } else if (resp && !resp.ok) {
+                            throw new Error('upload failed');
+                        }
+                    }
+                } catch (uploadErr) {
+                    try {
+                        const key = 'localPhotos_' + (property.id || ('tmp-' + Date.now()));
+                        localStorage.setItem(key, JSON.stringify(dataPhotos));
+                        property._localPhotosKey = key;
+                        console.warn('Saved data-URL photos locally under', key, uploadErr);
+                    } catch (e) { console.warn('Failed to save local photos', e); }
+                }
             }
+
             // Build body only with remote (http/https) photo URLs
             const body = { property: property, photoUrls: remotePhotos };
             const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
-            return poster('/api/properties', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            })
-            .then(async response => {
-                // apiFetch may return parsed JSON or a Response
-                let data;
+
+            try {
+                const response = await poster('/api/properties', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
                 if (!response) throw new Error('No response from API');
                 if (typeof response.json === 'function') {
                     if (!response.ok) throw new Error('API save failed');
-                    data = await response.json();
-                } else {
-                    data = response;
+                    await response.json();
                 }
                 // After a successful save, refresh server state so all devices sync
-                try { await loadProperties(); } catch(e) { /* ignore */ }
+                try { await loadProperties(); } catch (e) { /* ignore */ }
                 return property;
-            })
-            .catch(err => {
+            } catch (err) {
                 console.warn('saveProperty API failed, falling back to localStorage', err);
-                try{
-                    if(!Array.isArray(properties)){
+                try {
+                    if (!Array.isArray(properties)) {
                         console.warn('properties was not an array in saveProperty.catch; resetting to []', properties);
                         properties = [];
                     }
                     properties.push(property);
-                }catch(e){ console.error('Failed to push property to local properties array', e, properties); }
-                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+                } catch (e) { console.error('Failed to push property to local properties array', e, properties); }
+                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
                 return Promise.resolve(property);
-            });
+            }
         } catch (e) {
             // Fallback to localStorage
-            try{
-                if(!Array.isArray(properties)){
+            try {
+                if (!Array.isArray(properties)) {
                     console.warn('properties was not an array in saveProperty.fallback; resetting to []', properties);
                     properties = [];
                 }
                 properties.push(property);
-            }catch(errPush){ console.error('Failed to push property to local properties array (fallback)', errPush, properties); }
-            try { localStorage.setItem('properties', JSON.stringify(properties)); } catch(e){}
+            } catch (errPush) { console.error('Failed to push property to local properties array (fallback)', errPush, properties); }
+            try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
             return Promise.resolve(property);
         }
     }
