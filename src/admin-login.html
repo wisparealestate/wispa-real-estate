@@ -55,7 +55,8 @@
                 try {
                     if (isCrossOrigin) {
                         // Use redirect flow: POST to API to get a URL we can navigate to on the API origin
-                        const redirectRes = await fetch(apiBase + '/api/admin-login-redirect', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ username: email, password, returnTo: '/admin.html' }) });
+                        const returnTo = window.location.origin.replace(/\/$/, '') + '/admin.html';
+                        const redirectRes = await fetch(apiBase + '/api/admin-login-redirect', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ username: email, password, returnTo }) });
                         if (!redirectRes.ok) {
                             const err = await redirectRes.json().catch(()=>({error:'Login failed'}));
                             return showError(err.error || 'Login failed');
