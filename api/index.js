@@ -216,31 +216,145 @@ app.post('/api/admin/profile', async (req, res) => {
 });
 
 app.get('/api/property-requests', async (req, res) => {
-  res.status(501).json({ error: 'Property requests endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    const result = await pool.query('SELECT * FROM property_requests ORDER BY created_at DESC');
+    return res.json({ requests: result.rows });
+  } catch (err) {
+    // Fallback to file-backed store
+    try {
+      const rows = await readJson('property_requests.json');
+      return res.json({ requests: rows });
+    } catch (e) {
+      return res.status(500).json({ error: 'Property requests not available', details: err.message });
+    }
+  }
 });
 app.post('/api/property-requests', async (req, res) => {
-  res.status(501).json({ error: 'Property requests endpoint not implemented on server. Configure a DB-backed store.' });
+  const { userId, propertyId, message } = req.body || {};
+  const createdAt = new Date().toISOString();
+  try {
+    const insert = await pool.query(
+      'INSERT INTO property_requests (user_id, property_id, message, status, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [userId || null, propertyId || null, message || null, 'open', createdAt]
+    );
+    return res.json({ request: insert.rows[0] });
+  } catch (err) {
+    // Fallback to file JSON
+    try {
+      const arr = await readJson('property_requests.json');
+      const entry = { id: Date.now(), userId, propertyId, message, status: 'open', createdAt };
+      arr.unshift(entry);
+      await writeJson('property_requests.json', arr);
+      return res.json({ request: entry, fallback: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'Failed to create property request', details: err.message });
+    }
+  }
 });
 
 app.get('/api/contact-messages', async (req, res) => {
-  res.status(501).json({ error: 'Contact messages endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    const result = await pool.query('SELECT * FROM contact_messages ORDER BY created_at DESC');
+    return res.json({ messages: result.rows });
+  } catch (err) {
+    try {
+      const rows = await readJson('contact_messages.json');
+      return res.json({ messages: rows });
+    } catch (e) {
+      return res.status(500).json({ error: 'Contact messages not available', details: err.message });
+    }
+  }
 });
 app.post('/api/contact-messages', async (req, res) => {
-  res.status(501).json({ error: 'Contact messages endpoint not implemented on server. Configure a DB-backed store.' });
+  const { name, email, subject, message } = req.body || {};
+  const createdAt = new Date().toISOString();
+  try {
+    const insert = await pool.query(
+      'INSERT INTO contact_messages (name, email, subject, message, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [name || null, email || null, subject || null, message || null, createdAt]
+    );
+    return res.json({ message: insert.rows[0] });
+  } catch (err) {
+    try {
+      const arr = await readJson('contact_messages.json');
+      const entry = { id: Date.now(), name, email, subject, message, createdAt };
+      arr.unshift(entry);
+      await writeJson('contact_messages.json', arr);
+      return res.json({ message: entry, fallback: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'Failed to save contact message', details: err.message });
+    }
+  }
 });
 
 app.get('/api/notification-reactions', async (req, res) => {
-  res.status(501).json({ error: 'Notification reactions endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    const result = await pool.query('SELECT * FROM notification_reactions ORDER BY created_at DESC');
+    return res.json({ reactions: result.rows });
+  } catch (err) {
+    try {
+      const rows = await readJson('notification_reactions.json');
+      return res.json({ reactions: rows });
+    } catch (e) {
+      return res.status(500).json({ error: 'Notification reactions not available', details: err.message });
+    }
+  }
 });
 app.post('/api/notification-reactions', async (req, res) => {
-  res.status(501).json({ error: 'Notification reactions endpoint not implemented on server. Configure a DB-backed store.' });
+  const { notificationId, userId, reaction } = req.body || {};
+  const createdAt = new Date().toISOString();
+  try {
+    const insert = await pool.query(
+      'INSERT INTO notification_reactions (notification_id, user_id, reaction, created_at) VALUES ($1,$2,$3,$4) RETURNING *',
+      [notificationId || null, userId || null, reaction || null, createdAt]
+    );
+    return res.json({ reaction: insert.rows[0] });
+  } catch (err) {
+    try {
+      const arr = await readJson('notification_reactions.json');
+      const entry = { id: Date.now(), notificationId, userId, reaction, createdAt };
+      arr.unshift(entry);
+      await writeJson('notification_reactions.json', arr);
+      return res.json({ reaction: entry, fallback: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'Failed to record reaction', details: err.message });
+    }
+  }
 });
 
 app.get('/api/system-alerts', async (req, res) => {
-  res.status(501).json({ error: 'System alerts endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    const result = await pool.query('SELECT * FROM system_alerts ORDER BY created_at DESC');
+    return res.json({ alerts: result.rows });
+  } catch (err) {
+    try {
+      const rows = await readJson('system_alerts.json');
+      return res.json({ alerts: rows });
+    } catch (e) {
+      return res.status(500).json({ error: 'System alerts not available', details: err.message });
+    }
+  }
 });
 app.post('/api/system-alerts', async (req, res) => {
-  res.status(501).json({ error: 'System alerts endpoint not implemented on server. Configure a DB-backed store.' });
+  const { title, body, severity } = req.body || {};
+  const createdAt = new Date().toISOString();
+  try {
+    const insert = await pool.query(
+      'INSERT INTO system_alerts (title, body, severity, created_at) VALUES ($1,$2,$3,$4) RETURNING *',
+      [title || null, body || null, severity || 'info', createdAt]
+    );
+    return res.json({ alert: insert.rows[0] });
+  } catch (err) {
+    try {
+      const arr = await readJson('system_alerts.json');
+      const entry = { id: Date.now(), title, body, severity: severity || 'info', createdAt };
+      arr.unshift(entry);
+      await writeJson('system_alerts.json', arr);
+      return res.json({ alert: entry, fallback: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'Failed to create alert', details: err.message });
+    }
+  }
 });
 
 // Generic admin sync endpoint removed: file-backed sync is not allowed in DB-only mode
