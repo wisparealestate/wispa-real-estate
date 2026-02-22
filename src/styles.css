@@ -259,6 +259,33 @@ body {
     flex-wrap: nowrap;
 }
 
+/* Responsive header & compact post cards for consistent alignment across devices */
+.main-header { align-items: center; }
+.main-header .search-bar { height: 36px; min-height:36px; }
+.main-header .search-bar-wrapper input[type="text"] { height:36px; padding:0 36px 0 12px; box-sizing:border-box; }
+
+/* Compact post cards */
+.similar-property-image { height: 140px; max-height: 36vw; min-height:100px; object-fit:cover; }
+.similar-property-info { padding:10px; }
+
+/* Small screens: reduce gaps and stack when needed */
+@media (max-width: 600px) {
+    .main-header { padding:8px 12px; }
+    .main-header .search-bar { max-width: 100%; flex:1; order:2; margin-top:6px; }
+    .header-left, .header-right { flex:0 0 auto; }
+    .similar-property-image { height: 120px; }
+}
+
+/* Medium screens */
+@media (min-width: 601px) and (max-width: 1024px) {
+    .similar-property-image { height: 140px; }
+}
+
+/* Large screens */
+@media (min-width: 1025px) {
+    .similar-property-image { height: 160px; }
+}
+
 .header-left {
     display: flex;
     align-items: center;
