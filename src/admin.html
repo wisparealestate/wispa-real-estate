@@ -171,6 +171,7 @@
     <div class="tabs" role="tablist">
       <button class="tab-btn" data-tab="overview">Overview</button>
       <button class="tab-btn" data-tab="profile">Profile</button>
+      <button class="tab-btn" data-tab="create-post">Create Post</button>
       <button class="tab-btn" data-tab="requests">Requests</button>
       <button class="tab-btn" data-tab="messages">Messages</button>
       <button class="tab-btn" data-tab="alerts">Alerts</button>
@@ -246,6 +247,26 @@
       <h2>Sent Notifications</h2>
       <p><button id="refreshNotifications">Refresh</button></p>
       <div id="notificationsList">Loading notifications…</div>
+    </section>
+
+    <section id="create-post" class="tab-panel">
+      <h2>Create Property Post</h2>
+      <p>Use this form to create a new property post for users.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:920px">
+        <label style="display:block">Title<input id="postTitle" placeholder="Title" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="display:block">Price<input id="postPrice" placeholder="200000" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="display:block">Address<input id="postAddress" placeholder="123 Main St" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="display:block">Type<input id="postType" placeholder="house, apartment" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="display:block">For<select id="postFor" style="width:100%;padding:8px;margin-top:6px"><option value="sale">Sale</option><option value="rent">Rent</option></select></label>
+        <label style="display:block">Bedrooms<input id="postBeds" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="display:block">Bathrooms<input id="postBaths" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="display:block">Area (m²)<input id="postArea" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
+        <label style="grid-column:1 / -1;display:block">Description<textarea id="postDescription" rows="6" style="width:100%;padding:8px;margin-top:6px"></textarea></label>
+        <label style="grid-column:1 / -1;display:block">Image URLs (one per line)<textarea id="postImages" rows="3" placeholder="https://..." style="width:100%;padding:8px;margin-top:6px"></textarea></label>
+        <label style="grid-column:1 / -1;display:block"><input type="checkbox" id="postNotify"/> Notify users about this post</label>
+      </div>
+      <p style="margin-top:12px"><button id="createPostBtn">Create Post</button> <button id="createPostClear">Clear</button></p>
+      <div id="createPostStatus" style="margin-top:8px;color:#666"></div>
     </section>
 
       <section id="properties" class="tab-panel">
@@ -428,9 +449,9 @@
     document.getElementById('refreshOverview').addEventListener('click', loadOverview);
 
     // Data loaders for new panels
-    async function safeApi(path){
-      const fn = window.apiFetch ? window.apiFetch : (p,opts)=>fetch(p, Object.assign({credentials:'include'}, opts));
-      const res = await fn(path);
+    async function safeApi(path, opts){
+      const fn = window.apiFetch ? window.apiFetch : (p,o)=>fetch(p, Object.assign({credentials:'include'}, o));
+      const res = await fn(path, opts);
       if(!res.ok){ if(res.status===401){ location.href='/admin-login.html'; return null } throw new Error('API error '+res.status) }
       return res.json();
     }
@@ -648,6 +669,60 @@
     const userRoleEl = document.getElementById('userRole');
     if(userSearchEl) userSearchEl.addEventListener('input', ()=>renderUsersList(_usersCache));
     if(userRoleEl) userRoleEl.addEventListener('change', ()=>renderUsersList(_usersCache));
+
+    // Create post handler
+    document.getElementById('createPostBtn').addEventListener('click', async function(e){
+      e.preventDefault();
+      const btn = this; btn.disabled = true;
+      const status = document.getElementById('createPostStatus'); status.textContent = 'Creating post…';
+      const title = (document.getElementById('postTitle').value || '').trim();
+      if(!title){ status.textContent = 'Title is required'; btn.disabled = false; return; }
+      const price = (document.getElementById('postPrice').value || '').trim();
+      const address = (document.getElementById('postAddress').value || '').trim();
+      const type = (document.getElementById('postType').value || '').trim();
+      const saleRent = (document.getElementById('postFor').value || '').trim();
+      const beds = parseInt(document.getElementById('postBeds').value || '0') || 0;
+      const baths = parseInt(document.getElementById('postBaths').value || '0') || 0;
+      const area = parseFloat(document.getElementById('postArea').value || '0') || 0;
+      const description = (document.getElementById('postDescription').value || '').trim();
+      const imgLines = (document.getElementById('postImages').value || '').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const notify = !!document.getElementById('postNotify').checked;
+
+      const newProp = {
+        title: title,
+        address: address,
+        price: price,
+        type: type,
+        sale_rent: saleRent,
+        saleRent: saleRent,
+        bedrooms: beds,
+        bathrooms: baths,
+        area: area,
+        description: description,
+        images: imgLines,
+        photoUrls: imgLines
+      };
+
+      try{
+        // saveProperty returns a Promise
+        await saveProperty(newProp);
+        status.textContent = 'Post created.';
+        // refresh list
+        try{ await loadProperties(); }catch(e){}
+        // optionally notify users via admin API
+        if(notify){
+          try{
+            const titleNotif = 'New property: ' + title;
+            const bodyNotif = (description && description.slice(0,240)) || ('Check out our new property: '+ title);
+            await safeApi('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: titleNotif, body: bodyNotif, data: { url: window.location.origin + '/src/property-detail.html?id='+ (newProp.id||'') , property: newProp } }) });
+            status.textContent = 'Post created and users notified.';
+          }catch(e){ status.textContent = 'Post created but failed to notify users.'; }
+        }
+      }catch(err){ status.textContent = 'Failed to create post.'; console.error(err); }
+      btn.disabled = false;
+    });
+
+    document.getElementById('createPostClear').addEventListener('click', function(e){ e.preventDefault(); ['postTitle','postPrice','postAddress','postType','postBeds','postBaths','postArea','postDescription','postImages'].forEach(id=>{ try{ document.getElementById(id).value=''; }catch(e){} }); document.getElementById('postNotify').checked = false; document.getElementById('createPostStatus').textContent=''; });
 
     // Init tab from hash or default and load data
     const initial = (location.hash && location.hash.slice(1)) || 'overview';
