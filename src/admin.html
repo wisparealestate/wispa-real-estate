@@ -83,9 +83,13 @@
     .menu-dropdown a{ display:block; padding:8px 12px; color:inherit; text-decoration:none }
     .menu-dropdown a:hover{ background:#f6f6f6 }
     .admin-main{ padding:18px }
-    .tabs { display:flex; gap:8px; margin-bottom:12px }
-    .tab-btn { padding:8px 12px; background:#f1f5f9; border-radius:6px; cursor:pointer }
+    .tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center }
+    .tab-btn { padding:8px 12px; background:#f1f5f9; border-radius:6px; cursor:pointer; flex:0 1 auto; min-width:0; white-space:nowrap; font-size:0.95rem }
     .tab-btn.active { background:var(--brand, #1e88e5); color:#fff }
+    @media (max-width: 600px){
+      .tabs { gap:6px }
+      .tab-btn { padding:6px 8px; font-size:0.88rem }
+    }
     .tab-panel { display:none }
     .tab-panel.active { display:block }
     .profile-field { margin:8px 0 }
