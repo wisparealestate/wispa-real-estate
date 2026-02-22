@@ -45,70 +45,36 @@
     <script>
         const form = document.getElementById('adminLoginForm');
         const errorDiv = document.getElementById('adminLoginError');
-        form.addEventListener('submit', async function(e){
-            e.preventDefault();
-            errorDiv.style.display = 'none';
-            const email = document.getElementById('adminEmail').value.trim();
-            const password = document.getElementById('adminPassword').value;
-            if (!email || !password) {
-                errorDiv.textContent = 'Please enter both email and password.';
-                errorDiv.style.display = 'block';
-                return;
-            }
-            try {
-                // Build a robust API URL: prefer configured `window.WISPA_API_BASE`, otherwise use same-origin
-                const apiBase = (window.WISPA_API_BASE && String(window.WISPA_API_BASE).replace(/\/$/, '')) || '';
-                const target = apiBase ? apiBase + '/api/admin-login' : '/api/admin-login';
-                const res = await fetch(target, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: email, password })
-                });
-                if (!res || !res.ok) {
-                    const data = res ? await res.json().catch(() => ({})) : {};
-                    errorDiv.textContent = data.error || 'Invalid credentials.';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-                const data = await res.json().catch(() => ({}));
-                console.debug('admin-login response data', data);
-                const user = data && (data.user || data.admin || data.user);
-                if (!user || user.role !== 'admin') {
-                    errorDiv.textContent = 'Account is not an admin.';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-                // Immediate UI fallback: if server returned an admin user, navigate right away
-                try{
-                    window.location.href = 'admin.html';
-                }catch(e){ /* ignore */ }
-                // Verify session was set by asking /api/me with credentials included
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorDiv.style.display = 'none';
+                const email = document.getElementById('adminEmail').value.trim();
+                const password = document.getElementById('adminPassword').value;
+                const apiBase = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+                const isCrossOrigin = apiBase && (new URL(apiBase)).origin !== window.location.origin;
                 try {
-                    const meRes = await fetch(apiBase ? apiBase + '/api/me' : '/api/me', { credentials: 'include' });
-                    console.debug('/api/me status', meRes && meRes.status);
-                    if (meRes && meRes.ok) {
-                        const meJson = await meRes.json().catch(() => ({}));
-                        console.debug('/api/me body', meJson);
-                        if (meJson && meJson.user && meJson.user.role === 'admin') {
-                            window.location.href = 'admin.html';
+                    if (isCrossOrigin) {
+                        // Use redirect flow: POST to API to get a URL we can navigate to on the API origin
+                        const redirectRes = await fetch(apiBase + '/api/admin-login-redirect', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ username: email, password, returnTo: '/admin.html' }) });
+                        if (!redirectRes.ok) {
+                            const err = await redirectRes.json().catch(()=>({error:'Login failed'}));
+                            return showError(err.error || 'Login failed');
+                        }
+                        const payload = await redirectRes.json();
+                        if (payload && payload.url) {
+                            window.location.href = payload.url;
                             return;
                         }
+                        return showError('Login redirect failed');
+                    } else {
+                        // same-origin API: do normal fetch with credentials
+                        const res = await fetch((apiBase || '') + '/api/admin-login', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ username: email, password }), credentials: 'include' });
+                        const j = await res.json().catch(()=>null);
+                        if (!res.ok) return showError((j && j.error) || 'Login failed');
+                        // navigate to admin UI on same origin
+                        window.location.href = 'admin.html';
                     }
-                    // If we reach here, session cookie might not be accepted by the browser (cross-site cookie or CORS issue)
-                    errorDiv.textContent = 'Login succeeded but session cookie was not accepted by the browser. Check CORS and cookie settings (SameSite/secure).';
-                    errorDiv.style.display = 'block';
-                    return;
-                } catch (e) {
-                    console.error('session verify error', e);
-                    errorDiv.textContent = 'Login succeeded but verifying session failed.';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-            } catch (err) {
-                errorDiv.textContent = 'Login failed. Please try again.';
-                errorDiv.style.display = 'block';
-            }
+                } catch (e) { showError('Network error'); }
         });
     </script>
 </body>

@@ -565,6 +565,40 @@ app.post("/api/admin-login", async (req, res) => {
   }
 });
 
+// Admin login redirect flow for cross-origin login: returns a URL on the API host
+app.post('/api/admin-login-redirect', async (req, res) => {
+  const { username, password, returnTo } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+  try {
+    const result = await pool.query("SELECT * FROM admin_logins WHERE username = $1 OR email = $1", [username]);
+    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    const admin = result.rows[0];
+    const match = await bcrypt.compare(password, admin.password_hash || '');
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+    // Create a short-lived session token and return a URL that will set it on the API origin
+    const token = createSessionToken(admin.id, 60); // 60s short-lived token
+    const host = (process.env.API_HOST || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
+    const redirectPath = returnTo ? encodeURIComponent(returnTo) : encodeURIComponent('/admin.html');
+    const url = `${host}/set-session?st=${encodeURIComponent(token)}&r=${redirectPath}`;
+    return res.json({ url });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
+// Set session token via query and redirect to UI (used by cross-origin login flow)
+app.get('/set-session', async (req, res) => {
+  const st = req.query.st;
+  const r = req.query.r || '/admin.html';
+  if (!st) return res.status(400).send('Missing token');
+  try {
+    // validate token briefly
+    const payload = parseSessionToken(st);
+    if (!payload || !payload.uid) return res.status(400).send('Invalid token');
+    const cookieOpts = { httpOnly: true, sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', secure: process.env.NODE_ENV === 'production', maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
+    res.cookie('wispa_session', st, cookieOpts);
+    return res.redirect(r);
+  } catch (e) { return res.status(500).send('Failed to set session'); }
+});
+
 
 // Get all users
 app.get("/api/users", async (req, res) => {
