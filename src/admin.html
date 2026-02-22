@@ -262,7 +262,12 @@
         <label style="display:block">Bathrooms<input id="postBaths" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
         <label style="display:block">Area (m²)<input id="postArea" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
         <label style="grid-column:1 / -1;display:block">Description<textarea id="postDescription" rows="6" style="width:100%;padding:8px;margin-top:6px"></textarea></label>
-        <label style="grid-column:1 / -1;display:block">Image URLs (one per line)<textarea id="postImages" rows="3" placeholder="https://..." style="width:100%;padding:8px;margin-top:6px"></textarea></label>
+        <label style="grid-column:1 / -1;display:block">Select Images (you can choose multiple)</label>
+        <div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center">
+          <input id="postImagesFiles" type="file" accept="image/*" multiple style="flex:0 0 auto" />
+          <div id="postImagesPreview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+        <label style="grid-column:1 / -1;display:block">Or paste image URLs (one per line)<textarea id="postImages" rows="3" placeholder="https://..." style="width:100%;padding:8px;margin-top:6px"></textarea></label>
         <label style="grid-column:1 / -1;display:block"><input type="checkbox" id="postNotify"/> Notify users about this post</label>
       </div>
       <p style="margin-top:12px"><button id="createPostBtn">Create Post</button> <button id="createPostClear">Clear</button></p>
@@ -671,6 +676,38 @@
     if(userRoleEl) userRoleEl.addEventListener('change', ()=>renderUsersList(_usersCache));
 
     // Create post handler
+    // helper to read files as data URLs
+    function readFilesAsDataURLs(fileList){
+      return Promise.all(Array.from(fileList || []).map(f=>new Promise((resolve,reject)=>{
+        const r = new FileReader(); r.onload = ()=>resolve(r.result); r.onerror = ()=>reject(new Error('File read error')); r.readAsDataURL(f);
+      })));
+    }
+
+    // render previews for selected files
+    const postFilesEl = document.getElementById('postImagesFiles');
+    const postPreview = document.getElementById('postImagesPreview');
+    if(postFilesEl){
+      postFilesEl.addEventListener('change', (ev)=>{
+        // clear existing previews
+        try{ postPreview.innerHTML = ''; }catch(e){}
+        const files = ev.target.files || [];
+        Array.from(files).forEach(f=>{
+          try{
+            const url = URL.createObjectURL(f);
+            const img = document.createElement('img'); img.src = url; img.style.width='84px'; img.style.height='64px'; img.style.objectFit='cover'; img.style.borderRadius='6px'; img.title = f.name;
+            const wrapper = document.createElement('div'); wrapper.style.position='relative'; wrapper.appendChild(img);
+            const btn = document.createElement('button'); btn.textContent='✕'; btn.title='Remove'; btn.style.position='absolute'; btn.style.top='4px'; btn.style.right='4px'; btn.style.background='rgba(0,0,0,0.5)'; btn.style.color='#fff'; btn.style.border='0'; btn.style.borderRadius='50%'; btn.style.width='22px'; btn.style.height='22px'; btn.style.cursor='pointer';
+            btn.addEventListener('click', ()=>{
+              // remove file from input by rebuilding FileList via DataTransfer
+              const dt = new DataTransfer(); Array.from(postFilesEl.files).forEach(existing => { if(existing !== f) dt.items.add(existing); }); postFilesEl.files = dt.files; img.remove(); try{ URL.revokeObjectURL(url); }catch(e){}
+            });
+            wrapper.appendChild(btn);
+            postPreview.appendChild(wrapper);
+          }catch(e){ }
+        });
+      });
+    }
+
     document.getElementById('createPostBtn').addEventListener('click', async function(e){
       e.preventDefault();
       const btn = this; btn.disabled = true;
@@ -686,6 +723,7 @@
       const area = parseFloat(document.getElementById('postArea').value || '0') || 0;
       const description = (document.getElementById('postDescription').value || '').trim();
       const imgLines = (document.getElementById('postImages').value || '').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const selectedFiles = (postFilesEl && postFilesEl.files && postFilesEl.files.length) ? Array.from(postFilesEl.files) : [];
       const notify = !!document.getElementById('postNotify').checked;
 
       const newProp = {
@@ -704,6 +742,26 @@
       };
 
       try{
+        // If admin selected files, try to upload them first
+        if(selectedFiles.length){
+          try{
+            const fd = new FormData(); selectedFiles.forEach(f=>fd.append('files', f));
+            const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+            const upResp = await poster('/api/upload-photos', { method: 'POST', body: fd });
+            if(upResp && upResp.ok){
+              const upJson = await upResp.json();
+              const urls = Array.isArray(upJson.urls) ? upJson.urls : (upJson && upJson.uploaded) ? upJson.uploaded : [];
+              if(urls && urls.length){ newProp.images = urls; newProp.photoUrls = urls; }
+            } else {
+              // upload failed — fallback to storing data-URLs locally
+              const dataUrls = await readFilesAsDataURLs(selectedFiles);
+              newProp.photoUrls = (newProp.photoUrls||[]).concat(dataUrls);
+            }
+          }catch(e){
+            // fallback: read as data URLs and let saveProperty store them locally
+            try{ const dataUrls = await readFilesAsDataURLs(selectedFiles); newProp.photoUrls = (newProp.photoUrls||[]).concat(dataUrls); }catch(e){}
+          }
+        }
         // saveProperty returns a Promise
         await saveProperty(newProp);
         status.textContent = 'Post created.';
