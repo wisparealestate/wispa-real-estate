@@ -677,6 +677,46 @@ app.post('/api/logout', async (req, res) => {
   }
 });
 
+// Persist user acceptance of agreements. This endpoint is best-effort: if the
+// `users` table contains an `agreements_accepted` (or similar) boolean column
+// it will be updated. Otherwise we fall back to a file-backed store so the
+// frontend can call this endpoint without receiving a 404.
+app.post('/api/users/accept-agreements', async (req, res) => {
+  try {
+    // Prefer session user when available
+    let userId = null;
+    try{
+      const u = await getSessionUser(req);
+      if (u && u.id) userId = u.id;
+    }catch(e){}
+
+    // Accept explicit userId in body as a best-effort fallback
+    if(!userId && req.body && req.body.userId) userId = req.body.userId;
+    if(!userId) return res.status(400).json({ error: 'Missing userId' });
+
+    // Try to update DB column if present
+    try {
+      await pool.query('UPDATE users SET agreements_accepted = true WHERE id = $1', [userId]);
+      return res.json({ success: true });
+    } catch (e) {
+      // If column doesn't exist or DB update fails, fall back to file store
+      try {
+        const arr = await readJson('agreements.json');
+        const entry = { userId: userId, acceptedAt: new Date().toISOString() };
+        // replace existing entry for userId if present
+        const idx = arr.findIndex(x => String(x.userId) === String(userId));
+        if (idx > -1) arr[idx] = entry; else arr.unshift(entry);
+        await writeJson('agreements.json', arr);
+        return res.json({ success: true, fallback: true });
+      } catch (e2) {
+        return res.status(500).json({ error: 'Failed to persist acceptance', details: e2.message });
+      }
+    }
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin login (authenticate against `users` table and set session cookie)
 app.post("/api/admin-login", async (req, res) => {
   const { username, password } = req.body;
