@@ -114,8 +114,10 @@
 
     async function loadProfile(){
       try{
-        const res = await window.apiFetch ? apiFetch('/api/admin/profile') : fetch('/api/admin/profile',{credentials:'include'});
-        if(!res.ok){ if(res.status===401){ location.href='/admin-login.html'; return } throw new Error('Failed'); }
+        let res;
+        if (window.apiFetch) res = await window.apiFetch('/api/admin/profile');
+        else res = await fetch('/api/admin/profile',{credentials:'include'});
+        if(!res || !res.ok){ if(res && res.status===401){ location.href='/admin-login.html'; return } throw new Error('Failed'); }
         const data = await res.json();
         document.getElementById('profileName').textContent = data.name || data.username || 'Admin';
         document.getElementById('profileEmail').textContent = data.email || '—';
@@ -132,7 +134,7 @@
 
     // Data loaders for new panels
     async function safeApi(path){
-      const fn = window.apiFetch ? apiFetch : (p,opts)=>fetch(p, Object.assign({credentials:'include'}, opts));
+      const fn = window.apiFetch ? window.apiFetch : (p,opts)=>fetch(p, Object.assign({credentials:'include'}, opts));
       const res = await fn(path);
       if(!res.ok){ if(res.status===401){ location.href='/admin-login.html'; return null } throw new Error('API error '+res.status) }
       return res.json();
