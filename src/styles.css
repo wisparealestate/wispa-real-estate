@@ -238,7 +238,7 @@ body {
     max-width: 1200px;
     width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 12px 20px 20px 20px;
     background: white;
 }
 
@@ -250,12 +250,12 @@ body {
     align-items: center;
     justify-content: space-between;
     background: var(--white);
-    padding: 12px 20px;
+    padding: 10px 18px;
     box-shadow: var(--shadow);
     border-radius: 8px;
-    margin-bottom: 20px;
-    gap: 15px;
-    min-height: 70px;
+    margin-bottom: 18px;
+    gap: 12px;
+    min-height: 60px;
     flex-wrap: nowrap;
 }
 
@@ -309,11 +309,12 @@ body {
 
 .search-bar-wrapper input[type="text"] {
     width: 100%;
-    padding: 12.5px 40px 12.5px 14px;
+    padding: 10px 36px 10px 12px;
     border: none;
     border-radius: 6px;
     font-size: 14px;
     outline: none;
+    line-height: 1; /* keep input height compact */
 }
 
 .search-icon {
@@ -334,15 +335,15 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 8px;
+    padding: 6px;
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text);
     transition: all 0.2s ease;
-    height: 40px;
-    width: 40px;
+    height: 36px;
+    width: 36px;
 }
 
 /* Nav unread badge (header / hamburger / sidebar) */
@@ -458,8 +459,8 @@ body {
    ================================================== */
 .quick-search {
     background: var(--white);
-    padding: 25px;
-    margin-bottom: 30px;
+    padding: 18px 20px;
+    margin: 0 0 20px 0;
     border-radius: 8px;
     box-shadow: var(--shadow);
 }
@@ -467,7 +468,7 @@ body {
 .quick-search h2 {
     text-align: center;
     font-size: 24px;
-    margin: 0 0 20px 0;
+    margin: 0 0 12px 0;
     color: var(--text);
 }
 
@@ -1974,11 +1975,11 @@ body.home .property-image-container button.like-btn {
 }
 .similar-property-image {
     width: 100%;
-    height: 200px;
+    height: 140px;
     object-fit: cover;
 }
 .similar-property-info {
-    padding: 15px;
+    padding: 12px;
     flex: 1;
     display: flex;
     flex-direction: column;
