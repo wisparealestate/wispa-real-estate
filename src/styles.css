@@ -1226,6 +1226,38 @@ body.home .property-image-container button.like-btn {
     flex: 1;
 }
 
+/* Make calculator and valuation panels match the service-card design
+   so Mortgage Calculator and Property Valuation appear with the
+   same width, height and visual style as the Property Rentals card. */
+.calculator-panel, .valuation-panel {
+    background: var(--white);
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    text-align: left;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 360px;
+    width: 100%;
+    margin: 0 auto 12px auto; /* center within main container */
+}
+
+.calculator-panel h3, .valuation-panel h3 { margin: 0 0 8px 0; }
+
+.calculator-panel .form-row, .valuation-panel .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.calculator-panel .actions-row, .valuation-panel .actions-row {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+}
+
 /* ==================================================
    SERVICES HERO + SMALL ADJUSTMENTS
    ================================================== */
