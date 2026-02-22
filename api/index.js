@@ -173,7 +173,21 @@ app.post('/api/admin/sent-notifications', async (req, res) => {
 });
 
 app.get('/api/admin/profile', async (req, res) => {
-  res.status(501).json({ error: 'Admin profile endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    const user = req.currentUser || null;
+    if (!user) return res.status(401).json({ error: 'Admin authentication required' });
+    // Build a presentation-friendly profile object for admin UI
+    const profile = {
+      adminName: user.full_name || user.username || user.email || null,
+      adminRole: user.role || 'admin',
+      adminEmail: user.email || user.username || null,
+      adminAvatar: user.avatar_url || user.avatar || null,
+      adminSince: user.created_at ? new Date(user.created_at).toISOString() : null
+    };
+    return res.json({ profile });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to load admin profile', details: e.message });
+  }
 });
 app.post('/api/admin/profile', async (req, res) => {
   res.status(501).json({ error: 'Admin profile endpoint not implemented on server. Configure a DB-backed store.' });
