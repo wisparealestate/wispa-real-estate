@@ -298,6 +298,7 @@ body {
     border: 1px solid var(--border);
     border-radius: 6px;
     background: var(--white);
+    height: 36px; /* ensure same height as header icons */
 }
 
 .search-bar-wrapper {
@@ -309,12 +310,15 @@ body {
 
 .search-bar-wrapper input[type="text"] {
     width: 100%;
-    padding: 10px 36px 10px 12px;
+    padding: 0 36px 0 12px;
     border: none;
     border-radius: 6px;
     font-size: 14px;
     outline: none;
     line-height: 1; /* keep input height compact */
+    height: 36px; /* explicit height to align with icons */
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .search-icon {
@@ -1975,11 +1979,11 @@ body.home .property-image-container button.like-btn {
 }
 .similar-property-image {
     width: 100%;
-    height: 140px;
+    height: 120px; /* reduced for a more compact card */
     object-fit: cover;
 }
 .similar-property-info {
-    padding: 12px;
+    padding: 10px; /* slightly smaller padding */
     flex: 1;
     display: flex;
     flex-direction: column;
