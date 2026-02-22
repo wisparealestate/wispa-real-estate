@@ -96,13 +96,22 @@
 
       <section id="properties" class="tab-panel">
         <h2>Properties</h2>
-        <p><button id="refreshProperties">Refresh</button></p>
+        <p>
+          <button id="refreshProperties">Refresh</button>
+          <label style="margin-left:12px">Search: <input id="propSearch" placeholder="title or address" style="min-width:180px"></label>
+          <label style="margin-left:8px">Type: <input id="propType" placeholder="house, apartment" style="width:120px"></label>
+          <label style="margin-left:8px">For: <select id="propSaleRent"><option value="">All</option><option value="sale">Sale</option><option value="rent">Rent</option></select></label>
+        </p>
         <div id="propertiesList">Loading properties…</div>
       </section>
 
       <section id="users" class="tab-panel">
         <h2>Users</h2>
-        <p><button id="refreshUsers">Refresh</button></p>
+        <p>
+          <button id="refreshUsers">Refresh</button>
+          <label style="margin-left:12px">Search: <input id="userSearch" placeholder="name or email" style="min-width:200px"></label>
+          <label style="margin-left:8px">Role: <select id="userRole"><option value="">All</option><option value="user">User</option><option value="admin">Admin</option></select></label>
+        </p>
         <div id="usersList">Loading users…</div>
       </section>
   </main>
@@ -204,38 +213,69 @@
     }
 
     // Properties
+    let _propertiesCache = [];
     async function loadProperties(){
       const out = document.getElementById('propertiesList');
       out.textContent = 'Loading…';
       try{
         const data = await safeApi('/api/properties');
         if(!data) return;
-        const rows = Array.isArray(data.properties) ? data.properties : (data || []).properties || [];
+        let rows = Array.isArray(data.properties) ? data.properties : (data || {}).properties || [];
         if(!Array.isArray(rows)) rows = [];
-        out.innerHTML = rows.length ? '<ul>'+rows.map(p=>`<li><strong>${escapeHtml(p.title||p.address||('Property #'+(p.id||'')))}</strong> — id:${escapeHtml(p.id||'')}, images:${(p.images||[]).length || 0} <button data-id="${escapeHtml(p.id||'') }" class="delete-prop">Delete</button></li>`).join('')+'</ul>' : 'No properties.';
-        // wire delete buttons
-        out.querySelectorAll('.delete-prop').forEach(b=>b.addEventListener('click', async (e)=>{
-          const id = b.dataset.id || e.target.getAttribute('data-id');
-          if(!id) return alert('Missing id');
-          if(!confirm('Delete property '+id+'?')) return;
-          try{
-            const res = window.apiFetch ? await window.apiFetch('/api/properties/'+encodeURIComponent(id), { method: 'DELETE' }) : await fetch('/api/properties/'+encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
-            if(res && res.ok) { loadProperties(); } else { alert('Failed to delete property'); }
-          }catch(err){ alert('Delete error'); }
-        }));
+        _propertiesCache = rows;
+        renderPropertiesList(rows);
       }catch(e){ out.textContent = 'Failed to load properties.' }
     }
 
+    function renderPropertiesList(rows){
+      const out = document.getElementById('propertiesList');
+      const q = (document.getElementById('propSearch') && document.getElementById('propSearch').value || '').trim().toLowerCase();
+      const type = (document.getElementById('propType') && document.getElementById('propType').value || '').trim().toLowerCase();
+      const saleRent = (document.getElementById('propSaleRent') && document.getElementById('propSaleRent').value || '').trim().toLowerCase();
+      let filtered = rows.filter(p => {
+        if(q){ const hay = ((p.title||'')+' '+(p.address||'')+' '+(p.description||'')).toLowerCase(); if(hay.indexOf(q) === -1) return false; }
+        if(type){ if(!p.type || String(p.type).toLowerCase().indexOf(type) === -1) return false; }
+        if(saleRent){ if(!p.sale_rent || String(p.sale_rent).toLowerCase() !== saleRent) return false; }
+        return true;
+      });
+      out.innerHTML = filtered.length ? '<ul>'+filtered.map(p=>`<li><strong>${escapeHtml(p.title||p.address||('Property #'+(p.id||'')))}</strong> — id:${escapeHtml(p.id||'')}, images:${(p.images||[]).length || 0} <button data-id="${escapeHtml(p.id||'') }" class="delete-prop">Delete</button></li>`).join('')+'</ul>' : 'No properties.';
+      // wire delete buttons
+      out.querySelectorAll('.delete-prop').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = b.dataset.id || e.target.getAttribute('data-id');
+        if(!id) return alert('Missing id');
+        if(!confirm('Delete property '+id+'?')) return;
+        try{
+          const res = window.apiFetch ? await window.apiFetch('/api/properties/'+encodeURIComponent(id), { method: 'DELETE' }) : await fetch('/api/properties/'+encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+          if(res && res.ok) { loadProperties(); } else { alert('Failed to delete property'); }
+        }catch(err){ alert('Delete error'); }
+      }));
+    }
+
     // Users
+    let _usersCache = [];
     async function loadUsers(){
       const out = document.getElementById('usersList');
       out.textContent = 'Loading…';
       try{
         const data = await safeApi('/api/users');
         if(!data) return;
-        const rows = Array.isArray(data.users) ? data.users : (data && data.users) || [];
-        out.innerHTML = rows.length ? '<ul>'+rows.map(u=>`<li><strong>${escapeHtml(u.full_name||u.username||'User')}</strong> — ${escapeHtml(u.email||'')} (role:${escapeHtml(u.role||'')})</li>`).join('')+'</ul>' : 'No users.';
+        let rows = Array.isArray(data.users) ? data.users : (data && data.users) || [];
+        if(!Array.isArray(rows)) rows = [];
+        _usersCache = rows;
+        renderUsersList(rows);
       }catch(e){ out.textContent = 'Failed to load users.' }
+    }
+
+    function renderUsersList(rows){
+      const out = document.getElementById('usersList');
+      const q = (document.getElementById('userSearch') && document.getElementById('userSearch').value || '').trim().toLowerCase();
+      const role = (document.getElementById('userRole') && document.getElementById('userRole').value || '').trim().toLowerCase();
+      let filtered = rows.filter(u => {
+        if(q){ const hay = ((u.full_name||'')+' '+(u.username||'')+' '+(u.email||'')).toLowerCase(); if(hay.indexOf(q) === -1) return false; }
+        if(role){ if(!u.role || String(u.role).toLowerCase() !== role) return false; }
+        return true;
+      });
+      out.innerHTML = filtered.length ? '<ul>'+filtered.map(u=>`<li><strong>${escapeHtml(u.full_name||u.username||'User')}</strong> — ${escapeHtml(u.email||'')} (role:${escapeHtml(u.role||'')})</li>`).join('')+'</ul>' : 'No users.';
     }
 
     // Overview
@@ -291,6 +331,17 @@
     document.getElementById('refreshNotifications').addEventListener('click', loadNotifications);
     document.getElementById('refreshProperties').addEventListener('click', loadProperties);
     document.getElementById('refreshUsers').addEventListener('click', loadUsers);
+    // wire filters
+    const propSearchEl = document.getElementById('propSearch');
+    const propTypeEl = document.getElementById('propType');
+    const propSaleRentEl = document.getElementById('propSaleRent');
+    if(propSearchEl) propSearchEl.addEventListener('input', ()=>renderPropertiesList(_propertiesCache));
+    if(propTypeEl) propTypeEl.addEventListener('input', ()=>renderPropertiesList(_propertiesCache));
+    if(propSaleRentEl) propSaleRentEl.addEventListener('change', ()=>renderPropertiesList(_propertiesCache));
+    const userSearchEl = document.getElementById('userSearch');
+    const userRoleEl = document.getElementById('userRole');
+    if(userSearchEl) userSearchEl.addEventListener('input', ()=>renderUsersList(_usersCache));
+    if(userRoleEl) userRoleEl.addEventListener('change', ()=>renderUsersList(_usersCache));
 
     // Init tab from hash or default and load data
     const initial = (location.hash && location.hash.slice(1)) || 'overview';
