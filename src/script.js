@@ -86,7 +86,12 @@ async function uploadLocalPhotosForProperty(property){
     if(!blobs.length) return null;
     try{
         const form = new FormData();
-        blobs.forEach((b,idx)=> form.append('files', b, `photo-${Date.now()}-${idx}.jpg`));
+        blobs.forEach((b,idx)=>{
+            let ext = 'bin';
+            try{ if(b && b.type){ const parts = b.type.split('/'); if(parts[1]) ext = parts[1].split('+')[0]; } }catch(e){}
+            const name = `file-${Date.now()}-${idx}.${ext}`;
+            form.append('files', b, name);
+        });
         const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
         const resp = await poster('/api/upload-photos', { method: 'POST', body: form });
         if(!resp || !resp.ok) throw new Error('upload failed');

@@ -262,12 +262,13 @@
         <label style="display:block">Bathrooms<input id="postBaths" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
         <label style="display:block">Area (m²)<input id="postArea" type="number" min="0" style="width:100%;padding:8px;margin-top:6px"/></label>
         <label style="grid-column:1 / -1;display:block">Description<textarea id="postDescription" rows="6" style="width:100%;padding:8px;margin-top:6px"></textarea></label>
-        <label style="grid-column:1 / -1;display:block">Select Images (you can choose multiple)</label>
+        
+        <label style="display:block">Post to<select id="postTo" style="width:100%;padding:8px;margin-top:6px"><option value="available">Available</option><option value="hot">Hot</option><option value="featured">Featured</option></select></label>
+        <label style="grid-column:1 / -1;display:block">Select Images/Videos (you can choose multiple)</label>
         <div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center">
-          <input id="postImagesFiles" type="file" accept="image/*" multiple style="flex:0 0 auto" />
+          <input id="postImagesFiles" type="file" accept="image/*,video/*" multiple style="flex:0 0 auto" />
           <div id="postImagesPreview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
         </div>
-        <label style="grid-column:1 / -1;display:block">Or paste image URLs (one per line)<textarea id="postImages" rows="3" placeholder="https://..." style="width:100%;padding:8px;margin-top:6px"></textarea></label>
         <label style="grid-column:1 / -1;display:block"><input type="checkbox" id="postNotify"/> Notify users about this post</label>
       </div>
       <p style="margin-top:12px"><button id="createPostBtn">Create Post</button> <button id="createPostClear">Clear</button></p>
@@ -694,12 +695,19 @@
         Array.from(files).forEach(f=>{
           try{
             const url = URL.createObjectURL(f);
-            const img = document.createElement('img'); img.src = url; img.style.width='84px'; img.style.height='64px'; img.style.objectFit='cover'; img.style.borderRadius='6px'; img.title = f.name;
-            const wrapper = document.createElement('div'); wrapper.style.position='relative'; wrapper.appendChild(img);
+            let mediaEl;
+            if(f.type && f.type.indexOf('video/') === 0){
+              mediaEl = document.createElement('video');
+              mediaEl.src = url; mediaEl.controls = true; mediaEl.muted = true; mediaEl.style.width='140px'; mediaEl.style.height='80px'; mediaEl.style.objectFit='cover'; mediaEl.title = f.name;
+            } else {
+              mediaEl = document.createElement('img'); mediaEl.src = url; mediaEl.style.width='120px'; mediaEl.style.height='80px'; mediaEl.style.objectFit='cover'; mediaEl.title = f.name;
+            }
+            mediaEl.style.borderRadius = '6px';
+            const wrapper = document.createElement('div'); wrapper.style.position='relative'; wrapper.appendChild(mediaEl);
             const btn = document.createElement('button'); btn.textContent='✕'; btn.title='Remove'; btn.style.position='absolute'; btn.style.top='4px'; btn.style.right='4px'; btn.style.background='rgba(0,0,0,0.5)'; btn.style.color='#fff'; btn.style.border='0'; btn.style.borderRadius='50%'; btn.style.width='22px'; btn.style.height='22px'; btn.style.cursor='pointer';
             btn.addEventListener('click', ()=>{
               // remove file from input by rebuilding FileList via DataTransfer
-              const dt = new DataTransfer(); Array.from(postFilesEl.files).forEach(existing => { if(existing !== f) dt.items.add(existing); }); postFilesEl.files = dt.files; img.remove(); try{ URL.revokeObjectURL(url); }catch(e){}
+              const dt = new DataTransfer(); Array.from(postFilesEl.files).forEach(existing => { if(existing !== f) dt.items.add(existing); }); postFilesEl.files = dt.files; wrapper.remove(); try{ URL.revokeObjectURL(url); }catch(e){}
             });
             wrapper.appendChild(btn);
             postPreview.appendChild(wrapper);
@@ -722,8 +730,8 @@
       const baths = parseInt(document.getElementById('postBaths').value || '0') || 0;
       const area = parseFloat(document.getElementById('postArea').value || '0') || 0;
       const description = (document.getElementById('postDescription').value || '').trim();
-      const imgLines = (document.getElementById('postImages').value || '').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
       const selectedFiles = (postFilesEl && postFilesEl.files && postFilesEl.files.length) ? Array.from(postFilesEl.files) : [];
+      const postTo = (document.getElementById('postTo') && document.getElementById('postTo').value) ? document.getElementById('postTo').value : 'available';
       const notify = !!document.getElementById('postNotify').checked;
 
       const newProp = {
@@ -737,8 +745,9 @@
         bathrooms: baths,
         area: area,
         description: description,
-        images: imgLines,
-        photoUrls: imgLines
+        images: [],
+        photoUrls: [],
+        post_to: postTo
       };
 
       try{
@@ -780,7 +789,7 @@
       btn.disabled = false;
     });
 
-    document.getElementById('createPostClear').addEventListener('click', function(e){ e.preventDefault(); ['postTitle','postPrice','postAddress','postType','postBeds','postBaths','postArea','postDescription','postImages'].forEach(id=>{ try{ document.getElementById(id).value=''; }catch(e){} }); document.getElementById('postNotify').checked = false; document.getElementById('createPostStatus').textContent=''; });
+    document.getElementById('createPostClear').addEventListener('click', function(e){ e.preventDefault(); ['postTitle','postPrice','postAddress','postType','postBeds','postBaths','postArea','postDescription'].forEach(id=>{ try{ document.getElementById(id).value=''; }catch(e){} }); try{ document.getElementById('postTo').value = 'available'; }catch(e){}; try{ postFilesEl.value = ''; postPreview.innerHTML = ''; }catch(e){}; document.getElementById('postNotify').checked = false; document.getElementById('createPostStatus').textContent=''; });
 
     // Init tab from hash or default and load data
     const initial = (location.hash && location.hash.slice(1)) || 'overview';
