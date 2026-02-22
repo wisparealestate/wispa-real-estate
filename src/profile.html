@@ -929,8 +929,30 @@
             } catch(e) {}
             try {
                 const u = await window.getCurrentUser();
-                if (u && u.username) {
-                    user = u;
+                if (u && (u.username || u.email)) {
+                    // If this is an admin account, try to load the admin-specific profile
+                    if (u.role === 'admin') {
+                        try {
+                            const ap = window.apiFetch ? await window.apiFetch('/api/admin/profile') : await fetch('/api/admin/profile');
+                            if (ap && ap.ok) {
+                                const pj = await ap.json();
+                                // map admin profile shape to expected user fields
+                                const profile = (pj && pj.profile) ? pj.profile : {};
+                                user = Object.assign({}, user, {
+                                    username: profile.adminName || user.username,
+                                    email: profile.adminEmail || user.email,
+                                    avatar: profile.adminAvatar || user.avatar,
+                                    joined: profile.adminSince || user.created_at || user.joined
+                                });
+                            } else {
+                                user = u;
+                            }
+                        } catch(e) {
+                            user = u;
+                        }
+                    } else {
+                        user = u;
+                    }
                     try { localStorage.setItem('wispaUser', JSON.stringify(user)); } catch(e){}
                 } else {
                     // fallback to localStorage for older clients
