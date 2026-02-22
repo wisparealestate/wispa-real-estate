@@ -73,12 +73,48 @@
   @media (min-width:1400px){
     #overviewStats{ gap:20px }
   }
+  /* Compact mobile layout: smaller fonts, tighter spacing, hide nonessential tabs/panels */
+  @media (max-width: 600px){
+    /* global sizing */
+    body, .admin-main, .admin-header { font-size: 14px }
+    .admin-title { font-size: 1rem }
+    h2 { font-size: 1.05rem }
+
+    /* tighter gaps */
+    #overviewContent{ gap:8px }
+    #overviewStats{ gap:8px }
+    #companyMetrics{ gap:8px }
+    #overviewRecents, #companyBreakdown{ gap:8px }
+
+    /* smaller metric cards */
+    #overviewStats > div, .metric-card, #companyBreakdown > div, #overviewRecents > div { padding:8px; border-radius:8px }
+    #overviewStats > div div, .metric-card > div { font-size:1rem }
+
+    /* make tabs compact and allow wrap into multiple rows without overflow */
+    .tabs { gap:6px }
+    .tab-btn { padding:6px 8px; font-size:0.85rem }
+
+    /* hide non-essential panels and their tabs to reduce clutter on phones */
+    .tab-btn[data-tab="alerts"], .tab-btn[data-tab="notifications"], .tab-btn[data-tab="requests"], .tab-btn[data-tab="messages"] { display:none !important }
+    #alerts, #notifications, #requests, #messages { display:none !important }
+
+    /* compact property & user lists */
+    #propertiesList li, #usersList li { padding:6px 0; font-size:0.9rem }
+
+    /* reduce header padding */
+    .admin-header { padding:8px 10px }
+    .hamburger { font-size:1.1rem }
+  }
   </style>
   <style>
     /* Minimal overrides to ensure header/hamburger visible */
     .admin-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--brand, #1e88e5); color:#fff; }
     .admin-title { font-size:1.05rem; font-weight:600; color:#fff; }
     .hamburger { background:transparent; border:0; color:#fff; font-size:1.25rem; cursor:pointer }
+    .header-icons { display:flex; gap:10px; align-items:center; }
+    .icon-btn { background:transparent; border:0; color:inherit; font-size:1.05rem; cursor:pointer; padding:6px; border-radius:6px }
+    .icon-badge { position:relative; display:inline-flex }
+    .icon-badge .badge { position:absolute; top:-6px; right:-6px; background:#ff4d4f; color:#fff; font-size:11px; padding:2px 6px; border-radius:12px }
     .menu-dropdown { position:absolute; right:16px; top:56px; background:#fff; color:#111; border:1px solid rgba(0,0,0,0.08); box-shadow:0 6px 18px rgba(0,0,0,0.08); min-width:160px; display:none; z-index:2000 }
     .menu-dropdown a{ display:block; padding:8px 12px; color:inherit; text-decoration:none }
     .menu-dropdown a:hover{ background:#f6f6f6 }
@@ -101,6 +137,11 @@
       <div class="admin-title">Wispa Admin</div>
       <div style="font-size:0.9rem; opacity:0.9" id="logged-as"></div>
     </div>
+    <div class="header-icons" aria-hidden="false">
+      <button id="quickSearchBtn" class="icon-btn" title="Quick search" aria-label="Search">🔍</button>
+      <button id="notificationsBtn" class="icon-btn icon-badge" title="Notifications" aria-label="Notifications">🔔<span class="badge" id="notifBadge" style="display:none">0</span></button>
+      <button id="chatsBtn" class="icon-btn" title="Chats" aria-label="Chats">💬</button>
+    </div>
     <div style="position:relative">
       <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
       <nav class="menu-dropdown" id="menuDropdown">
@@ -112,6 +153,15 @@
       </nav>
     </div>
   </header>
+
+  <!-- Quick search dropdown (hidden until used) -->
+  <div id="adminQuickSearch" style="display:none; position:fixed; top:64px; left:50%; transform:translateX(-50%); width:92%; max-width:760px; background:#fff; border:1px solid rgba(0,0,0,0.06); box-shadow:0 10px 30px rgba(0,0,0,0.12); z-index:2200; border-radius:8px;">
+    <div style="padding:8px 12px; display:flex; gap:8px; align-items:center">
+      <input id="adminQuickSearchInput" placeholder="Search properties, users, requests..." style="flex:1; padding:10px 12px; font-size:14px; border:1px solid #e6eef7; border-radius:6px" />
+      <button id="adminQuickSearchClose" style="background:transparent;border:0;font-size:18px;padding:6px;cursor:pointer">✕</button>
+    </div>
+    <div id="adminQuickSearchResults" style="max-height:320px; overflow:auto; padding:8px 12px; border-top:1px solid #f0f5fb"></div>
+  </div>
 
   <main class="admin-main">
     <div class="tabs" role="tablist">
@@ -216,6 +266,54 @@
       try{ await fetch('/api/logout',{method:'POST', credentials:'include'}); }catch(e){}
       location.href = '/admin-login.html';
     });
+
+    // Header icon handlers: quick search, notifications, chats
+    const quickSearchBtn = document.getElementById('quickSearchBtn');
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    const chatsBtn = document.getElementById('chatsBtn');
+    const quickSearchEl = document.getElementById('adminQuickSearch');
+    const quickSearchInput = document.getElementById('adminQuickSearchInput');
+    const quickSearchResults = document.getElementById('adminQuickSearchResults');
+    const quickSearchClose = document.getElementById('adminQuickSearchClose');
+
+    function openQuickSearch(){ quickSearchEl.style.display='block'; quickSearchInput.value=''; quickSearchResults.innerHTML=''; quickSearchInput.focus(); }
+    function closeQuickSearch(){ quickSearchEl.style.display='none'; quickSearchResults.innerHTML=''; }
+
+    quickSearchBtn.addEventListener('click', (e)=>{ e.stopPropagation(); if(quickSearchEl.style.display==='block') closeQuickSearch(); else openQuickSearch(); });
+    quickSearchClose.addEventListener('click', closeQuickSearch);
+    window.addEventListener('click', (e)=>{ if(!e.target.closest('#adminQuickSearch') && !e.target.closest('#quickSearchBtn')) closeQuickSearch(); });
+
+    async function doQuickSearch(q){
+      if(!q || q.trim().length<2){ quickSearchResults.innerHTML = '<div style="color:#666;padding:8px">Type 2+ chars to search</div>'; return }
+      quickSearchResults.innerHTML = '<div style="color:#666;padding:8px">Searching…</div>';
+      try{
+        const [propsResp, usersResp, reqsResp] = await Promise.all([
+          safeApi('/api/properties').catch(()=>null),
+          safeApi('/api/users').catch(()=>null),
+          safeApi('/api/property-requests').catch(()=>null)
+        ]);
+        const ql = q.toLowerCase();
+        const items = [];
+        if(propsResp && Array.isArray(propsResp.properties)){
+          for(const p of propsResp.properties){ const hay = ((p.title||'')+' '+(p.address||'')).toLowerCase(); if(hay.indexOf(ql)!==-1) items.push({type:'property', title: p.title||p.address||('Property #'+(p.id||'')), id:p.id}) }
+        }
+        if(usersResp && Array.isArray(usersResp.users)){
+          for(const u of usersResp.users){ const hay = ((u.full_name||'')+' '+(u.email||'')+' '+(u.username||'')).toLowerCase(); if(hay.indexOf(ql)!==-1) items.push({type:'user', title: u.full_name||u.email||u.username, id:u.id}) }
+        }
+        if(reqsResp && Array.isArray(reqsResp.requests)){
+          for(const r of reqsResp.requests){ const hay = ((r.name||'')+' '+(r.email||'')+' '+(r.message||'')).toLowerCase(); if(hay.indexOf(ql)!==-1) items.push({type:'request', title: r.name||r.email||'Request', id:r.id}) }
+        }
+        if(!items.length) quickSearchResults.innerHTML = '<div style="color:#666;padding:8px">No results</div>';
+        else quickSearchResults.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+items.slice(0,12).map(it=>`<li style="padding:8px;border-bottom:1px solid #f2f6fb"><a href="#" data-type="${it.type}" data-id="${it.id}" class="quick-result">${escapeHtml(it.title)} <span style="color:#777;font-size:12px">(${it.type})</span></a></li>`).join('')+'</ul>';
+        // wire click handlers
+        quickSearchResults.querySelectorAll('.quick-result').forEach(a=>a.addEventListener('click', (ev)=>{ ev.preventDefault(); const t=a.dataset.type; const id=a.dataset.id; closeQuickSearch(); if(t==='property'){ switchTab('properties'); setTimeout(()=>{ document.getElementById('propSearch').value = id; renderPropertiesList(_propertiesCache); }, 120); } else if(t==='user'){ switchTab('users'); setTimeout(()=>{ document.getElementById('userSearch').value = id; renderUsersList(_usersCache); }, 120); } else if(t==='request'){ switchTab('requests'); } }));
+      }catch(err){ quickSearchResults.innerHTML = '<div style="color:#c33;padding:8px">Search failed</div>' }
+    }
+
+    quickSearchInput.addEventListener('input', (e)=>{ const v=e.target.value; doQuickSearch(v); });
+
+    notificationsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('notifications'); loadNotifications(); });
+    chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('messages'); loadMessages(); });
 
     async function loadProfile(){
       try{
