@@ -19,6 +19,8 @@ export const pool = new Pool({
 import { addPropertyWithPhotos } from "./property.js";
 
 const app = express();
+// Respect X-Forwarded-* headers from proxies (so req.protocol reflects original scheme)
+app.set('trust proxy', true);
 // Allow configured origin(s) and credentials for cross-site session cookies
 // Support multiple origins via comma-separated `CORS_ORIGINS` env var or sensible defaults
 const DEFAULT_CORS = (process.env.CORS_ORIGINS || 'https://wispa-real-estate-one.vercel.app,https://wispa-real-estate-2ew3.onrender.com,http://localhost:3000,http://localhost:3001').split(',').map(s=>s.trim()).filter(Boolean);
@@ -370,7 +372,8 @@ app.post('/api/admin/sync', async (req, res) => {
 });
 app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  const hostBase = (process.env.API_HOST || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
+  const imageUrl = `${hostBase}/uploads/${req.file.filename}`;
   res.json({ imageUrl });
 });
 
@@ -378,7 +381,8 @@ app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
 app.post('/api/upload-photos', upload.array('files'), (req, res) => {
   try {
     if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
-    const urls = req.files.map(f => `${req.protocol}://${req.get('host')}/uploads/${f.filename}`);
+    const hostBase = (process.env.API_HOST || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
+    const urls = req.files.map(f => `${hostBase}/uploads/${f.filename}`);
     res.json({ urls });
   } catch (err) {
     res.status(500).json({ error: err.message });
