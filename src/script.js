@@ -23,13 +23,23 @@ if (!window.apiFetch) {
             // prefer calling configured backend directly for /api/ paths
                     if (typeof url === 'string' && url.startsWith('/api/')) {
                         const finalOpts = Object.assign({}, opts || {}, { credentials: 'include' });
-                        return await fetch(API_BASE + url, finalOpts);
+                        try{
+                            const r = await fetch(API_BASE + url, finalOpts);
+                            if(r && r.status === 401){ try{ window._wispaAdminUnauthorized = true; }catch(e){} }
+                            if(r && r.ok){ try{ window._wispaAdminUnauthorized = false; }catch(e){} }
+                            return r;
+                        }catch(e){ return null; }
                     }
                     // otherwise try same-origin then fallback to API_BASE
                     try { const r = await fetch(url, opts); if (r && r.ok) return r; } catch(e){}
                     try {
                         const finalOpts2 = Object.assign({}, opts || {}, { credentials: 'include' });
-                        return await fetch(API_BASE + url, finalOpts2);
+                        const res2 = await fetch(API_BASE + url, finalOpts2);
+                        // If the API indicates unauthorized, mark a global flag so callers can back off
+                        if (res2 && res2.status === 401) {
+                            try{ window._wispaAdminUnauthorized = true; }catch(e){}
+                        }
+                        return res2;
                     } catch (e) { return null; }
         } catch (e) { return null; }
     };
@@ -240,6 +250,9 @@ try{ setInterval(()=>{ try{ processLocalPhotosQueue(); }catch(e){} }, 60000); }c
 // Process pending admin notifications stored in localStorage under 'pendingNotifications'
 async function processPendingNotifications(){
     try{
+        // If we've observed repeated 401 Unauthorized responses for admin endpoints,
+        // avoid attempting admin POSTs until the admin session is re-established.
+        if (window._wispaAdminUnauthorized) return;
         const key = 'pendingNotifications';
         let pending = [];
         try{ pending = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ pending = []; }
@@ -295,7 +308,7 @@ async function openAdminChat(chatId) {
     let messages = [];
     let chat = null;
     try {
-        if (window.apiFetch) {
+        if (window.apiFetch && !window._wispaAdminUnauthorized) {
             try {
                 const res = await window.apiFetch('/api/conversations/' + encodeURIComponent(chatId) + '/messages');
                 if (res && res.ok) {
@@ -668,15 +681,21 @@ async function updateNavUnreadCounts(){
         // Prefer server-side conversation unread counts for admin badge; fallback to localStorage
         let adminChatCount = 0;
         try {
-            const convRes = window.apiFetch ? await window.apiFetch('/api/conversations') : await fetch('/api/conversations');
-            if (convRes && convRes.ok) {
-                const cj = await convRes.json();
-                const convsAll = cj.conversations || cj || [];
-                if (Array.isArray(convsAll)) adminChatCount = convsAll.reduce((s, c) => s + (Number(c.unread) || 0), 0);
-                else adminChatCount = 0;
-            } else {
+            // If we've recently seen admin 401 responses, avoid calling admin endpoints
+            if (window._wispaAdminUnauthorized) {
                 const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
                 adminChatCount = convs.filter(n => !n.read).length;
+            } else {
+                const convRes = window.apiFetch ? await window.apiFetch('/api/conversations') : await fetch('/api/conversations');
+                if (convRes && convRes.ok) {
+                    const cj = await convRes.json();
+                    const convsAll = cj.conversations || cj || [];
+                    if (Array.isArray(convsAll)) adminChatCount = convsAll.reduce((s, c) => s + (Number(c.unread) || 0), 0);
+                    else adminChatCount = 0;
+                } else {
+                    const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                    adminChatCount = convs.filter(n => !n.read).length;
+                }
             }
         } catch (e) {
             try { const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]'); adminChatCount = convs.filter(n => !n.read).length; } catch(e) { adminChatCount = 0; }
