@@ -487,7 +487,14 @@
         let res;
         if (window.apiFetch) res = await window.apiFetch('/api/admin/profile');
         else res = await fetch('/api/admin/profile',{credentials:'include'});
-        if(!res || !res.ok){ if(res && res.status===401){ location.href='/admin-login.html'; return } throw new Error('Failed'); }
+        if(!res || !res.ok){
+          if(res && res.status===401){
+            // Don't auto-redirect to login; show a message so the page doesn't loop back
+            try { document.getElementById('overviewIntro').textContent = 'Not authenticated — please sign in via /admin-login.html'; } catch(e){}
+            return;
+          }
+          throw new Error('Failed');
+        }
         const data = await res.json();
         document.getElementById('profileName').textContent = data.name || data.username || 'Admin';
         document.getElementById('profileEmail').textContent = data.email || '—';
@@ -507,7 +514,13 @@
     async function safeApi(path, opts){
       const fn = window.apiFetch ? window.apiFetch : (p,o)=>fetch(p, Object.assign({credentials:'include'}, o));
       const res = await fn(path, opts);
-      if(!res.ok){ if(res.status===401){ location.href='/admin-login.html'; return null } throw new Error('API error '+res.status) }
+      if(!res.ok){
+        if(res.status===401){
+          // Do not redirect automatically; propagate null so callers can handle login UI without loops
+          return null;
+        }
+        throw new Error('API error '+res.status)
+      }
       return res.json();
     }
 
