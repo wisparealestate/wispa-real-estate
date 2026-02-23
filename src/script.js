@@ -376,31 +376,53 @@ async function openAdminChat(chatId) {
     if (!messages.length && !propertyCard) {
         msgsEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>';
     } else {
-        let htmlParts = [];
-        if (propertyCard) {
-            const p = propertyCard;
-                        const img = p.image || (p.images && p.images[0]) || '';
-                        const imgSrc = img ? normalizeImageUrl(img) : '';
-            const title = p.title || p.name || 'Property';
-            const price = (p.price != null) ? (`$${Number(p.price).toLocaleString()}`) : '';
-            const loc = p.location || p.address || '';
-                        const propId = p.id || p.propertyId || '';
-                        htmlParts.push(`
-                                <a href="property-detail.html?id=${escapeHtml(String(propId))}&conversation=true" style="text-decoration:none;color:inherit;display:block">
-                                <div style="padding:12px;border-radius:8px;background:#f8fafc;margin-bottom:10px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);">
-                                        ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)}" style="width:84px;height:64px;object-fit:cover;border-radius:6px;">` : ''}
-                                        <div style="flex:1">
-                                            <div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div>
-                                            <div style="color:#666;font-size:13px">${escapeHtml(loc)} ${price ? ' — '+escapeHtml(price) : ''}</div>
-                                        </div>
-                                </div>
-                                </a>
-                        `);
-            // mark property shown so it doesn't appear as duplicate in first message
-            try { if (messages[0] && messages[0].meta && messages[0].meta.property) delete messages[0].meta.property; } catch(e){}
-        }
+        // If a property exists, render a preview card before the messages container (match user conversation page)
+        try {
+            // remove any existing card
+            const existingCard = document.getElementById('messages-property-card');
+            if (existingCard && existingCard.parentNode) existingCard.parentNode.removeChild(existingCard);
+            if (propertyCard) {
+                const p = propertyCard;
+                const img = p.image || (p.images && p.images[0]) || '';
+                const imgSrc = img ? normalizeImageUrl(img) : '';
+                const title = p.title || p.name || 'Property';
+                const price = (p.price != null) ? (`$${Number(p.price).toLocaleString()}`) : '';
+                const loc = p.location || p.address || '';
+                const propId = p.id || p.propertyId || p.property_id || '';
+                const cardWrap = document.createElement('div');
+                cardWrap.id = 'messages-property-card';
+                cardWrap.style.padding = '12px';
+                cardWrap.style.borderRadius = '8px';
+                cardWrap.style.background = '#f8fafc';
+                cardWrap.style.margin = '6px 0 12px 0';
+                cardWrap.style.display = 'flex';
+                cardWrap.style.gap = '12px';
+                cardWrap.style.alignItems = 'center';
+                cardWrap.style.cursor = 'pointer';
+                if (imgSrc) {
+                    const im = document.createElement('img');
+                    im.src = imgSrc;
+                    im.alt = title;
+                    im.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;';
+                    cardWrap.appendChild(im);
+                } else {
+                    const placeholder = document.createElement('div');
+                    placeholder.style.cssText = 'width:84px;height:64px;border-radius:6px;background:#f5f7fa;border:1px solid #f1f5fb';
+                    cardWrap.appendChild(placeholder);
+                }
+                const info = document.createElement('div'); info.style.flex = '1';
+                const t = document.createElement('div'); t.style.fontWeight = '700'; t.style.marginBottom = '4px'; t.textContent = title;
+                const s = document.createElement('div'); s.style.color = '#666'; s.style.fontSize = '13px'; s.textContent = (loc || '') + (price ? (' — ' + price) : '');
+                info.appendChild(t); info.appendChild(s); cardWrap.appendChild(info);
+                if (propId) cardWrap.addEventListener('click', function(){ window.location.href = 'property-detail.html?id='+encodeURIComponent(propId)+'&conversation=true'; });
+                // insert before messages container
+                if (msgsEl && msgsEl.parentNode) msgsEl.parentNode.insertBefore(cardWrap, msgsEl);
+                // prevent duplicate property meta in first message rendering
+                try { if (messages[0] && messages[0].meta && messages[0].meta.property) delete messages[0].meta.property; } catch(e){}
+            }
+        } catch(e) { console.warn('Failed to render property card in admin chat fullview', e); }
 
-        htmlParts = htmlParts.concat(messages.map(m => {
+        const htmlParts = messages.map(m => {
             const isAdmin = (m.sender === 'admin' || m.from === 'Admin');
             const senderLabel = isAdmin ? 'Admin' : (m.userName || m.userEmail || m.sender || m.from || 'User');
             const ts = new Date(m.timestamp || m.ts || m.time || Date.now()).toLocaleString();
