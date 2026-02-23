@@ -386,37 +386,71 @@ async function openAdminChat(chatId) {
                 const img = p.image || (p.images && p.images[0]) || '';
                 const imgSrc = img ? normalizeImageUrl(img) : '';
                 const title = p.title || p.name || 'Property';
-                const price = (p.price != null) ? (`$${Number(p.price).toLocaleString()}`) : '';
+                const price = (p.price != null) ? (`€${Number(p.price).toLocaleString()}`) : '';
                 const loc = p.location || p.address || '';
                 const propId = p.id || p.propertyId || p.property_id || '';
-                const cardWrap = document.createElement('div');
-                cardWrap.id = 'messages-property-card';
-                cardWrap.style.padding = '12px';
-                cardWrap.style.borderRadius = '8px';
-                cardWrap.style.background = '#f8fafc';
-                cardWrap.style.margin = '6px 0 12px 0';
-                cardWrap.style.display = 'flex';
-                cardWrap.style.gap = '12px';
-                cardWrap.style.alignItems = 'center';
-                cardWrap.style.cursor = 'pointer';
-                if (imgSrc) {
-                    const im = document.createElement('img');
-                    im.src = imgSrc;
-                    im.alt = title;
-                    im.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;';
-                    cardWrap.appendChild(im);
+                // If we're on the admin page, render the richer property bubble (badge, beds, baths, type)
+                const isAdminPage = (typeof window !== 'undefined' && window.location && window.location.pathname && window.location.pathname.indexOf('admin') !== -1);
+                if (isAdminPage) {
+                    const badge = p.hot ? '🔥 Hot Property' : (p.featured ? '⭐ Featured Property' : '✅ Available Property');
+                    const beds = p.bedrooms || p.beds || p.bed || 0;
+                    const baths = p.bathrooms || p.baths || p.bath || 0;
+                    const typeLabel = (p.type === 'rent' || String(p.post_to||'').toLowerCase()==='rent') ? 'For Rent' : 'For Sale';
+                    const html = `
+                        <a href="property-detail.html?id=${escapeHtml(String(propId))}&conversation=true" style="text-decoration:none;color:inherit;display:block">
+                        <div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;display:flex;gap:18px;align-items:center;border:1px solid var(--border);max-width:900px;">
+                            <div style="width:110px;height:80px;flex:0 0 110px;">
+                                ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f7f7f7;">` : `<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;border:1px solid var(--border);"></div>`}
+                            </div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700;font-size:17px;line-height:1.2;">${escapeHtml(title)}</div>
+                                <div style="display:flex;align-items:center;gap:10px;color:var(--secondary);font-size:14px;margin:2px 0 6px 0;">
+                                    <span>${escapeHtml(loc)}</span>
+                                    <span style='background:#3498db;color:#fff;font-size:12px;padding:2px 8px;border-radius:6px;'>${escapeHtml(badge)}</span>
+                                </div>
+                                <div style="display:flex;gap:16px;font-size:14px;color:#444;align-items:center;">
+                                    <span>${escapeHtml(price)}</span>
+                                    <span>${escapeHtml(String(beds))} bed</span>
+                                    <span>${escapeHtml(String(baths))} bath</span>
+                                    <span style="background:#eaf6ff;color:#3498db;padding:2px 8px;border-radius:6px;font-size:13px;">${escapeHtml(typeLabel)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        </a>
+                    `;
+                    const temp = document.createElement('div'); temp.innerHTML = html;
+                    const node = temp.firstElementChild;
+                    if (msgsEl && msgsEl.parentNode) msgsEl.parentNode.insertBefore(node, msgsEl);
                 } else {
-                    const placeholder = document.createElement('div');
-                    placeholder.style.cssText = 'width:84px;height:64px;border-radius:6px;background:#f5f7fa;border:1px solid #f1f5fb';
-                    cardWrap.appendChild(placeholder);
+                    // simple card for user pages
+                    const cardWrap = document.createElement('div');
+                    cardWrap.id = 'messages-property-card';
+                    cardWrap.style.padding = '12px';
+                    cardWrap.style.borderRadius = '8px';
+                    cardWrap.style.background = '#f8fafc';
+                    cardWrap.style.margin = '6px 0 12px 0';
+                    cardWrap.style.display = 'flex';
+                    cardWrap.style.gap = '12px';
+                    cardWrap.style.alignItems = 'center';
+                    cardWrap.style.cursor = 'pointer';
+                    if (imgSrc) {
+                        const im = document.createElement('img');
+                        im.src = imgSrc;
+                        im.alt = title;
+                        im.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;';
+                        cardWrap.appendChild(im);
+                    } else {
+                        const placeholder = document.createElement('div');
+                        placeholder.style.cssText = 'width:84px;height:64px;border-radius:6px;background:#f5f7fa;border:1px solid #f1f5fb';
+                        cardWrap.appendChild(placeholder);
+                    }
+                    const info = document.createElement('div'); info.style.flex = '1';
+                    const t = document.createElement('div'); t.style.fontWeight = '700'; t.style.marginBottom = '4px'; t.textContent = title;
+                    const s = document.createElement('div'); s.style.color = '#666'; s.style.fontSize = '13px'; s.textContent = (loc || '') + (price ? (' — ' + price) : '');
+                    info.appendChild(t); info.appendChild(s); cardWrap.appendChild(info);
+                    if (propId) cardWrap.addEventListener('click', function(){ window.location.href = 'property-detail.html?id='+encodeURIComponent(propId)+'&conversation=true'; });
+                    if (msgsEl && msgsEl.parentNode) msgsEl.parentNode.insertBefore(cardWrap, msgsEl);
                 }
-                const info = document.createElement('div'); info.style.flex = '1';
-                const t = document.createElement('div'); t.style.fontWeight = '700'; t.style.marginBottom = '4px'; t.textContent = title;
-                const s = document.createElement('div'); s.style.color = '#666'; s.style.fontSize = '13px'; s.textContent = (loc || '') + (price ? (' — ' + price) : '');
-                info.appendChild(t); info.appendChild(s); cardWrap.appendChild(info);
-                if (propId) cardWrap.addEventListener('click', function(){ window.location.href = 'property-detail.html?id='+encodeURIComponent(propId)+'&conversation=true'; });
-                // insert before messages container
-                if (msgsEl && msgsEl.parentNode) msgsEl.parentNode.insertBefore(cardWrap, msgsEl);
                 // prevent duplicate property meta in first message rendering
                 try { if (messages[0] && messages[0].meta && messages[0].meta.property) delete messages[0].meta.property; } catch(e){}
             }
