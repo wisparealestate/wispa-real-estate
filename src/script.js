@@ -80,6 +80,37 @@ window.clearAdminUnauthorized = function() {
         }catch(err){ console.error('debugAdminAuth error', err); return { error: String(err) }; }
     };
 
+    // Attempt cross-origin admin login via API host and open the URL that sets the session cookie.
+    // Usage: await window.adminLoginRedirect('admin','password');
+    window.adminLoginRedirect = async function(username, password, returnTo){
+        try{
+            if(!username || !password) throw new Error('username and password required');
+            const base = (window.WISPA_API_BASE || '').replace(/\/+$/,'') || '';
+            const resp = await fetch(base + '/api/admin-login-redirect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password, returnTo: returnTo || '/admin.html' })
+            });
+            const j = await resp.json();
+            if(j && j.url){
+                // open the URL on API host which will set the cookie and redirect back
+                window.open(j.url, '_blank');
+                return j.url;
+            }
+            throw new Error('Login redirect failed: ' + JSON.stringify(j));
+        }catch(e){ console.error('adminLoginRedirect error', e); throw e; }
+    };
+
+    // Prompt helper for quick use from Console: prompts for username/password and triggers redirect flow.
+    window.adminLoginPrompt = async function(){
+        try{
+            const u = prompt('Admin username'); if(!u) return;
+            const p = prompt('Admin password'); if(!p) return;
+            await window.adminLoginRedirect(u,p, '/admin.html');
+            alert('Opened API host to set admin session. Complete login in the new tab.');
+        }catch(e){ alert('admin login failed: ' + (e && e.message ? e.message : String(e))); }
+    };
+
 // Disable localStorage usage in DB-only mode only when explicitly configured.
 // Setting `window.WISPA_DISABLE_LOCALSTORAGE = true` or `window.WISPA_DB_ONLY = true`
 // will turn reads into no-ops to prevent accidental client-side persistence.

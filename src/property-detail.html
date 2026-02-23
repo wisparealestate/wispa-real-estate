@@ -894,7 +894,16 @@
                 }
                 // category badge (type) e.g., Apartment, House
                 const catVal = property.type || property.property_type || property.category || '';
-                if (categoryBadgeEl && catVal) { categoryBadgeEl.textContent = String(catVal); categoryBadgeEl.style.display = 'inline-block'; }
+                // Only show category badge when a post badge isn't already displayed.
+                if (categoryBadgeEl && catVal) {
+                    if (postBadgeEl && postBadgeEl.style && postBadgeEl.style.display && postBadgeEl.style.display !== 'none') {
+                        // hide category badge to avoid duplicate badges
+                        categoryBadgeEl.style.display = 'none';
+                    } else {
+                        categoryBadgeEl.textContent = String(catVal);
+                        categoryBadgeEl.style.display = 'inline-block';
+                    }
+                }
             } catch (e) {}
 
             // Meta info: area, bedrooms, bathrooms
