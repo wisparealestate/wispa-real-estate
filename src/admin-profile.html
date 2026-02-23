@@ -110,8 +110,21 @@
         async function updateProfile() {
             let profile = {};
             try {
-                const getter = window.apiFetch || fetch;
+                const getter = window.apiFetch || (async function(url){
+                    const base = (window.WISPA_API_BASE||'').replace(/\/$/, '');
+                    const final = (typeof url === 'string' && url.startsWith('/api/')) ? (base + url) : url;
+                    try{ return await fetch(final, { credentials: 'include' }); }catch(e){ return null; }
+                });
                 const res = await getter('/api/admin/profile');
+                if (res && res.status === 401) {
+                    // Not signed in as admin — show login prompt
+                    const container = document.querySelector('.profile-container');
+                    if (container) {
+                        container.innerHTML = `<div style="padding:20px;text-align:center;color:#444;"><div style="font-weight:700;margin-bottom:8px;">Not signed in</div><div style="margin-bottom:12px;color:#666">You must sign in as an administrator to view this profile.</div><div><button id="admin-login-btn" style="background:#3498db;color:#fff;padding:8px 14px;border-radius:8px;border:none;cursor:pointer">Sign in</button></div></div>`;
+                        const btn = document.getElementById('admin-login-btn'); if(btn) btn.addEventListener('click', ()=>{ window.location.href = 'admin-login.html'; });
+                    }
+                    return;
+                }
                 if (res && res.ok) {
                     const j = await res.json();
                     profile = j.profile || j || {};
@@ -133,9 +146,9 @@
             document.getElementById('adminBio').textContent = 'Bio: ' + (profile.adminBio || 'Responsible for managing the Wispa Real Estate platform, users, and agents.');
             // Update avatar if uploaded, else use initials
             if(profile.adminAvatar){
-                document.getElementById('adminAvatar').src = profile.adminAvatar;
+                const av = document.getElementById('adminAvatar'); if(av) av.src = profile.adminAvatar;
             } else {
-                document.getElementById('adminAvatar').src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.adminName || 'Terry Franklin') + '&background=3498db&color=fff';
+                const av = document.getElementById('adminAvatar'); if(av) av.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.adminName || 'Terry Franklin') + '&background=3498db&color=fff';
             }
         }
         updateProfile();
@@ -147,17 +160,14 @@
                 reader.onload = async function(evt){
                     let profile = {};
                     try {
-                        const getter = window.apiFetch || fetch;
+                        const getter = window.apiFetch || (async function(url){ const base = (window.WISPA_API_BASE||'').replace(/\/$/, ''); const final = (typeof url === 'string' && url.startsWith('/api/')) ? (base + url) : url; try{ return await fetch(final, { credentials: 'include' }); }catch(e){ return null; } });
                         const res = await getter('/api/admin/profile');
-                        if (res && res.ok) {
-                            const j = await res.json(); profile = j.profile || j || {};
-                        } else {
-                            const p = await adminLoadKey('adminProfile'); profile = p || {};
-                        }
+                        if (res && res.ok) { const j = await res.json(); profile = j.profile || j || {}; }
+                        else { const p = await adminLoadKey('adminProfile'); profile = p || {}; }
                     } catch (e) { const p = await adminLoadKey('adminProfile'); profile = p || {}; }
                     profile.adminAvatar = evt.target.result;
                     try {
-                        const poster = window.apiFetch || fetch;
+                        const poster = window.apiFetch || (async function(url, options){ const base = (window.WISPA_API_BASE||'').replace(/\/$/, ''); const final = (typeof url === 'string' && url.startsWith('/api/')) ? (base + url) : url; const finalOpts = Object.assign({}, options||{}, { credentials: 'include' }); try{ return await fetch(final, finalOpts); }catch(e){ return null; } });
                         await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
                         adminSaveKey('adminProfile', profile);
                     } catch (e) {
