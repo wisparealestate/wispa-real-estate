@@ -508,7 +508,22 @@
         if (window.apiFetch) res = await window.apiFetch('/api/admin/profile');
         else res = await fetch('/api/admin/profile',{credentials:'include'});
         if(!res || !res.ok){
+          // If unauthorized, attempt to load a locally-saved admin profile so details can still display
           if(res && res.status===401){
+            try{
+              // try adminLoadKey (defined in admin-profile.html) or localStorage fallback
+              let localProfile = null;
+              try { localProfile = (window.adminLoadKey) ? await window.adminLoadKey('adminProfile') : null; } catch(e) { localProfile = null; }
+              if(!localProfile){
+                try { const raw = localStorage.getItem('adminProfile'); if(raw) localProfile = JSON.parse(raw); } catch(e) { localProfile = null; }
+              }
+              if(localProfile){
+                document.getElementById('profileName').textContent = localProfile.adminName || localProfile.name || localProfile.username || 'Admin';
+                try{ document.getElementById('profileEmail').textContent = localProfile.adminEmail || localProfile.email || '—'; }catch(e){}
+                try{ document.getElementById('overviewIntro').textContent = 'Offline/admin session not validated — showing cached profile'; }catch(e){}
+                return;
+              }
+            }catch(e){/* ignore */}
             // Don't auto-redirect to login; show a message so the page doesn't loop back
             try { document.getElementById('overviewIntro').textContent = 'Not authenticated — please sign in via /admin-login.html'; } catch(e){}
             return;
