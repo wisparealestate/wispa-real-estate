@@ -399,8 +399,14 @@
           // Normalize to expected meta fields
           if (convs && convs.length) {
             const mapped = convs.map(c => ({ id: c.id || c.conversation_id || c.key || (c.user_id?('user-'+c.user_id):null), participantName: c.title || c.participantName || c.userName || c.user_email || (c.meta && c.meta.property && c.meta.property.title) || null, lastMessage: c.last || c.last_message || c.lastMessage || c.updated || '', unread: c.unread || 0 }));
-            out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+mapped.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="#" data-id="${escapeHtml(c.id||'')}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||('Conversation '+(c.id||'unknown')))}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
-            out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{ ev.preventDefault(); const id=a.dataset.id; try{ openAdminChat(id); }catch(e){ console.error(e) } }));
+            out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+mapped.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin.html#conversation?id=${encodeURIComponent(c.id||'')}" data-id="${escapeHtml(c.id||'')}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||('Conversation '+(c.id||'unknown')))}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
+            out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{
+              // allow modifier clicks (open in new tab/window)
+              if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
+              ev.preventDefault();
+              const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
+              try{ openAdminChat(id); }catch(e){ console.error(e) }
+            }));
             return;
           }
         }catch(e){ /* server may be unreachable or return no conversations; fall back to local */ }
@@ -410,8 +416,13 @@
         try{ convs = JSON.parse(localStorage.getItem('adminChats') || '[]'); }catch(e){ convs = []; }
         if(!convs || !convs.length){ try{ convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]') }catch(e){ convs = []; } }
         if(!convs || !convs.length){ out.innerHTML = '<div style="padding:12px;color:#666">No conversations yet.</div>'; return }
-        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+convs.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="#" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
-        out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{ ev.preventDefault(); const id=a.dataset.id; try{ openAdminChat(id); }catch(e){ console.error(e) } }));
+        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+convs.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin.html#conversation?id=${encodeURIComponent(c.id)}" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
+        out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{
+          if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
+          ev.preventDefault();
+          const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
+          try{ openAdminChat(id); }catch(e){ console.error(e) }
+        }));
       }catch(e){ out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load chats</div>'; }
     }
 
