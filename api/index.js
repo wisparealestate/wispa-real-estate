@@ -12,10 +12,24 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 
 const { Pool } = pkg;
+// Configure SSL for cloud-hosted databases. Render/Postgres often requires SSL;
+// enable non-authoritative SSL when connecting to known hosts or in production.
+const shouldUseSsl = (process.env.NODE_ENV === 'production') || (process.env.DATABASE_URL && String(process.env.DATABASE_URL).includes('render.com'));
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
 });
+
+// Quick startup DB test to surface connection errors early in logs
+(async function startupDbCheck(){
+  if(!process.env.DATABASE_URL) return;
+  try{
+    const r = await pool.query('SELECT NOW() as now');
+    console.log('[db] connected, now=', r.rows && r.rows[0] && r.rows[0].now);
+  }catch(e){
+    console.error('[db] connection test failed:', e && e.message ? e.message : e);
+  }
+})();
 
 // Import property helper after pool is defined to avoid circular import issues
 import { addPropertyWithPhotos } from "./property.js";
