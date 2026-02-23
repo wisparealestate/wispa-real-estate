@@ -654,7 +654,18 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
       };
     });
 
-    return res.json({ messages: mapped });
+    // If conversation id references a property (property-<id>), attempt to attach property row for frontend preview
+    let convProperty = null;
+    try{
+      const m = String(convId).match(/^property-(\d+)$/i);
+      if(m){
+        const pid = parseInt(m[1],10);
+        const pres = await pool.query('SELECT id, title, image_url, images FROM properties WHERE id = $1 LIMIT 1', [pid]);
+        if(pres && pres.rows && pres.rows[0]) convProperty = pres.rows[0];
+      }
+    }catch(e){}
+
+    return res.json({ messages: mapped, property: convProperty });
   } catch (err) {
     res.status(500).json({ error: 'Database error fetching conversation messages', details: err.message });
   }
