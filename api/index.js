@@ -399,7 +399,12 @@ app.post('/api/upload-photos', upload.array('files'), async (req, res) => {
           await client.query('ROLLBACK');
           return res.status(404).json({ error: 'Property not found' });
         }
-        // Insert uploaded photos (append, do not delete existing)
+        // Insert uploaded photos. By default replace existing photos for the property
+        // unless client explicitly requests append via ?append=true
+        const wantAppend = (req.query && String(req.query.append) === 'true');
+        if (!wantAppend) {
+          await client.query('DELETE FROM property_photos WHERE property_id = $1', [propertyId]);
+        }
         for (const u of urls) {
           await client.query('INSERT INTO property_photos (property_id, photo_url) VALUES ($1, $2)', [propertyId, u]);
         }

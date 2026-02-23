@@ -448,7 +448,22 @@ async function updateNavUnreadCounts(){
         const _wispaNotifs = JSON.parse(localStorage.getItem('wispaNotifications') || '[]');
         const _reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
         const adminAlertCount = _wispaNotifs.filter(n => !n.read).length + _reactions.filter(r => !r.read).length;
-        const adminChatCount = (JSON.parse(localStorage.getItem('chatNotifications') || '[]')).filter(n => !n.read).length;
+        // Prefer server-side conversation unread counts for admin badge; fallback to localStorage
+        let adminChatCount = 0;
+        try {
+            const convRes = window.apiFetch ? await window.apiFetch('/api/conversations') : await fetch('/api/conversations');
+            if (convRes && convRes.ok) {
+                const cj = await convRes.json();
+                const convsAll = cj.conversations || cj || [];
+                if (Array.isArray(convsAll)) adminChatCount = convsAll.reduce((s, c) => s + (Number(c.unread) || 0), 0);
+                else adminChatCount = 0;
+            } else {
+                const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                adminChatCount = convs.filter(n => !n.read).length;
+            }
+        } catch (e) {
+            try { const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]'); adminChatCount = convs.filter(n => !n.read).length; } catch(e) { adminChatCount = 0; }
+        }
 
         const adminAlertsLink = document.querySelector('a[href="#alerts"]');
         if(adminAlertsLink) upsertBadge(adminAlertsLink, 'admin-alerts', adminAlertCount, { small: true, inline: true, cls: 'sidebar-badge' });
