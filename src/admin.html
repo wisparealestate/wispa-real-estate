@@ -405,7 +405,12 @@
               if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
               ev.preventDefault();
               const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
-              try{ openAdminChat(id); }catch(e){ console.error(e) }
+              console.log('admin chat clicked (server list)', id, a.href);
+              try{
+                try { location.hash = 'conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
+                if (id && typeof openAdminChat === 'function') openAdminChat(id);
+                else if (typeof renderAdminChatList === 'function') renderAdminChatList();
+              }catch(e){ console.error(e) }
             }));
             return;
           }
@@ -421,7 +426,12 @@
           if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
           ev.preventDefault();
           const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
-          try{ openAdminChat(id); }catch(e){ console.error(e) }
+          console.log('admin chat clicked (local list)', id, a.href);
+          try{
+            try { location.hash = 'conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
+            if (id && typeof openAdminChat === 'function') openAdminChat(id);
+            else if (typeof renderAdminChatList === 'function') renderAdminChatList();
+          }catch(e){ console.error(e) }
         }));
       }catch(e){ out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load chats</div>'; }
     }
@@ -952,6 +962,21 @@
         loadNotifications();
         loadProperties();
         loadUsers();
+        // Open conversation when hash changes (supports admin.html#conversation?id=... links)
+        window.addEventListener('hashchange', function(){
+          try{
+            const raw = (location.hash && location.hash.slice(1)) || '';
+            const parts = String(raw).split('?');
+            const path = parts[0] || '';
+            const qs = parts[1] || '';
+            if (path === 'conversation'){
+              const params = new URLSearchParams(qs);
+              const convId = params.get('id') || params.get('conv') || null;
+              console.log('hashchange detected, conversation id=', convId);
+              if (convId && typeof openAdminChat === 'function') openAdminChat(convId);
+            }
+          }catch(e){ console.error('hashchange handler error', e); }
+        });
         setTimeout(() => {
           if (convId && typeof openAdminChat === 'function') openAdminChat(convId);
           else if (typeof renderAdminChatList === 'function') renderAdminChatList();
