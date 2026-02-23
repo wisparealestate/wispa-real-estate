@@ -40,7 +40,14 @@
     </div>
     <!-- Ensure pages that are served from other origins use the configured API backend by default -->
     <script>
-        window.WISPA_API_BASE = window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
+        // Prefer same-origin localhost API during local development to avoid cross-site cookie issues.
+        if (!window.WISPA_API_BASE) {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                window.WISPA_API_BASE = 'http://localhost:3001';
+            } else {
+                window.WISPA_API_BASE = 'https://wispa-real-estate-2ew3.onrender.com';
+            }
+        }
     </script>
     <script>
         const form = document.getElementById('adminLoginForm');
