@@ -283,11 +283,15 @@ window.addEventListener('online', () => { try{ processLocalPhotosQueue(); }catch
 try{ setInterval(()=>{ try{ processLocalPhotosQueue(); }catch(e){} }, 60000); }catch(e){}
 
 // Process pending admin notifications stored in localStorage under 'pendingNotifications'
-async function processPendingNotifications(){
+async function processPendingNotifications(force = false){
     try{
         // If we've observed repeated 401 Unauthorized responses for admin endpoints,
         // avoid attempting admin POSTs until the admin session is re-established.
-        if (window._wispaAdminUnauthorized) return;
+        // Allow callers to force a retry by passing `force = true` (useful after re-login).
+        if (window._wispaAdminUnauthorized && !force) {
+            console.log('processPendingNotifications: aborting due to admin unauthorized backoff');
+            return;
+        }
         const key = 'pendingNotifications';
         let pending = [];
         try{ pending = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ pending = []; }
@@ -316,6 +320,11 @@ async function processPendingNotifications(){
 
 // Retry pending notifications on network online and periodically
 window.addEventListener('online', () => { try{ processPendingNotifications(); }catch(e){} });
+// Helper to explicitly retry pending admin notifications (forces retry even during backoff)
+window.retryPendingNotifications = async function(){
+    try{ window.clearAdminUnauthorized && window.clearAdminUnauthorized(); }catch(e){}
+    try{ return await processPendingNotifications(true); }catch(e){ console.error('retryPendingNotifications failed', e); }
+};
 try{ setInterval(()=>{ try{ processPendingNotifications(); }catch(e){} }, 60000); }catch(e){}
 // Helper to get current authenticated user from server (caches result in-memory)
 window._wispaCurrentUser = null;
