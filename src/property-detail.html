@@ -698,6 +698,12 @@
             if (contactSection) contactSection.style.display = 'none';
         }
 
+        // Clear static/demo similar properties so only dynamic content is shown
+        try{
+            const simGrid = document.getElementById('similarPropertiesGrid');
+            if(simGrid) simGrid.innerHTML = '<!-- dynamic content loaded by script.js -->';
+        }catch(e){}
+
         // Normalize price string for display
         if (typeof property.price === 'number') {
             property.price = '€' + property.price.toLocaleString();
