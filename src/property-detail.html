@@ -897,18 +897,69 @@
             }
 
             const convId = 'property-' + propertyId;
+            function renderPropertyCard(prop){
+                try{
+                    const existing = document.getElementById('property-chat-card');
+                    if(existing) existing.remove();
+                    if(!prop) return;
+                    const card = document.createElement('div');
+                    card.id = 'property-chat-card';
+                    card.style.cssText = 'padding:12px;border-radius:8px;background:#f8fafc;margin-bottom:10px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);';
+                    const img = (prop.image || (prop.images && prop.images[0])) || '';
+                    const title = prop.title || prop.name || 'Property';
+                    const price = (prop.price != null) ? (`$${Number(prop.price).toLocaleString()}`) : '';
+                    const loc = prop.location || prop.address || '';
+                    if(img){
+                        const i = document.createElement('img'); i.src = img; i.alt = title; i.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;'; card.appendChild(i);
+                    }
+                    const info = document.createElement('div');
+                    info.innerHTML = `<div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div><div style="color:#666;font-size:13px">${escapeHtml(loc)}${price?(' — '+escapeHtml(price)) : ''}</div>`;
+                    card.appendChild(info);
+                    messagesDiv.parentNode.insertBefore(card, messagesDiv);
+                }catch(e){console.warn('renderPropertyCard error', e);} 
+            }
+
             function renderList(list){
                 messagesDiv.innerHTML = '';
                 (list || []).forEach(m => {
                     const el = document.createElement('div');
-                    const text = m.body || m.content || m.text || (m.meta && m.meta.text) || JSON.stringify(m);
+                    const text = m.body || m.content || m.text || (m.meta && m.meta.text) || '';
                     const isUser = (m.sender === 'user' || String(m.sender_id) === String(userId) || (m.userId && String(m.userId) === String(userId)));
                     if (isUser) {
                         el.style.cssText = 'margin: 10px 0; padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: right;';
                     } else {
                         el.style.cssText = 'margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: left;';
                     }
-                    el.textContent = text;
+                    // sender label
+                    try{
+                        const label = document.createElement('div');
+                        label.style.cssText = 'font-size:12px;font-weight:600;margin-bottom:6px;color:' + (isUser ? 'white' : '#666') + ';';
+                        label.textContent = isUser ? (m.userName || m.userEmail || 'You') : (m.userName || m.sender || m.from || 'Agent');
+                        el.appendChild(label);
+                    }catch(e){}
+                    // message text
+                    const bodyDiv = document.createElement('div');
+                    bodyDiv.style.whiteSpace = 'pre-wrap';
+                    bodyDiv.textContent = text;
+                    el.appendChild(bodyDiv);
+                    // attachments
+                    try{
+                        const at = (m.meta && m.meta.attachments) || (m.attachments);
+                        if(Array.isArray(at) && at.length){
+                            const aWrap = document.createElement('div');
+                            aWrap.style.marginTop = '8px';
+                            at.forEach(url => {
+                                if(!url) return;
+                                const low = String(url).toLowerCase();
+                                if(low.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/)){
+                                    const im = document.createElement('img'); im.src = url; im.style.cssText = 'max-width:180px;display:block;margin-top:6px;border-radius:6px;'; aWrap.appendChild(im);
+                                } else {
+                                    const link = document.createElement('a'); link.href = url; link.target = '_blank'; link.textContent = url.split('/').pop() || url; link.style.cssText = 'display:block;margin-top:6px;color:#0366d6;'; aWrap.appendChild(link);
+                                }
+                            });
+                            el.appendChild(aWrap);
+                        }
+                    }catch(e){ }
                     messagesDiv.appendChild(el);
                 });
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
