@@ -105,6 +105,21 @@ async function getSessionUser(req){
     return null;
   }catch(e){ return null; }
 }
+// Read admin session cookie and return admin user row when valid
+async function getAdminSessionUser(req){
+  const token = readCookie(req, 'wispa_admin_session');
+  if(!token) return null;
+  const payload = parseSessionToken(token);
+  if(!payload || !payload.uid || payload.exp < Math.floor(Date.now()/1000)) return null;
+  try{
+    const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1', [payload.uid]);
+    if(a && a.rows && a.rows[0]){
+      const adminRow = a.rows[0];
+      return { id: adminRow.id, username: adminRow.username, email: adminRow.email, full_name: adminRow.full_name || null, role: 'admin', created_at: adminRow.created_at };
+    }
+  }catch(e){ }
+  return null;
+}
 async function readJson(name){
   try{
     await ensureDataDir();
@@ -211,10 +226,10 @@ app.get("/api/conversations", async (req, res) => {
 // Protect admin API routes: require authenticated user with role 'admin'
 app.use('/api/admin', async (req, res, next) => {
   try {
-    const user = await getSessionUser(req);
-    if (!user || user.role !== 'admin') return res.status(401).json({ error: 'Admin authentication required' });
-    // attach user to request for downstream handlers
-    req.currentUser = user;
+    const admin = await getAdminSessionUser(req);
+    if (!admin || admin.role !== 'admin') return res.status(401).json({ error: 'Admin authentication required' });
+    // attach admin to request for downstream handlers
+    req.currentUser = admin;
     next();
   } catch (e) {
     return res.status(500).json({ error: 'Admin auth check failed' });
@@ -881,7 +896,9 @@ app.get('/api/me', async (req, res) => {
 // Logout: clear session cookie
 app.post('/api/logout', async (req, res) => {
   try {
+    // Clear both user and admin session cookies
     res.cookie('wispa_session', '', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 0 });
+    res.cookie('wispa_admin_session', '', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 0 });
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to clear session' });
@@ -949,7 +966,7 @@ app.post("/api/admin-login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials or not an admin" });
     }
     console.log('[admin-login] success for user', username, 'id', admin.id);
-    // Create session cookie (same behavior as /api/login)
+    // Create admin session cookie (separate from user session)
     try{
       const token = createSessionToken(admin.id);
       const cookieOpts = {
@@ -958,7 +975,8 @@ app.post("/api/admin-login", async (req, res) => {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 7*24*3600*1000
       };
-      res.cookie('wispa_session', token, cookieOpts);
+      // use distinct cookie name for admin sessions
+      res.cookie('wispa_admin_session', token, cookieOpts);
     }catch(e){ /* ignore cookie set errors */ }
     res.json({ user: { id: admin.id, username: admin.username, email: admin.email, full_name: admin.full_name || 'Administrator', role: 'admin', created_at: admin.created_at } });
   } catch (err) {
@@ -994,8 +1012,15 @@ app.get('/set-session', async (req, res) => {
     // validate token briefly
     const payload = parseSessionToken(st);
     if (!payload || !payload.uid) return res.status(400).send('Invalid token');
+    // Determine whether token belongs to an admin; if so set admin cookie, otherwise set user cookie
+    let isAdmin = false;
+    try{
+      const a = await pool.query('SELECT id FROM admin_logins WHERE id = $1', [payload.uid]);
+      if(a && a.rows && a.rows[0]) isAdmin = true;
+    }catch(e){}
     const cookieOpts = { httpOnly: true, sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', secure: process.env.NODE_ENV === 'production', maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
-    res.cookie('wispa_session', st, cookieOpts);
+    if(isAdmin) res.cookie('wispa_admin_session', st, cookieOpts);
+    else res.cookie('wispa_session', st, cookieOpts);
     return res.redirect(r);
   } catch (e) { return res.status(500).send('Failed to set session'); }
 });
