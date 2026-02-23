@@ -378,6 +378,7 @@ app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
 });
 
 // Upload multiple files for property photos
+// Upload multiple files for property photos
 app.post('/api/upload-photos', upload.array('files'), (req, res) => {
   try {
     if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
