@@ -25,8 +25,16 @@ if (!window.apiFetch) {
                         const finalOpts = Object.assign({}, opts || {}, { credentials: 'include' });
                         try{
                             const r = await fetch(API_BASE + url, finalOpts);
-                            if(r && r.status === 401){ try{ window._wispaAdminUnauthorized = true; }catch(e){} }
-                            if(r && r.ok){ try{ window._wispaAdminUnauthorized = false; }catch(e){} }
+                            // Only mark the global admin-401 flag for admin routes to avoid
+                            // globally silencing retries for non-admin endpoints.
+                            try {
+                                if (r && r.status === 401 && String(url).startsWith('/api/admin')) {
+                                    window._wispaAdminUnauthorized = true;
+                                }
+                                if (r && r.ok && String(url).startsWith('/api/admin')) {
+                                    window._wispaAdminUnauthorized = false;
+                                }
+                            } catch (e) {}
                             return r;
                         }catch(e){ return null; }
                     }
@@ -35,15 +43,27 @@ if (!window.apiFetch) {
                     try {
                         const finalOpts2 = Object.assign({}, opts || {}, { credentials: 'include' });
                         const res2 = await fetch(API_BASE + url, finalOpts2);
-                        // If the API indicates unauthorized, mark a global flag so callers can back off
-                        if (res2 && res2.status === 401) {
-                            try{ window._wispaAdminUnauthorized = true; }catch(e){}
-                        }
+                        // If the API indicates unauthorized, mark a global flag only for admin routes
+                        try {
+                            if (res2 && res2.status === 401 && String(url).startsWith('/api/admin')) {
+                                window._wispaAdminUnauthorized = true;
+                            }
+                            if (res2 && res2.ok && String(url).startsWith('/api/admin')) {
+                                window._wispaAdminUnauthorized = false;
+                            }
+                        } catch (e) {}
                         return res2;
                     } catch (e) { return null; }
         } catch (e) { return null; }
     };
 }
+
+// Allow pages (or login flows) to clear the admin-unauthorized backoff and
+// attempt pending admin actions again after an admin signs in.
+window.clearAdminUnauthorized = function() {
+    try { window._wispaAdminUnauthorized = false; } catch(e) {}
+    try { if (typeof processPendingNotifications === 'function') processPendingNotifications(); } catch(e) {}
+};
 
 // Disable localStorage usage in DB-only mode: make reads return null and writes no-ops.
 // This prevents accidental client-side persistence that can conflict with the real API.
