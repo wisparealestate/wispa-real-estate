@@ -58,12 +58,47 @@
             function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
             // Render conversation messages
+            function normalizeImageUrlLocal(u){ try{ if(!u) return u; const s=String(u).trim(); if(s.indexOf('data:')===0) return s; if(window.normalizeImageUrl) return window.normalizeImageUrl(s); if(location && location.protocol==='https:'){ if(s.startsWith('http://')) return s.replace(/^http:/,'https:'); if(s.startsWith('//')) return 'https:'+s; } return s; }catch(e){return u;} }
+
+            function renderPropertyCardIfPresent(list){
+                try{
+                    // find a property meta on first message or any message
+                    const msgWithProp = (list||[]).find(m => m && m.meta && (m.meta.property || m.meta.propertyId || m.meta.property_id));
+                    const prop = msgWithProp && (msgWithProp.meta.property || null);
+                    // clear any existing card
+                    const existing = document.getElementById('messages-property-card'); if(existing) existing.remove();
+                    if(!prop) return;
+                    const cardWrap = document.createElement('div');
+                    cardWrap.id = 'messages-property-card';
+                    cardWrap.style.padding = '12px';
+                    cardWrap.style.borderRadius = '8px';
+                    cardWrap.style.background = '#f8fafc';
+                    cardWrap.style.margin = '6px 0 12px 0';
+                    cardWrap.style.display = 'flex';
+                    cardWrap.style.gap = '12px';
+                    cardWrap.style.alignItems = 'center';
+                    cardWrap.style.cursor = 'pointer';
+                    const img = prop.image || (prop.images && prop.images[0]) || '';
+                    if(img){ const im = document.createElement('img'); im.src = normalizeImageUrlLocal(img); im.alt = prop.title || ''; im.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;'; cardWrap.appendChild(im); }
+                    const info = document.createElement('div'); info.style.flex = '1';
+                    const t = document.createElement('div'); t.style.fontWeight = '700'; t.style.marginBottom='4px'; t.textContent = prop.title || prop.name || 'Property';
+                    const s = document.createElement('div'); s.style.color='#666'; s.style.fontSize='13px'; s.textContent = (prop.location||prop.address||'') + (prop.price ? (' — '+prop.price) : '');
+                    info.appendChild(t); info.appendChild(s); cardWrap.appendChild(info);
+                    const pid = prop.id || prop.propertyId || prop.property_id || '';
+                    cardWrap.addEventListener('click', function(){ if(pid) window.location.href = 'property-detail.html?id='+encodeURIComponent(pid)+'&conversation=true'; });
+                    // insert at top of messages container
+                    messagesEl.parentNode.insertBefore(cardWrap, messagesEl);
+                }catch(e){ console.warn('renderPropertyCardIfPresent failed', e); }
+            }
+
             function renderList(list){
                 messagesEl.innerHTML = '';
                 if (!list || list.length === 0) {
                     messagesEl.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">No messages yet. Start the conversation!</p>';
                     return;
                 }
+                // prepend property card when applicable
+                renderPropertyCardIfPresent(list);
                 list.forEach(m => {
                     const div = document.createElement('div');
                     div.className = 'chat-message ' + (m.sender === 'user' ? 'sent' : 'received');

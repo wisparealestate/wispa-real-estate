@@ -691,6 +691,13 @@
             };
         } catch(e) {}
 
+        // If this page is being opened from a conversation, hide the contact/admin contact section
+        const convParam = urlParams.get('conversation') || urlParams.get('conv') || null;
+        if (convParam === 'true') {
+            const contactSection = document.querySelector('.contact-admin-section');
+            if (contactSection) contactSection.style.display = 'none';
+        }
+
         // Normalize price string for display
         if (typeof property.price === 'number') {
             property.price = '€' + property.price.toLocaleString();
@@ -928,6 +935,12 @@
                     if(img){
                         const i = document.createElement('img'); i.src = normalizeImageUrl(img); i.alt = title; i.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;'; card.appendChild(i);
                     }
+                    // Make the card clickable to open the property detail page but mark as conversation view
+                    card.style.cursor = 'pointer';
+                    try{
+                        const pid = prop.id || prop.propertyId || prop.id || '';
+                        card.addEventListener('click', function(){ if(pid) window.location.href = 'property-detail.html?id='+encodeURIComponent(pid)+'&conversation=true'; });
+                    }catch(e){}
                     const info = document.createElement('div');
                     const infoTitle = document.createElement('div');
                     infoTitle.style.cssText = 'font-weight:700;margin-bottom:4px';

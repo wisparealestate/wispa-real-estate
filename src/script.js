@@ -383,15 +383,18 @@ async function openAdminChat(chatId) {
             const title = p.title || p.name || 'Property';
             const price = (p.price != null) ? (`$${Number(p.price).toLocaleString()}`) : '';
             const loc = p.location || p.address || '';
-            htmlParts.push(`
-                <div style="padding:12px;border-radius:8px;background:#f8fafc;margin-bottom:10px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);">
+                        const propId = p.id || p.propertyId || '';
+                        htmlParts.push(`
+                                <a href="property-detail.html?id=${escapeHtml(String(propId))}&conversation=true" style="text-decoration:none;color:inherit;display:block">
+                                <div style="padding:12px;border-radius:8px;background:#f8fafc;margin-bottom:10px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);">
                                         ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)}" style="width:84px;height:64px;object-fit:cover;border-radius:6px;">` : ''}
-                    <div style="flex:1">
+                                        <div style="flex:1">
                                             <div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div>
                                             <div style="color:#666;font-size:13px">${escapeHtml(loc)} ${price ? ' — '+escapeHtml(price) : ''}</div>
-                    </div>
-                </div>
-            `);
+                                        </div>
+                                </div>
+                                </a>
+                        `);
             // mark property shown so it doesn't appear as duplicate in first message
             try { if (messages[0] && messages[0].meta && messages[0].meta.property) delete messages[0].meta.property; } catch(e){}
         }
