@@ -147,7 +147,35 @@ app.get("/api/conversations", async (req, res) => {
       ? await pool.query('SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated DESC', [userId])
       : await pool.query('SELECT * FROM conversations ORDER BY updated DESC');
     // sanitize titles to avoid literal 'undefined' showing in UI
-    const rows = (result.rows || []).map(r => (Object.assign({}, r, { title: sanitizeTitle(r.title) })));
+    let rows = (result.rows || []).map(r => (Object.assign({}, r, { title: sanitizeTitle(r.title) })));
+    try{
+      // Attach the most-recent message.meta (if present) to each conversation so the frontend can render property previews reliably
+      await Promise.all(rows.map(async (c, idx) => {
+        try{
+          const mres = await pool.query('SELECT meta FROM messages WHERE conversation_id = $1 AND meta IS NOT NULL ORDER BY sent_at DESC LIMIT 1', [c.id]);
+          if(mres && mres.rows && mres.rows[0] && mres.rows[0].meta){
+            try{
+              const parsed = (typeof mres.rows[0].meta === 'string') ? JSON.parse(mres.rows[0].meta) : mres.rows[0].meta;
+              rows[idx].meta = parsed;
+              if(parsed && parsed.property) rows[idx].property = parsed.property;
+            }catch(e){}
+          }
+          // Fallback: if no meta/property found, and conversation id is of form property-<id>, try to load property row directly
+          if((!rows[idx].property || !rows[idx].property.id) && typeof c.id === 'string'){
+            const m = c.id.match(/^property-(\d+)$/i);
+            if(m){
+              try{
+                const pid = parseInt(m[1],10);
+                const pres = await pool.query('SELECT id, title, image_url, images FROM properties WHERE id = $1 LIMIT 1', [pid]);
+                if(pres && pres.rows && pres.rows[0]){
+                  rows[idx].property = pres.rows[0];
+                }
+              }catch(e){}
+            }
+          }
+        }catch(e){}
+      }));
+    }catch(e){}
     return res.json({ conversations: rows });
   } catch (err) {
     // Fallback: some deployments use an older schema without a `conversations` table.
@@ -574,17 +602,59 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
   if (!convId) return res.status(400).json({ error: 'Missing conversation id' });
   try {
     // Prefer conversation_id column
-    const result = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 ORDER BY sent_at ASC', [convId]);
-    // If no rows, attempt a fallback that matches conversation_id or legacy mapping
-    if (!result.rows || result.rows.length === 0) {
+    const result = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 OR (conversation_id IS NULL AND (meta IS NOT NULL AND (meta->>\'conversationId\') = $1)) ORDER BY sent_at ASC', [convId]);
+    let rows = (result.rows || []);
+    if (!rows || rows.length === 0) {
       try {
         const fallback = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 OR (meta->>\'legacy_sender_id\' = $2) OR (meta->>\'legacy_receiver_id\' = $2) ORDER BY sent_at ASC', [convId, convId.replace(/^user-/, '')]);
-        return res.json({ messages: fallback.rows });
+        rows = fallback.rows || [];
       } catch (e) {
-        return res.json({ messages: [] });
+        rows = [];
       }
     }
-    return res.json({ messages: result.rows });
+
+    // Normalize rows into a consistent JSON shape for clients
+    let convUserId = null;
+    try{
+      const cres = await pool.query('SELECT user_id FROM conversations WHERE id = $1 LIMIT 1', [convId]);
+      if(cres && cres.rows && cres.rows[0]) convUserId = cres.rows[0].user_id;
+    }catch(e){}
+
+    // If there is a conversation-level user id, try to load the user record for nicer display
+    let convUser = null;
+    if(convUserId){
+      try{ const ur = await pool.query('SELECT id, username, email, full_name, avatar_url FROM users WHERE id = $1 LIMIT 1', [convUserId]); if(ur && ur.rows && ur.rows[0]) convUser = ur.rows[0]; }catch(e){}
+    }
+
+    const mapped = rows.map(r => {
+      // attempt parse meta
+      let meta = null;
+      try{ meta = (typeof r.meta === 'string') ? JSON.parse(r.meta) : r.meta; }catch(e){ meta = r.meta || null }
+      const text = r.body || r.content || r.message || (meta && (meta.text || meta.body)) || null;
+      const ts = r.sent_at || r.sentAt || r.created_at || null;
+      // determine sender: prefer explicit r.sender, else compare sender_id to conversation user_id; else fall back to admin/user heuristics
+      let sender = null;
+      try{
+        if(r.sender && (String(r.sender).toLowerCase() === 'admin' || String(r.sender).toLowerCase() === 'user')) sender = String(r.sender).toLowerCase();
+        else if(r.sender_id && convUserId && String(r.sender_id) === String(convUserId)) sender = 'user';
+        else if(r.sender_id && convUserId && String(r.sender_id) !== String(convUserId)) sender = 'admin';
+        else if(meta && meta.sender) sender = String(meta.sender).toLowerCase();
+        else sender = (r.sender || null);
+      }catch(e){ sender = (r.sender || null); }
+
+      return {
+        id: r.id,
+        sender: sender || (r.sender_id ? 'user' : 'user'), // default to 'user' when unknown (safer UX)
+        text: text,
+        timestamp: ts,
+        userId: r.sender_id || (meta && (meta.userId || meta.user_id)) || null,
+        userName: (meta && (meta.userName || meta.user_name)) || r.user_name || r.userName || (convUser ? (convUser.full_name || convUser.username || convUser.email) : null),
+        userEmail: (meta && (meta.userEmail || meta.user_email)) || r.user_email || r.email || (convUser ? convUser.email : null),
+        meta: meta || null
+      };
+    });
+
+    return res.json({ messages: mapped });
   } catch (err) {
     res.status(500).json({ error: 'Database error fetching conversation messages', details: err.message });
   }
