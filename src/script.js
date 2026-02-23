@@ -1003,44 +1003,41 @@ if (typeof propertyImageIds === 'undefined') {
     // Start with no system-generated properties. Homepage will show only admin-saved posts.
     let properties = [];
 
-    // Initialize user-specific liked properties
-    function initializeLikedProperties() {
-        const wispaUser = localStorage.getItem('wispaUser');
-        if (!wispaUser) return;
-        
-        const userData = JSON.parse(wispaUser);
-        const userId = userData.id;
-        const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
-        // Only initialize demo liked properties if there are existing properties
-        if (likedProperties.length === 0 && properties.length > 0) {
-            const likedIds = [];
-            const count = Math.min(50, properties.length);
-            for (let i = 0; i < count; i++) {
-                const randomIndex = Math.floor(Math.random() * properties.length);
-                const randomId = properties[randomIndex].id;
-                if (randomId && !likedIds.includes(randomId)) {
-                    likedIds.push(randomId);
+    // Initialize user-specific liked properties (async; uses server-backed session if available)
+    async function initializeLikedProperties() {
+        try {
+            const user = await (window.getCurrentUser ? window.getCurrentUser() : null);
+            if (!user || !user.id) return;
+            const userId = user.id;
+            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+            // Only initialize demo liked properties if there are existing properties
+            if (likedProperties.length === 0 && properties.length > 0) {
+                const likedIds = [];
+                const count = Math.min(50, properties.length);
+                for (let i = 0; i < count; i++) {
+                    const randomIndex = Math.floor(Math.random() * properties.length);
+                    const randomId = properties[randomIndex].id;
+                    if (randomId && !likedIds.includes(randomId)) {
+                        likedIds.push(randomId);
+                    }
                 }
+                if (likedIds.length) localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedIds));
             }
-            if (likedIds.length) localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedIds));
-        }
+        } catch (e) { /* ignore */ }
     }
 
-    initializeLikedProperties();
+    // fire-and-forget initialization
+    initializeLikedProperties().catch(()=>{});
 
     // Wire up any existing like buttons on the page (static or dynamically added)
-    function initializeGlobalLikeButtons() {
-        const wispaUser = localStorage.getItem('wispaUser');
-        if (!wispaUser) {
-            console.log('User not logged in, skipping like button initialization');
-            return;
-        }
+    async function initializeGlobalLikeButtons() {
+        try{
+            const user = await (window.getCurrentUser ? window.getCurrentUser() : null);
+            if (!user || !user.id) return; // not logged in, silently skip
+            const userId = user.id;
         
-        const userData = JSON.parse(wispaUser);
-        const userId = userData.id;
-        
-        const selector = '.similar-property-like-btn, .like-btn';
-        document.querySelectorAll(selector).forEach(btn => {
+            const selector = '.similar-property-like-btn, .like-btn';
+            document.querySelectorAll(selector).forEach(btn => {
             // avoid double-binding
             if (btn.dataset._likeInit) return;
             btn.dataset._likeInit = '1';
@@ -1049,7 +1046,7 @@ if (typeof propertyImageIds === 'undefined') {
                 e.stopPropagation();
                 const id = this.dataset.id || this.dataset.propertyId || this.getAttribute('data-id') || this.getAttribute('data-property-id');
                 if (!id) return;
-                const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+                    const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
                 const idx = liked.findIndex(x => String(x) === String(id));
                 if (idx > -1) {
                     liked.splice(idx, 1);
