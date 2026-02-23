@@ -419,33 +419,67 @@
     document.getElementById('chat-back').addEventListener('click', (e)=>{ e.preventDefault(); backToChatList(); });
     document.getElementById('chat-full-send').addEventListener('click', (e)=>{ const text = document.getElementById('chat-full-input').value || ''; if(!text.trim()) return; try{ const id = (document.getElementById('chat-full-title').dataset && document.getElementById('chat-full-title').dataset.chatId) || null; if(!id){ /* try to infer from title */ } sendAdminMessage(id, text); document.getElementById('chat-full-input').value=''; }catch(err){ console.error(err) } });
 
-    function sendAdminMessage(chatId, text){
+    async function sendAdminMessage(chatId, text){
       if(!chatId){ console.warn('Missing chatId for sendAdminMessage'); return }
-      const key = 'adminMessages_' + chatId;
-      let arr = [];
-      try{ arr = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ arr = []; }
-      const msg = { sender:'admin', text: text, timestamp: Date.now() };
-      arr.push(msg);
-      try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
-      // update adminChats meta
+      const msg = { sender:'admin', text: text, ts: Date.now() };
+      // Try to persist via server API so users receive admin replies
       try{
-        const acKey = 'adminChats';
-        let ac = [];
-        try{ ac = JSON.parse(localStorage.getItem(acKey) || '[]'); }catch(e){ ac = []; }
-        let meta = ac.find(a=>a.id===chatId);
-        const now = Date.now();
-        if(!meta){
-          meta = { id: chatId, userId: null, participantName: null, lastMessage: text, updated: now, unread: 0 };
-          ac.unshift(meta);
-        } else {
-          meta.lastMessage = text;
-          meta.updated = now;
-          meta.unread = 0;
+        const opts = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ convId: chatId, message: msg })
+        };
+        const poster = window.apiFetch ? window.apiFetch : fetch;
+        const res = await poster('/api/conversations/messages', opts);
+        if (res && res.ok) {
+          // update adminChats meta locally for immediate UI update
+          try{
+            const acKey = 'adminChats';
+            let ac = [];
+            try{ ac = JSON.parse(localStorage.getItem(acKey) || '[]'); }catch(e){ ac = []; }
+            let meta = ac.find(a=>a.id===chatId);
+            const now = Date.now();
+            if(!meta){
+              meta = { id: chatId, userId: null, participantName: null, lastMessage: text, updated: now, unread: 0 };
+              ac.unshift(meta);
+            } else {
+              meta.lastMessage = text;
+              meta.updated = now;
+              meta.unread = 0;
+            }
+            try{ localStorage.setItem(acKey, JSON.stringify(ac)); }catch(e){}
+          }catch(e){}
+          try{ openAdminChat(chatId); }catch(e){}
+          return;
         }
-        try{ localStorage.setItem(acKey, JSON.stringify(ac)); }catch(e){}
-      }catch(e){}
-      // refresh fullview
-      try{ openAdminChat(chatId); }catch(e){}
+      }catch(e){ /* fall through to local fallback */ }
+
+      // Fallback: save to localStorage if server unavailable
+      try{
+        const key = 'adminMessages_' + chatId;
+        let arr = [];
+        try{ arr = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ arr = []; }
+        arr.push(msg);
+        try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
+        // update adminChats meta
+        try{
+          const acKey = 'adminChats';
+          let ac = [];
+          try{ ac = JSON.parse(localStorage.getItem(acKey) || '[]'); }catch(e){ ac = []; }
+          let meta = ac.find(a=>a.id===chatId);
+          const now = Date.now();
+          if(!meta){
+            meta = { id: chatId, userId: null, participantName: null, lastMessage: text, updated: now, unread: 0 };
+            ac.unshift(meta);
+          } else {
+            meta.lastMessage = text;
+            meta.updated = now;
+            meta.unread = 0;
+          }
+          try{ localStorage.setItem(acKey, JSON.stringify(ac)); }catch(e){}
+        }catch(e){}
+        try{ openAdminChat(chatId); }catch(e){}
+      }catch(e){ console.error('Failed to send admin message', e); }
     }
 
     async function loadProfile(){
