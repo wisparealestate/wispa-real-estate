@@ -3075,3 +3075,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 })();
+
+// Remove hard-coded demo property cards from index.html so dynamic data is used
+document.addEventListener('DOMContentLoaded', function(){
+    try{
+        const path = (location && location.pathname) ? location.pathname : '';
+        if (!path || path.endsWith('/') || path.endsWith('index.html') || path.indexOf('index') !== -1) {
+            ['hot-row-1','hot-row-2','featured-list','available-list'].forEach(id => {
+                try{ const el = document.getElementById(id); if(el) el.innerHTML = '<!-- dynamic content loaded by script.js -->'; }catch(e){}
+            });
+        }
+    }catch(e){}
+});
