@@ -876,7 +876,22 @@
                 const postBadgeEl = document.getElementById('postBadge');
                 const categoryBadgeEl = document.getElementById('categoryBadge');
                 const postVal = property.postTo || property.post_to || property.post || property.sale_rent || property.saleRent || '';
-                if (postBadgeEl && postVal) { postBadgeEl.textContent = String(postVal).toUpperCase(); postBadgeEl.style.display = 'inline-block'; }
+                if (postBadgeEl && postVal) {
+                    // Set text and show the canonical badge in the title area
+                    postBadgeEl.textContent = String(postVal).toUpperCase();
+                    postBadgeEl.style.display = 'inline-block';
+                    // normalize badge class (hot/featured/available)
+                    postBadgeEl.classList.remove('hot','featured','available');
+                    if (property.hot) postBadgeEl.classList.add('hot');
+                    else if (property.featured) postBadgeEl.classList.add('featured');
+                    else postBadgeEl.classList.add('available');
+                    // Hide any overlay badges that may exist inside the image container to avoid duplicates
+                    try{
+                        document.querySelectorAll('.property-image-container .property-post-badge').forEach(el => {
+                            if (el !== postBadgeEl) el.style.display = 'none';
+                        });
+                    }catch(e){}
+                }
                 // category badge (type) e.g., Apartment, House
                 const catVal = property.type || property.property_type || property.category || '';
                 if (categoryBadgeEl && catVal) { categoryBadgeEl.textContent = String(catVal); categoryBadgeEl.style.display = 'inline-block'; }
