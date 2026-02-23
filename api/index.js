@@ -544,6 +544,19 @@ app.post('/api/conversations/messages', async (req, res) => {
           await pool.query('UPDATE messages SET conversation_id = $1 WHERE id = $2', [convId, r2.rows[0].id]);
         }
       } catch (e) { /* ignore */ }
+      // If the messages table has a `meta` or `sender` column, try to persist the original message object
+      try {
+        const origMeta = JSON.stringify(message || {});
+        const senderVal = message && message.sender ? message.sender : (message && message.userId ? 'user' : null);
+        if (r2.rows && r2.rows[0] && r2.rows[0].id) {
+          try {
+            await pool.query('UPDATE messages SET meta = $1 WHERE id = $2', [origMeta, r2.rows[0].id]);
+          } catch (e) { /* ignore if column missing */ }
+          try {
+            if (senderVal) await pool.query('UPDATE messages SET sender = $1 WHERE id = $2', [senderVal, r2.rows[0].id]);
+          } catch (e) { /* ignore if column missing */ }
+        }
+      } catch (e) { /* ignore */ }
       // Ensure a conversations row exists (create or update) so the conversation appears for the user/admin
       try {
         const convUserId = message.userId || null;
