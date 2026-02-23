@@ -922,16 +922,39 @@
     document.getElementById('createPostClear').addEventListener('click', function(e){ e.preventDefault(); ['postTitle','postPrice','postAddress','postType','postBeds','postBaths','postArea','postDescription'].forEach(id=>{ try{ document.getElementById(id).value=''; }catch(e){} }); try{ document.getElementById('postTo').value = 'available'; }catch(e){}; try{ postFilesEl.value = ''; postPreview.innerHTML = ''; }catch(e){}; document.getElementById('postNotify').checked = false; document.getElementById('createPostStatus').textContent=''; });
 
     // Init tab from hash or default and load data
-    const initial = (location.hash && location.hash.slice(1)) || 'overview';
-    switchTab(initial);
-    loadProfile();
-    loadOverview();
-    loadRequests();
-    loadMessages();
-    loadAlerts();
-    loadNotifications();
-    loadProperties();
-    loadUsers();
+    (function(){
+      const raw = (location.hash && location.hash.slice(1)) || 'overview';
+      // Support legacy #conversation links by mapping them to the chat tab
+      if (raw === 'conversation') {
+        const params = new URLSearchParams(location.search || '');
+        const convId = params.get('id') || params.get('conv') || null;
+        switchTab('chat');
+        // Load data then open the requested conversation (small delay ensures DOM panels are ready)
+        loadProfile();
+        loadOverview();
+        loadRequests();
+        loadMessages();
+        loadAlerts();
+        loadNotifications();
+        loadProperties();
+        loadUsers();
+        setTimeout(() => {
+          if (convId && typeof openAdminChat === 'function') openAdminChat(convId);
+          else if (typeof renderAdminChatList === 'function') renderAdminChatList();
+        }, 120);
+        return;
+      }
+      // Default flow for other hashes
+      switchTab(raw);
+      loadProfile();
+      loadOverview();
+      loadRequests();
+      loadMessages();
+      loadAlerts();
+      loadNotifications();
+      loadProperties();
+      loadUsers();
+    })();
   </script>
   <!-- Wispa admin debug panel: floating controls to test admin auth and retry queued notifications -->
   <div id="wispa-admin-debug" style="position:fixed;right:12px;bottom:12px;z-index:99999;background:rgba(255,255,255,0.95);border:1px solid #e6eef6;padding:8px;border-radius:8px;box-shadow:0 10px 30px rgba(8,24,50,0.08);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:0">
