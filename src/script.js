@@ -141,64 +141,139 @@ document.addEventListener('DOMContentLoaded', async function() {
     // After loading properties, attempt to process any locally-stored photos (upload & migrate to remote)
     try { processLocalPhotosQueue(); } catch (e) { console.warn('processLocalPhotosQueue init failed', e); }
 
-    // Initialize global chat toolbar (attach + emoji) available on all pages
+    // Initialize attach + emoji controls but only inject into conversation input areas
     try{
-        if (!document.getElementById('wispa-chat-toolbar')){
-            const tb = document.createElement('div');
-            tb.id = 'wispa-chat-toolbar';
-            tb.style.position = 'fixed';
-            tb.style.right = '18px';
-            tb.style.bottom = '18px';
-            tb.style.zIndex = '9999';
-            tb.innerHTML = `
-                <style>#wispa-chat-toolbar button{background:#fff;border:1px solid #e6eef6;padding:8px;border-radius:8px;margin-left:6px;box-shadow:0 6px 14px rgba(8,24,50,0.06);cursor:pointer}#wispa-emoji-picker{position:fixed;right:18px;bottom:70px;background:#fff;border:1px solid #e6eef6;padding:8px;border-radius:8px;display:none;box-shadow:0 12px 36px rgba(8,24,50,0.08)}#wispa-emoji-picker button{background:transparent;border:none;font-size:20px;padding:6px;cursor:pointer}</style>
-                <input id="wispa-global-file-input" type="file" multiple style="display:none" />
-                <div id="wispa-emoji-picker" aria-hidden="true"></div>
-                <div style="display:flex;align-items:center;">
-                    <button id="wispa-attach-btn" title="Attach files">📎</button>
-                    <button id="wispa-emoji-btn" title="Emoji picker">😊</button>
-                </div>
-            `;
-            document.body.appendChild(tb);
-            const fileInput = document.getElementById('wispa-global-file-input');
+        // hidden file input used by local attach buttons
+        if (!document.getElementById('wispa-global-file-input')){
+            const hidden = document.createElement('input');
+            hidden.id = 'wispa-global-file-input';
+            hidden.type = 'file';
+            hidden.multiple = true;
+            hidden.style.display = 'none';
+            document.body.appendChild(hidden);
             window._wispaPendingFiles = [];
-            document.getElementById('wispa-attach-btn').addEventListener('click', ()=> fileInput.click());
-            fileInput.addEventListener('change', async (e)=>{
+            hidden.addEventListener('change', async (e)=>{
                 const files = Array.from(e.target.files || []);
                 if(files.length) {
                     window._wispaPendingFiles = files;
-                    // show a small notification briefly
-                    const btn = document.getElementById('wispa-attach-btn');
-                    const prev = btn.textContent;
-                    btn.textContent = '📎(' + files.length + ')';
-                    setTimeout(()=>{ btn.textContent = prev; }, 2500);
                 }
-                // reset input so same file can be reselected
                 e.target.value = '';
             });
+        }
 
-            // Emoji picker with business-related emojis (10)
-            const emojis = ['📄','🖼️','🏢','💼','📈','📊','🧾','📝','📨','📞'];
-            const picker = document.getElementById('wispa-emoji-picker');
-            for(const em of emojis){ const b = document.createElement('button'); b.type='button'; b.textContent = em; b.addEventListener('click', ()=>{
-                // insert emoji into focused input/textarea if present, else copy to clipboard
-                const active = document.activeElement; const ok = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
-                if(ok){
-                    const el = active;
-                    const start = el.selectionStart || 0; const end = el.selectionEnd || 0;
-                    const val = el.value || el.innerText || '';
-                    const newVal = val.slice(0,start) + em + val.slice(end);
-                    if(el.value !== undefined) { el.value = newVal; el.selectionStart = el.selectionEnd = start + em.length; el.focus(); }
-                    else { el.innerText = newVal; }
-                } else {
-                    try { navigator.clipboard.writeText(em); }catch(e){}
+        // Emoji set used for picker
+        const emojis = ['📄','🖼️','🏢','💼','📈','📊','🧾','📝','📨','📞'];
+
+        // Helper to add controls into a chat input area (places them before the send button)
+        function addControlsToInput(inputEl){
+            if(!inputEl || inputEl._wispaControlsAttached) return;
+            const parent = inputEl.parentNode;
+            if(!parent) return;
+            // If the chat container already provides file/emoji controls (e.g., admin view), do not inject duplicates
+            try{
+                if(parent.querySelector('#fileInput') || parent.querySelector('#emojiBtn') || parent.querySelector('input[type=file]') ){
+                    inputEl._wispaControlsAttached = true; // mark as handled
+                    return;
                 }
-                // hide picker after selection
+            }catch(e){}
+            // find send button in same container
+            const sendBtn = Array.from(parent.querySelectorAll('button')).find(b => b.id === 'sendBtn' || b.textContent.trim().toLowerCase() === 'send' || b.getAttribute('onclick') && b.getAttribute('onclick').toLowerCase().includes('send'));
+            // create controls wrapper
+            const wrap = document.createElement('div');
+            wrap.style.display = 'flex';
+            wrap.style.alignItems = 'center';
+            wrap.style.gap = '6px';
+            wrap.style.marginRight = '6px';
+
+            const attach = document.createElement('button');
+            attach.type = 'button';
+            attach.title = 'Attach files';
+            attach.textContent = '📎';
+            attach.style.background = 'transparent';
+            attach.style.border = 'none';
+            attach.style.cursor = 'pointer';
+            attach.style.fontSize = '18px';
+
+            const emojiBtn = document.createElement('button');
+            emojiBtn.type = 'button';
+            emojiBtn.title = 'Emoji picker';
+            emojiBtn.textContent = '😊';
+            emojiBtn.style.background = 'transparent';
+            emojiBtn.style.border = 'none';
+            emojiBtn.style.cursor = 'pointer';
+            emojiBtn.style.fontSize = '18px';
+
+            // emoji picker element
+            const picker = document.createElement('div');
+            picker.style.display = 'none';
+            picker.style.position = 'absolute';
+            picker.style.background = '#fff';
+            picker.style.border = '1px solid #e6eef6';
+            picker.style.padding = '6px';
+            picker.style.borderRadius = '6px';
+            picker.style.boxShadow = '0 8px 24px rgba(8,24,50,0.08)';
+            picker.style.zIndex = '9999';
+            picker.setAttribute('aria-hidden','true');
+
+            for(const em of emojis){ const b = document.createElement('button'); b.type='button'; b.textContent=em; b.style.background='transparent'; b.style.border='none'; b.style.fontSize='18px'; b.style.cursor='pointer'; b.style.margin='4px'; b.addEventListener('click', ()=>{
+                const active = inputEl; const ok = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+                if(ok){
+                    try{
+                        const el = active;
+                        const start = el.selectionStart || el.value.length || 0; const end = el.selectionEnd || start;
+                        const val = el.value || el.innerText || '';
+                        const newVal = val.slice(0,start) + em + val.slice(end);
+                        if(el.value !== undefined) { el.value = newVal; el.selectionStart = el.selectionEnd = start + em.length; el.focus(); }
+                        else { el.innerText = newVal; }
+                    }catch(e){}
+                } else {
+                    try { navigator.clipboard.writeText(em); } catch(e){}
+                }
                 picker.style.display = 'none';
             }); picker.appendChild(b); }
-            document.getElementById('wispa-emoji-btn').addEventListener('click', ()=>{ picker.style.display = (picker.style.display === 'block') ? 'none' : 'block'; });
+
+            // attach click handlers
+            attach.addEventListener('click', ()=>{
+                const hidden = document.getElementById('wispa-global-file-input'); if(hidden) hidden.click();
+                // small visual feedback: show count if files already selected
+                try{ const files = window._wispaPendingFiles || []; if(files.length){ attach.textContent = '📎(' + files.length + ')'; setTimeout(()=>{ attach.textContent = '📎'; }, 2500); } }catch(e){}
+            });
+            emojiBtn.addEventListener('click', (ev)=>{
+                // position picker relative to the button
+                if(picker.style.display === 'block') { picker.style.display='none'; return; }
+                const rect = emojiBtn.getBoundingClientRect();
+                picker.style.display = 'block';
+                picker.style.left = (rect.left) + 'px';
+                picker.style.top = (rect.top - rect.height - 10) + 'px';
+            });
+
+            // ensure parent is positioned to allow absolute picker placement
+            if(getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+
+            wrap.appendChild(attach);
+            wrap.appendChild(emojiBtn);
+            parent.insertBefore(wrap, sendBtn || inputEl.nextSibling);
+            parent.appendChild(picker);
+            inputEl._wispaControlsAttached = true;
         }
-    }catch(e){ console.warn('chat toolbar init failed', e); }
+
+        // find known conversation input elements and attach controls
+        const selectors = ['#chatInput', '#propertyDetailChatInput', 'input[data-wispa-chat]', 'textarea[data-wispa-chat]'];
+        selectors.forEach(sel => {
+            const el = document.querySelector(sel);
+            if(el) addControlsToInput(el);
+        });
+
+        // also observe DOM for chat inputs added later (e.g., modals)
+        const obs = new MutationObserver((mut)=>{
+            for(const m of mut){
+                for(const n of m.addedNodes){
+                    try{ if(n && n.querySelector){ const found = n.querySelector('#chatInput, #propertyDetailChatInput, input[data-wispa-chat], textarea[data-wispa-chat]'); if(found) addControlsToInput(found); } }catch(e){}
+                }
+            }
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }catch(e){ console.warn('chat controls init failed', e); }
 });
 
 // Convert a dataURL to a Blob
