@@ -296,20 +296,48 @@ async function openAdminChat(chatId) {
     document.getElementById('chat-full-title').textContent = chat.userName || chat.conversationTitle || chat.participantName || chat.participantId;
     document.getElementById('chat-full-sub').textContent = chat.conversationTitle || chat.participantId || '';
     try{ document.getElementById('chat-full-title').dataset.chatId = chatId; }catch(e){}
-    // Render messages
+    // Render messages (include property card at top if available)
     const msgsEl = document.getElementById('chat-full-messages');
-    if (!messages.length) {
+    const propertyCard = chat && (chat.conversationProperty || (messages && messages[0] && messages[0].meta && messages[0].meta.property)) ? (chat.conversationProperty || messages[0].meta.property) : null;
+    if (!messages.length && !propertyCard) {
         msgsEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>';
     } else {
-        msgsEl.innerHTML = messages.map(m => `
-            <div style="display:flex;${m.sender === 'admin' || m.from === 'Admin' ? 'justify-content:flex-end' : 'justify-content:flex-start'};margin-bottom:8px;">
-                <div style="max-width:75%;background:${m.sender === 'admin' || m.from === 'Admin' ? '#3498db' : '#fff'};color:${m.sender === 'admin' || m.from === 'Admin' ? '#fff' : '#222'};padding:10px;border-radius:10px;box-shadow:var(--shadow);">
-                    <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:${m.sender === 'admin' || m.from === 'Admin' ? '#fff' : '#666'};">${m.sender === 'admin' || m.from === 'Admin' ? 'Admin' : (m.userName || m.sender || m.from)}</div>
-                    <div style="white-space:pre-wrap">${m.text}</div>
-                    <div style="font-size:11px;color:rgba(0,0,0,0.45);margin-top:6px;text-align:${m.sender === 'admin' || m.from === 'Admin' ? 'right' : 'left'};">${new Date(m.timestamp || m.ts || m.time).toLocaleString()}</div>
+        let htmlParts = [];
+        if (propertyCard) {
+            const p = propertyCard;
+            const img = p.image || (p.images && p.images[0]) || '';
+            const title = p.title || p.name || 'Property';
+            const price = (p.price != null) ? (`$${Number(p.price).toLocaleString()}`) : '';
+            const loc = p.location || p.address || '';
+            htmlParts.push(`
+                <div style="padding:12px;border-radius:8px;background:#f8fafc;margin-bottom:10px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);">
+                    ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" style="width:84px;height:64px;object-fit:cover;border-radius:6px;">` : ''}
+                    <div style="flex:1">
+                      <div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div>
+                      <div style="color:#666;font-size:13px">${escapeHtml(loc)} ${price ? ' — '+escapeHtml(price) : ''}</div>
+                    </div>
+                </div>
+            `);
+            // mark property shown so it doesn't appear as duplicate in first message
+            try { if (messages[0] && messages[0].meta && messages[0].meta.property) delete messages[0].meta.property; } catch(e){}
+        }
+
+        htmlParts = htmlParts.concat(messages.map(m => {
+            const isAdmin = (m.sender === 'admin' || m.from === 'Admin');
+            const senderLabel = isAdmin ? 'Admin' : (m.userName || m.userEmail || m.sender || m.from || 'User');
+            const ts = new Date(m.timestamp || m.ts || m.time || Date.now()).toLocaleString();
+            return `
+            <div style="display:flex;${isAdmin ? 'justify-content:flex-end' : 'justify-content:flex-start'};margin-bottom:8px;">
+                <div style="max-width:75%;background:${isAdmin ? '#3498db' : '#fff'};color:${isAdmin ? '#fff' : '#222'};padding:10px;border-radius:10px;box-shadow:var(--shadow);">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:${isAdmin ? '#fff' : '#666'};">${escapeHtml(senderLabel)}</div>
+                    <div style="white-space:pre-wrap">${escapeHtml(String(m.text || m.body || ''))}</div>
+                    <div style="font-size:11px;color:rgba(0,0,0,0.45);margin-top:6px;text-align:${isAdmin ? 'right' : 'left'};">${escapeHtml(ts)}</div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }));
+
+        msgsEl.innerHTML = htmlParts.join('');
     }
     document.getElementById('chat-full-input').disabled = false;
 }
