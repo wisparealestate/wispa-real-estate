@@ -66,7 +66,20 @@
                     const apiProp = window._wispaConversationProperty || null;
                     // find a property meta on first message or any message
                     const msgWithProp = (list||[]).find(m => m && m.meta && (m.meta.property || m.meta.propertyId || m.meta.property_id));
-                    const prop = apiProp || (msgWithProp && (msgWithProp.meta.property || null));
+                    let prop = apiProp || (msgWithProp && (msgWithProp.meta.property || null));
+                    // fallback: try to resolve property by conv id from global properties loaded on page
+                    if(!prop){
+                        try{
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const convId = urlParams.get('conv') || '';
+                            const m = String(convId).match(/^property-(\d+)$/i);
+                            if(m && Array.isArray(window.properties)){
+                                const pid = Number(m[1]);
+                                const found = window.properties.find(p => Number(p.id) === pid || String(p.id) === String(pid));
+                                if(found) prop = found;
+                            }
+                        }catch(e){}
+                    }
                     // clear any existing card
                     const existing = document.getElementById('messages-property-card'); if(existing) existing.remove();
                     if(!prop) return;
@@ -103,8 +116,8 @@
                 renderPropertyCardIfPresent(list);
                 list.forEach(m => {
                     const div = document.createElement('div');
-                    // Determine whether this message was sent by the current user
-                    const isSent = (m.sender === 'user') || (m.userId && String(m.userId) === String(userId));
+                    // Determine whether this message was sent by the current user (only by matching user id)
+                    const isSent = (m.userId && String(m.userId) === String(userId));
                     div.className = 'chat-message ' + (isSent ? 'sent' : 'received');
                     div.style.maxWidth = '78%';
                     div.style.padding = '10px 12px';
@@ -112,7 +125,11 @@
                     div.style.alignSelf = isSent ? 'flex-end' : 'flex-start';
                     div.style.background = isSent ? 'var(--primary)' : 'var(--light)';
                     div.style.color = isSent ? '#fff' : 'var(--text)';
-                    const senderLabel = m.userName || m.userEmail || (isSent ? 'You' : 'Admin');
+                    let senderLabel = 'User';
+                    if (m.userName) senderLabel = m.userName;
+                    else if (m.userEmail) senderLabel = m.userEmail;
+                    else if (m.sender && String(m.sender).toLowerCase() === 'admin') senderLabel = 'Admin';
+                    else if (isSent) senderLabel = 'You';
                     const text = (m.text || m.body || m.content || (m.meta && m.meta.text) || (m.message && m.message.text) || '');
                     const ts = m.ts || m.time || m.sent_at || m.created_at || Date.now();
                     div.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:${isSent ? '#fff' : '#666'}">${escapeHtml(senderLabel)}</div><div style="font-size:14px;margin-bottom:6px">${escapeHtml(text)}</div><div style="font-size:11px;opacity:0.7;text-align:${isSent ? 'right' : 'left'}">${new Date(ts).toLocaleTimeString()}</div>`;
