@@ -1001,7 +1001,8 @@ if (typeof propertyImageIds === 'undefined') {
     }
 
     // Start with no system-generated properties. Homepage will show only admin-saved posts.
-    let properties = [];
+    // Use `var` so early-initialization callers (initialized above) do not hit TDZ.
+    var properties = [];
 
     // Initialize user-specific liked properties (async; uses server-backed session if available)
     async function initializeLikedProperties() {
@@ -1033,25 +1034,26 @@ if (typeof propertyImageIds === 'undefined') {
     async function initializeGlobalLikeButtons() {
         try{
             const user = await (window.getCurrentUser ? window.getCurrentUser() : null);
-            if (!user || !user.id) return; // not logged in, silently skip
+            if (!user || !user.id) return;
             const userId = user.id;
-        
             const selector = '.similar-property-like-btn, .like-btn';
             document.querySelectorAll(selector).forEach(btn => {
             // avoid double-binding
             if (btn.dataset._likeInit) return;
             btn.dataset._likeInit = '1';
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', async function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                const id = this.dataset.id || this.dataset.propertyId || this.getAttribute('data-id') || this.getAttribute('data-property-id');
+                const btnEl = e.currentTarget;
+                const id = btnEl.dataset.id || btnEl.dataset.propertyId || btnEl.getAttribute('data-id') || btnEl.getAttribute('data-property-id');
                 if (!id) return;
-                    const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+                // user validated at init; reuse outer `user` and `userId`
+                const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
                 const idx = liked.findIndex(x => String(x) === String(id));
                 if (idx > -1) {
                     liked.splice(idx, 1);
-                    this.classList.remove('liked');
-                    this.textContent = '♡';
+                    btnEl.classList.remove('liked');
+                    btnEl.textContent = '♡';
 
                     // remove existing like reaction for this user/post
                     try {
@@ -1061,8 +1063,8 @@ if (typeof propertyImageIds === 'undefined') {
                     } catch(e) { console.error(e); }
                 } else {
                     liked.push(String(id));
-                    this.classList.add('liked');
-                    this.textContent = '♥';
+                    btnEl.classList.add('liked');
+                    btnEl.textContent = '♥';
 
                     // create a notification reaction for admin to see this like
                     try {
@@ -1071,7 +1073,7 @@ if (typeof propertyImageIds === 'undefined') {
                         const reactionObj = {
                             id: 'react-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
                             userId: userId,
-                            userName: userData.username || userData.email || userId,
+                            userName: (user && (user.username || user.email)) || userId,
                             postId: id,
                             postTitle: prop ? (prop.title || prop.location || 'Property') : 'Post',
                             timestamp: new Date().toISOString(),
@@ -1114,9 +1116,13 @@ if (typeof propertyImageIds === 'undefined') {
                 btn.textContent = '♥';
             }
         });
+    } catch (e) { /* ignore */ }
+
+    // End try/catch for initialization
     }
 
-    let filteredProperties = [...properties];
+    // Start empty — will be populated after `properties` is loaded from the API
+    let filteredProperties = [];
     let currentCategory = 'all';
     let displayedProperties = [];
     let currentPage = 1;
