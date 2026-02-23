@@ -355,56 +355,17 @@
     </style>
 </head>
 <body>
-    <!-- STANDARD SITE HEADER -->
-    <header class="main-header">
-        <div class="header-left">
-            <a class="profile-btn" aria-label="User profile" href="profile.html">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.2c-3.3 0-9.8 1.7-9.8 5v2.2h19.6V19c0-3.3-6.5-5-9.8-5z" fill="currentColor"/>
-                </svg>
-            </a>
-        </div>
-        <div class="header-center">
-            <form class="search-bar" id="header-search-form">
-                <div class="search-bar-wrapper">
-                    <input type="text" id="header-search-input" placeholder="Search for Properties" />
-                    <span class="search-icon" id="header-search-icon">🔍</span>
-                </div>
-            </form>
-        </div>
-        <div class="header-right">
-            <a href="notifications.html" class="notification-btn" aria-label="Notifications">🔔</a>
-            <div class="hamburger-menu-container" id="hamburgerMenuContainer">
-                <button type="button" class="hamburger-btn" aria-label="Open menu">☰</button>
-                <div class="hamburger-dropdown" role="menu" aria-hidden="true">
-                    <a href="index.html" class="nav-link">Home</a>
-                    <a href="profile.html" class="nav-link">Profile</a>
-                    <a href="about.html" class="nav-link">About</a>
-                    <a href="services.html" class="nav-link">Services</a>
-                    <a href="agents.html" class="nav-link">Agents</a>
-                    <a href="likes.html" class="nav-link">Likes</a>
-                    <a href="notifications.html" class="nav-link">Notifications</a>
-                    <button class="chat-btn" type="button">Chat</button>
-                </div>
-            </div>
-        </div>
-    </header>
-    <div style="height:80px;"></div>
+    <!-- Header removed on notifications page to show full notification feed -->
+    <style>
+        /* Keep page spacing consistent when header removed */
+        main.main-content { margin-top: 8px; }
+    </style>
 
     <main class="main-content">
         <div class="search-section" style="width:100%;max-width:600px;margin:40px auto 0 auto;padding:20px;">
             <h2>Notifications</h2>
-            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                <div class="filter-tabs">
-                    <button class="filter-tab active" data-filter="all">All</button>
-                    <button class="filter-tab" data-filter="login">Login</button>
-                    <button class="filter-tab" data-filter="like">Likes</button>
-                    <button class="filter-tab" data-filter="message">Messages</button>
-                    <button class="filter-tab" data-filter="system">System</button>
-                    <button class="filter-tab" data-filter="listing">Listings</button>
-                    <button class="filter-tab" data-filter="admin">Admin</button>
-                    <button class="filter-tab" data-filter="unread">Unread</button>
-                </div>
+            <div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center;">
+                <!-- Filters removed: show all notifications by default -->
                 <button class="mark-all-read" id="markAllReadBtn">Mark all read</button>
             </div>
             <!-- Notifications List -->
@@ -644,11 +605,8 @@
         }
 
         function renderNotifications() {
-            const filtered = notifications.filter(n => {
-                if (currentFilter === 'all') return true;
-                if (currentFilter === 'unread') return !n.read;
-                return n.type === currentFilter;
-            });
+            // Always show all notifications for users on this page.
+            const filtered = Array.isArray(notifications) ? notifications.slice() : [];
 
             const list = document.getElementById('notificationsList');
             const empty = document.getElementById('emptyState');
