@@ -38,17 +38,7 @@
             <div class="admin-login-error" id="adminLoginError" style="display:none;"></div>
         </form>
     </div>
-    <!-- Ensure pages that are served from other origins use the configured API backend by default -->
-    <script>
-        // Prefer same-origin localhost API during local development to avoid cross-site cookie issues.
-        if (!window.WISPA_API_BASE) {
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                window.WISPA_API_BASE = 'http://localhost:3001';
-            } else {
-                window.WISPA_API_BASE = 'https://wispa-real-estate-2ew3.onrender.com';
-            }
-        }
-    </script>
+    <!-- Use the configured API backend (script.js sets `window.WISPA_API_BASE` to the project host) -->
     <script>
         const form = document.getElementById('adminLoginForm');
         const errorDiv = document.getElementById('adminLoginError');
