@@ -456,16 +456,20 @@ window.requireLogin = async function(){
 
 // Open chat conversation in fullview
 async function openAdminChat(chatId) {
+    console.log('openAdminChat called for', chatId);
     // Attempt to load messages from server first (DB-backed messages), fallback to localStorage
     let messages = [];
     let chat = null;
     try {
         if (window.apiFetch && !window._wispaAdminUnauthorized) {
+            console.log('openAdminChat: attempting server fetch for', chatId);
             try {
                 const res = await window.apiFetch('/api/conversations/' + encodeURIComponent(chatId) + '/messages');
+                console.log('openAdminChat: server fetch status', res && res.status);
                 if (res && res.ok) {
                     const j = await res.json();
                         const rows = Array.isArray(j.messages) ? j.messages : (Array.isArray(j) ? j : []);
+                        console.log('openAdminChat: server returned messages count', rows && rows.length);
                         if (rows && rows.length) {
                             messages = rows.map(r => {
                                 let meta = null;
@@ -504,6 +508,24 @@ async function openAdminChat(chatId) {
                     }
                 }
             } catch(e) { /* ignore and fallback */ }
+            // If server fetch returned empty, try listing conversations to resolve partial ids
+            try{
+                if ((!messages || messages.length === 0) && window.apiFetch && !window._wispaAdminUnauthorized) {
+                    console.log('openAdminChat: attempting to resolve id via /api/conversations');
+                    const listRes = await window.apiFetch('/api/conversations');
+                    if (listRes && listRes.ok) {
+                        const lj = await listRes.json();
+                        const convs = Array.isArray(lj.conversations) ? lj.conversations : (Array.isArray(lj) ? lj : []);
+                        if (Array.isArray(convs) && convs.length) {
+                            const found = convs.find(c => (c.id && String(c.id).indexOf(String(chatId)) !== -1) || (c.key && String(c.key).indexOf(String(chatId)) !== -1) || (c.conversation_id && String(c.conversation_id).indexOf(String(chatId)) !== -1) );
+                            if (found && found.id && found.id !== chatId) {
+                                console.log('openAdminChat: resolved via server list', chatId, '->', found.id);
+                                return openAdminChat(found.id);
+                            }
+                        }
+                    }
+                }
+            }catch(e){ console.warn('openAdminChat: /api/conversations resolution failed', e); }
         }
     } catch(e) { /* ignore */ }
 
@@ -535,12 +557,14 @@ async function openAdminChat(chatId) {
         }
         // Merge messages from all keys
         const seen = new Set();
+        console.log('openAdminChat: checking local keys', keys);
         for (let i = 0; i < keys.length; i++) {
             const arr = localStorage.getItem(keys[i]);
             if (arr) {
                 try {
                     const msgs = JSON.parse(arr);
                     if (Array.isArray(msgs)) {
+                        console.log('openAdminChat: found', msgs.length, 'messages in', keys[i]);
                         msgs.forEach(m => {
                             const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
                             if (!seen.has(sig)) {
@@ -580,6 +604,29 @@ async function openAdminChat(chatId) {
                 if (found2 && found2.id && found2.id !== chatId) {
                     console.log('openAdminChat: resolved partial id via chatNotifications', chatId, '->', found2.id);
                     return openAdminChat(found2.id);
+                }
+                // Try scanning all localStorage keys for messages that include the chatId
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!key) continue;
+                    if (String(key).indexOf(chatId) !== -1) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key) || 'null');
+                            if (Array.isArray(data) && data.length) {
+                                console.log('openAdminChat: found messages under storage key', key);
+                                messages = data.slice();
+                                // derive chat id from key suffix when possible
+                                const mKey = (key.match(/([A-Za-z0-9\-_:]+)$/) || [])[1];
+                                if (mKey) chatId = mKey;
+                                break;
+                            }
+                        } catch(e) {}
+                    }
+                }
+                if (messages && messages.length) {
+                    console.log('openAdminChat: loaded messages from localStorage scan, count=', messages.length);
+                    // continue to render with found messages; attempt to derive chat meta
+                    try { chat = JSON.parse(localStorage.getItem('adminChats') || '[]').find(c=>c && c.id && String(c.id).indexOf(String(chatId)) !== -1) || null; } catch(e) { chat = chat || null; }
                 }
             } catch(e){}
             return;
