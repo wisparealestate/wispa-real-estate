@@ -425,6 +425,18 @@ app.post('/api/upload-photos', upload.array('files'), async (req, res) => {
   }
 });
 
+// Generic upload endpoint for chat attachments (docs, images, etc.)
+app.post('/api/upload-attachments', upload.array('files'), (req, res) => {
+  try {
+    if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
+    const hostBase = (process.env.API_HOST || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
+    const urls = req.files.map(f => `${hostBase}/uploads/${f.filename}`);
+    return res.json({ urls });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Create a notification for a user (DB first, fallback to file)
 app.post('/api/notifications', async (req, res) => {
   const { userId, notification } = req.body || {};

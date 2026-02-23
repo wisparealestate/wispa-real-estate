@@ -57,6 +57,65 @@ document.addEventListener('DOMContentLoaded', async function() {
     } catch (e) { window.properties = []; }
     // After loading properties, attempt to process any locally-stored photos (upload & migrate to remote)
     try { processLocalPhotosQueue(); } catch (e) { console.warn('processLocalPhotosQueue init failed', e); }
+
+    // Initialize global chat toolbar (attach + emoji) available on all pages
+    try{
+        if (!document.getElementById('wispa-chat-toolbar')){
+            const tb = document.createElement('div');
+            tb.id = 'wispa-chat-toolbar';
+            tb.style.position = 'fixed';
+            tb.style.right = '18px';
+            tb.style.bottom = '18px';
+            tb.style.zIndex = '9999';
+            tb.innerHTML = `
+                <style>#wispa-chat-toolbar button{background:#fff;border:1px solid #e6eef6;padding:8px;border-radius:8px;margin-left:6px;box-shadow:0 6px 14px rgba(8,24,50,0.06);cursor:pointer}#wispa-emoji-picker{position:fixed;right:18px;bottom:70px;background:#fff;border:1px solid #e6eef6;padding:8px;border-radius:8px;display:none;box-shadow:0 12px 36px rgba(8,24,50,0.08)}#wispa-emoji-picker button{background:transparent;border:none;font-size:20px;padding:6px;cursor:pointer}</style>
+                <input id="wispa-global-file-input" type="file" multiple style="display:none" />
+                <div id="wispa-emoji-picker" aria-hidden="true"></div>
+                <div style="display:flex;align-items:center;">
+                    <button id="wispa-attach-btn" title="Attach files">📎</button>
+                    <button id="wispa-emoji-btn" title="Emoji picker">😊</button>
+                </div>
+            `;
+            document.body.appendChild(tb);
+            const fileInput = document.getElementById('wispa-global-file-input');
+            window._wispaPendingFiles = [];
+            document.getElementById('wispa-attach-btn').addEventListener('click', ()=> fileInput.click());
+            fileInput.addEventListener('change', async (e)=>{
+                const files = Array.from(e.target.files || []);
+                if(files.length) {
+                    window._wispaPendingFiles = files;
+                    // show a small notification briefly
+                    const btn = document.getElementById('wispa-attach-btn');
+                    const prev = btn.textContent;
+                    btn.textContent = '📎(' + files.length + ')';
+                    setTimeout(()=>{ btn.textContent = prev; }, 2500);
+                }
+                // reset input so same file can be reselected
+                e.target.value = '';
+            });
+
+            // Emoji picker with business-related emojis (10)
+            const emojis = ['📄','🖼️','🏢','💼','📈','📊','🧾','📝','📨','📞'];
+            const picker = document.getElementById('wispa-emoji-picker');
+            for(const em of emojis){ const b = document.createElement('button'); b.type='button'; b.textContent = em; b.addEventListener('click', ()=>{
+                // insert emoji into focused input/textarea if present, else copy to clipboard
+                const active = document.activeElement; const ok = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+                if(ok){
+                    const el = active;
+                    const start = el.selectionStart || 0; const end = el.selectionEnd || 0;
+                    const val = el.value || el.innerText || '';
+                    const newVal = val.slice(0,start) + em + val.slice(end);
+                    if(el.value !== undefined) { el.value = newVal; el.selectionStart = el.selectionEnd = start + em.length; el.focus(); }
+                    else { el.innerText = newVal; }
+                } else {
+                    try { navigator.clipboard.writeText(em); }catch(e){}
+                }
+                // hide picker after selection
+                picker.style.display = 'none';
+            }); picker.appendChild(b); }
+            document.getElementById('wispa-emoji-btn').addEventListener('click', ()=>{ picker.style.display = (picker.style.display === 'block') ? 'none' : 'block'; });
+        }
+    }catch(e){ console.warn('chat toolbar init failed', e); }
 });
 
 // Convert a dataURL to a Blob
@@ -1901,9 +1960,31 @@ if (typeof propertyImageIds === 'undefined') {
         }
 
         list.push(msg);
-        // Try to persist message to server; fallback to localStorage
+        // Try to persist message to server; fallback to localStorage.
+        // If there are pending attachments selected via the global toolbar, upload them first.
         (async function(){
             try {
+                // handle attachments
+                try {
+                    if (window._wispaPendingFiles && Array.isArray(window._wispaPendingFiles) && window._wispaPendingFiles.length){
+                        try{
+                            const fd = new FormData();
+                            window._wispaPendingFiles.forEach(f=>fd.append('files', f));
+                            const poster = window.apiFetch ? window.apiFetch : fetch;
+                            const up = await poster('/api/upload-attachments', { method: 'POST', body: fd });
+                            if (up && up.ok){
+                                const uj = await up.json();
+                                if (uj && Array.isArray(uj.urls) && uj.urls.length){
+                                    msg.meta = msg.meta || {};
+                                    msg.meta.attachments = uj.urls;
+                                }
+                            }
+                        }catch(e){ /* ignore upload errors and continue to send message without attachments */ }
+                        // clear pending files after attempt
+                        try{ window._wispaPendingFiles = []; }catch(e){}
+                    }
+                } catch(e){}
+
                 const opts = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
