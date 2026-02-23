@@ -277,16 +277,25 @@ async function openAdminChat(chatId) {
                             return {
                                 sender: r.sender || (meta && meta.sender) || 'user',
                                 text: r.body || r.content || (meta && (meta.text || meta.body)) || '',
-                                timestamp: r.sent_at || r.sentAt || r.sentAt || (r.created_at || null) || null,
+                                timestamp: r.sent_at || r.sentAt || r.created_at || null,
+                                userId: r.sender_id || r.user_id || (meta && (meta.userId || meta.user_id)) || null,
+                                userEmail: (meta && (meta.userEmail || meta.user_email)) || r.user_email || r.email || null,
                                 userName: (meta && (meta.userName || meta.user_name)) || r.user_name || r.userName || null,
                                 meta: meta || null
                             };
                         });
                         // sort by timestamp ascending
                         messages.sort((a,b)=>{ const ta = new Date(a.timestamp).getTime()||0; const tb = new Date(b.timestamp).getTime()||0; return ta - tb; });
-                        // derive chat meta from first message
+                        // derive chat meta from first message and preserve property payload for admin view
                         const first = messages[0];
-                        chat = { id: chatId, userName: first.userName || (first.meta && first.meta.userName) || null, conversationTitle: (first.meta && first.meta.property && first.meta.property.title) || null };
+                        chat = {
+                            id: chatId,
+                            userName: first.userName || (first.meta && (first.meta.userName || first.meta.user_name)) || null,
+                            userEmail: first.userEmail || (first.meta && (first.meta.userEmail || first.meta.user_email)) || null,
+                            userId: first.userId || null,
+                            conversationTitle: (first.meta && first.meta.property && first.meta.property.title) || null,
+                            conversationProperty: (first.meta && first.meta.property) || null
+                        };
                     }
                 }
             } catch(e) { /* ignore and fallback */ }
