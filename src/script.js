@@ -65,6 +65,21 @@ window.clearAdminUnauthorized = function() {
     try { if (typeof processPendingNotifications === 'function') processPendingNotifications(); } catch(e) {}
 };
 
+    // Debug helper: test admin auth from the browser and log response details
+    window.debugAdminAuth = async function(){
+        try{
+            const base = window.WISPA_API_BASE || '';
+            const url = (base.replace(/\/+$/,'') || '') + '/api/admin/sent-notifications';
+            console.log('debugAdminAuth ->', url);
+            const r = await fetch(url, { method: 'GET', credentials: 'include' });
+            console.log('debugAdminAuth status:', r.status);
+            try{ for (const h of r.headers) console.log('header:', h[0], h[1]); }catch(e){}
+            const body = await r.text();
+            console.log('debugAdminAuth body:', body);
+            return { status: r.status, body };
+        }catch(err){ console.error('debugAdminAuth error', err); return { error: String(err) }; }
+    };
+
 // Disable localStorage usage in DB-only mode: make reads return null and writes no-ops.
 // This prevents accidental client-side persistence that can conflict with the real API.
 try {
