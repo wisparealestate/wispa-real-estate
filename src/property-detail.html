@@ -666,6 +666,20 @@
 
         let property = propertiesMap[propertyId] || { title: 'Property Not Found', price: 'N/A', location: 'Unknown', images: [FALLBACK_IMAGE] };
 
+        // Normalize image URLs to avoid mixed-content blocks (upgrade http -> https when page is https)
+        function normalizeImageUrl(u){
+            try{
+                if(!u) return u;
+                const s = String(u).trim();
+                if(s.indexOf('data:') === 0) return s;
+                if(location && location.protocol === 'https:'){
+                    if(s.startsWith('http://')) return s.replace(/^http:/,'https:');
+                    if(s.startsWith('//')) return 'https:' + s;
+                }
+                return s;
+            }catch(e){ return u; }
+        }
+
         // Expose lightweight current property info for chat/message helpers to include
         try {
             window.__currentProperty = {
@@ -725,8 +739,10 @@
                     return `<img src="${src}" alt="Property image" class="carousel-image">`;
                 }).join('');
 
-                // Attach error handler to any carousel images to replace with inline fallback on load error
+                // Normalize src and attach error handler to carousel images
                 Array.from(carouselImagesDiv.querySelectorAll('img.carousel-image')).forEach(el => {
+                    const raw = el.getAttribute('src');
+                    el.src = normalizeImageUrl(raw);
                     el.addEventListener('error', function() { if (this.src !== FALLBACK_IMAGE) this.src = FALLBACK_IMAGE; });
                 });
                 
@@ -763,14 +779,14 @@
                     vid.id = 'propertySingleVideo';
                     vid.controls = true;
                     vid.className = 'property-detail-image';
-                    vid.src = singleSrc;
+                    vid.src = normalizeImageUrl(singleSrc);
                     singleImage.parentNode.insertBefore(vid, singleImage.nextSibling);
                 } else {
                     // normal image
                     const existing = document.getElementById('propertySingleVideo');
                     if (existing) existing.remove();
                     singleImage.style.display = 'block';
-                    singleImage.src = singleSrc;
+                    singleImage.src = normalizeImageUrl(singleSrc);
                     singleImage.addEventListener('error', function(){ if (this.src !== FALLBACK_IMAGE) this.src = FALLBACK_IMAGE; });
                 }
             }
@@ -910,10 +926,17 @@
                     const price = (prop.price != null) ? (`$${Number(prop.price).toLocaleString()}`) : '';
                     const loc = prop.location || prop.address || '';
                     if(img){
-                        const i = document.createElement('img'); i.src = img; i.alt = title; i.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;'; card.appendChild(i);
+                        const i = document.createElement('img'); i.src = normalizeImageUrl(img); i.alt = title; i.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;'; card.appendChild(i);
                     }
                     const info = document.createElement('div');
-                    info.innerHTML = `<div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div><div style="color:#666;font-size:13px">${escapeHtml(loc)}${price?(' — '+escapeHtml(price)) : ''}</div>`;
+                    const infoTitle = document.createElement('div');
+                    infoTitle.style.cssText = 'font-weight:700;margin-bottom:4px';
+                    infoTitle.textContent = title || '';
+                    const infoSub = document.createElement('div');
+                    infoSub.style.cssText = 'color:#666;font-size:13px';
+                    infoSub.textContent = (loc || '') + (price ? (' — ' + price) : '');
+                    info.appendChild(infoTitle);
+                    info.appendChild(infoSub);
                     card.appendChild(info);
                     messagesDiv.parentNode.insertBefore(card, messagesDiv);
                 }catch(e){console.warn('renderPropertyCard error', e);} 
@@ -952,7 +975,7 @@
                                 if(!url) return;
                                 const low = String(url).toLowerCase();
                                 if(low.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/)){
-                                    const im = document.createElement('img'); im.src = url; im.style.cssText = 'max-width:180px;display:block;margin-top:6px;border-radius:6px;'; aWrap.appendChild(im);
+                                    const im = document.createElement('img'); im.src = normalizeImageUrl(url); im.style.cssText = 'max-width:180px;display:block;margin-top:6px;border-radius:6px;'; aWrap.appendChild(im);
                                 } else {
                                     const link = document.createElement('a'); link.href = url; link.target = '_blank'; link.textContent = url.split('/').pop() || url; link.style.cssText = 'display:block;margin-top:6px;color:#0366d6;'; aWrap.appendChild(link);
                                 }

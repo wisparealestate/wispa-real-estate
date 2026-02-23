@@ -7,6 +7,11 @@ const _configured = window.WISPA_API_BASE || _defaultRemote;
 window.WISPA_API_BASE = window.WISPA_API_BASE || _configured;
 // Ensure legacy pages that use `API_URL` pick up the same base.
 window.API_URL = window.API_URL || window.WISPA_API_BASE;
+// Ensure small helpers exist globally: normalize image URLs and escape HTML
+window.normalizeImageUrl = window.normalizeImageUrl || function(u){
+    try{ if(!u) return u; const s = String(u).trim(); if(s.indexOf('data:')===0) return s; if(location && location.protocol === 'https:'){ if(s.startsWith('http://')) return s.replace(/^http:/,'https:'); if(s.startsWith('//')) return 'https:' + s; } return s; }catch(e){ return u; }
+};
+window.escapeHtml = window.escapeHtml || function(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 if (!window.apiFetch) {
     window.apiFetch = async function(url, opts) {
         const API_BASE = (window.WISPA_API_BASE || '').replace(/\/$/, '');
@@ -364,16 +369,17 @@ async function openAdminChat(chatId) {
         let htmlParts = [];
         if (propertyCard) {
             const p = propertyCard;
-            const img = p.image || (p.images && p.images[0]) || '';
+                        const img = p.image || (p.images && p.images[0]) || '';
+                        const imgSrc = img ? normalizeImageUrl(img) : '';
             const title = p.title || p.name || 'Property';
             const price = (p.price != null) ? (`$${Number(p.price).toLocaleString()}`) : '';
             const loc = p.location || p.address || '';
             htmlParts.push(`
                 <div style="padding:12px;border-radius:8px;background:#f8fafc;margin-bottom:10px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);">
-                    ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(title)}" style="width:84px;height:64px;object-fit:cover;border-radius:6px;">` : ''}
+                                        ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)}" style="width:84px;height:64px;object-fit:cover;border-radius:6px;">` : ''}
                     <div style="flex:1">
-                      <div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div>
-                      <div style="color:#666;font-size:13px">${escapeHtml(loc)} ${price ? ' — '+escapeHtml(price) : ''}</div>
+                                            <div style="font-weight:700;margin-bottom:4px">${escapeHtml(title)}</div>
+                                            <div style="color:#666;font-size:13px">${escapeHtml(loc)} ${price ? ' — '+escapeHtml(price) : ''}</div>
                     </div>
                 </div>
             `);
