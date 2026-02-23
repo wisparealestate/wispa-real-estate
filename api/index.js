@@ -697,6 +697,37 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
   }
 });
 
+// Optional utility: attempt to retrofit legacy message rows by parsing `content` JSON
+// This is gated by ALLOW_MESSAGE_RETROFIT=true in environment to avoid accidental writes.
+app.post('/api/messages/retrofit-meta', async (req, res) => {
+  if (String(process.env.ALLOW_MESSAGE_RETROFIT) !== 'true') return res.status(403).json({ error: 'Retrofit disabled. Set ALLOW_MESSAGE_RETROFIT=true to enable.' });
+  try {
+    // Find candidate rows: meta IS NULL and content looks non-empty
+    const candidates = await pool.query("SELECT id, content FROM messages WHERE (meta IS NULL OR meta = '') AND content IS NOT NULL LIMIT 1000");
+    const rows = candidates.rows || [];
+    const updated = [];
+    for (const r of rows) {
+      if (!r.content || typeof r.content !== 'string') continue;
+      try {
+        const parsed = JSON.parse(r.content);
+        if (parsed && typeof parsed === 'object') {
+          try {
+            await pool.query('UPDATE messages SET meta = $1 WHERE id = $2', [JSON.stringify(parsed), r.id]);
+            // if parsed.sender is present, try to persist into sender column too
+            if (parsed.sender) {
+              try { await pool.query('UPDATE messages SET sender = $1 WHERE id = $2', [parsed.sender, r.id]); } catch (e) { }
+            }
+            updated.push(r.id);
+          } catch (e) { /* ignore individual update failures */ }
+        }
+      } catch (e) { /* not JSON */ }
+    }
+    return res.json({ updatedCount: updated.length, updatedIds: updated });
+  } catch (err) {
+    return res.status(500).json({ error: 'Retrofit failed', details: err.message });
+  }
+});
+
 
 // Property upload endpoint
 app.post("/api/properties", async (req, res) => {
