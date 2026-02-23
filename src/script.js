@@ -328,6 +328,14 @@ async function openAdminChat(chatId) {
                             conversationTitle: (apiProperty && (apiProperty.title || apiProperty.name)) || (first.meta && first.meta.property && first.meta.property.title) || null,
                             conversationProperty: apiProperty || (first.meta && first.meta.property) || null
                         };
+                        // If API didn't include a userName, try to preserve a locally-known participantName
+                        try{
+                            if((!chat.userName || String(chat.userName).toLowerCase() === 'user')){
+                                const ac = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                                const found = (ac || []).find(a => a.id === chatId);
+                                if(found && found.participantName) chat.userName = found.participantName;
+                            }
+                        }catch(e){}
                     }
                 }
             } catch(e) { /* ignore and fallback */ }
@@ -403,7 +411,23 @@ async function openAdminChat(chatId) {
     try{ document.getElementById('chat-full-title').dataset.chatId = chatId; }catch(e){}
     // Render messages (include property card at top if available)
     const msgsEl = document.getElementById('chat-full-messages');
-    const propertyCard = chat && (chat.conversationProperty || (messages && messages[0] && messages[0].meta && messages[0].meta.property)) ? (chat.conversationProperty || messages[0].meta.property) : null;
+    // Determine propertyCard: prefer explicit conversationProperty, then API-provided property,
+    // then search all messages for the first meta.property occurrence as a robust fallback.
+    let propertyCard = null;
+    try{
+        if (chat && chat.conversationProperty) propertyCard = chat.conversationProperty;
+        if (!propertyCard && messages && messages.length) {
+            // check if first message or any message contains property meta
+            for (let mi = 0; mi < messages.length; mi++){
+                const mm = messages[mi];
+                if (mm && mm.meta && mm.meta.property){ propertyCard = mm.meta.property; break; }
+            }
+        }
+        // also honor conversation-level property if present
+        if (!propertyCard && chat && chat.conversationProperty) propertyCard = chat.conversationProperty;
+        // persist back onto chat so later re-renders keep using it
+        if (chat && propertyCard) chat.conversationProperty = propertyCard;
+    }catch(e){ propertyCard = null }
     if (!messages.length && !propertyCard) {
         msgsEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>';
     } else {

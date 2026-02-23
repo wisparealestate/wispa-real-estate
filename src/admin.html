@@ -422,6 +422,23 @@
     async function sendAdminMessage(chatId, text){
       if(!chatId){ console.warn('Missing chatId for sendAdminMessage'); return }
       const msg = { sender:'admin', text: text, ts: Date.now() };
+      // If this is a property conversation, attempt to attach property metadata
+      try{
+        const m = String(chatId).match(/^property-(\d+)/i);
+        if(m){
+          const pid = parseInt(m[1],10);
+          try{
+            const poster = window.apiFetch ? window.apiFetch : fetch;
+            const pres = await poster('/api/properties');
+            if(pres && pres.ok){
+              const pj = await pres.json();
+              const list = Array.isArray(pj) ? pj : (pj && pj.properties) ? pj.properties : [];
+              const p = list.find(pp => String(pp.id) === String(pid));
+              if(p){ msg.meta = msg.meta || {}; msg.meta.property = p; }
+            }
+          }catch(e){}
+        }
+      }catch(e){}
       // Try to persist via server API so users receive admin replies
       try{
         const opts = {
@@ -439,13 +456,16 @@
             try{ ac = JSON.parse(localStorage.getItem(acKey) || '[]'); }catch(e){ ac = []; }
             let meta = ac.find(a=>a.id===chatId);
             const now = Date.now();
+            // preserve existing participantName when present, otherwise use visible title
+            const visibleName = (document.getElementById('chat-full-title') && document.getElementById('chat-full-title').textContent) ? document.getElementById('chat-full-title').textContent : null;
             if(!meta){
-              meta = { id: chatId, userId: null, participantName: null, lastMessage: text, updated: now, unread: 0 };
+              meta = { id: chatId, userId: null, participantName: (visibleName||null), lastMessage: text, updated: now, unread: 0 };
               ac.unshift(meta);
             } else {
               meta.lastMessage = text;
               meta.updated = now;
               meta.unread = 0;
+              if(!meta.participantName && visibleName) meta.participantName = visibleName;
             }
             try{ localStorage.setItem(acKey, JSON.stringify(ac)); }catch(e){}
           }catch(e){}
