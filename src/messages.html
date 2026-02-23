@@ -62,9 +62,11 @@
 
             function renderPropertyCardIfPresent(list){
                 try{
+                    // prefer API-provided conversation property when available
+                    const apiProp = window._wispaConversationProperty || null;
                     // find a property meta on first message or any message
                     const msgWithProp = (list||[]).find(m => m && m.meta && (m.meta.property || m.meta.propertyId || m.meta.property_id));
-                    const prop = msgWithProp && (msgWithProp.meta.property || null);
+                    const prop = apiProp || (msgWithProp && (msgWithProp.meta.property || null));
                     // clear any existing card
                     const existing = document.getElementById('messages-property-card'); if(existing) existing.remove();
                     if(!prop) return;
@@ -101,16 +103,19 @@
                 renderPropertyCardIfPresent(list);
                 list.forEach(m => {
                     const div = document.createElement('div');
-                    div.className = 'chat-message ' + (m.sender === 'user' ? 'sent' : 'received');
+                    // Determine whether this message was sent by the current user
+                    const isSent = (m.sender === 'user') || (m.userId && String(m.userId) === String(userId));
+                    div.className = 'chat-message ' + (isSent ? 'sent' : 'received');
                     div.style.maxWidth = '78%';
                     div.style.padding = '10px 12px';
                     div.style.borderRadius = '10px';
-                    div.style.alignSelf = m.sender === 'user' ? 'flex-end' : 'flex-start';
-                    div.style.background = m.sender === 'user' ? 'var(--primary)' : 'var(--light)';
-                    div.style.color = m.sender === 'user' ? '#fff' : 'var(--text)';
+                    div.style.alignSelf = isSent ? 'flex-end' : 'flex-start';
+                    div.style.background = isSent ? 'var(--primary)' : 'var(--light)';
+                    div.style.color = isSent ? '#fff' : 'var(--text)';
+                    const senderLabel = m.userName || m.userEmail || (isSent ? 'You' : 'Admin');
                     const text = (m.text || m.body || m.content || (m.meta && m.meta.text) || (m.message && m.message.text) || '');
                     const ts = m.ts || m.time || m.sent_at || m.created_at || Date.now();
-                    div.innerHTML = `<div style="font-size:14px;margin-bottom:6px">${escapeHtml(text)}</div><div style="font-size:11px;opacity:0.7;text-align:${m.sender==='user'?'right':'left'}">${new Date(ts).toLocaleTimeString()}</div>`;
+                    div.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:${isSent ? '#fff' : '#666'}">${escapeHtml(senderLabel)}</div><div style="font-size:14px;margin-bottom:6px">${escapeHtml(text)}</div><div style="font-size:11px;opacity:0.7;text-align:${isSent ? 'right' : 'left'}">${new Date(ts).toLocaleTimeString()}</div>`;
                     messagesEl.appendChild(div);
                 });
                 messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -121,7 +126,7 @@
                 try{
                     const fetcher = window.apiFetch ? window.apiFetch : fetch;
                     const r = await fetcher('/api/conversations/' + encodeURIComponent(convId) + '/messages');
-                    if (r && r.ok){ const j = await r.json(); return Array.isArray(j.messages) ? j.messages : []; }
+                    if (r && r.ok){ const j = await r.json(); window._wispaConversationProperty = j && j.property ? j.property : null; return Array.isArray(j.messages) ? j.messages : []; }
                 }catch(e){}
                 // fallback to in-memory merge
                 window._wispaMessages = window._wispaMessages || {};
