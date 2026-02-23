@@ -386,11 +386,26 @@
     // Chats: open property chats (admin conversations)
     chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('chat'); renderAdminChatList(); });
 
-    // Render admin chat list from localStorage keys or fallback chatNotifications
+    // Render admin chat list: prefer server-backed conversations, fall back to localStorage
     async function renderAdminChatList(){
       const out = document.getElementById('admin-chats-list');
       out.innerHTML = 'Loading…';
       try{
+        // Try server-side conversations first (includes property/user messages saved to DB)
+        try{
+          const data = await safeApi('/api/conversations');
+          let convs = [];
+          if (data) convs = Array.isArray(data.conversations) ? data.conversations : (Array.isArray(data) ? data : []);
+          // Normalize to expected meta fields
+          if (convs && convs.length) {
+            const mapped = convs.map(c => ({ id: c.id || c.conversation_id || c.key || (c.user_id?('user-'+c.user_id):null), participantName: c.title || c.participantName || c.userName || (c.meta && c.meta.property && c.meta.property.title) || null, lastMessage: c.last || c.last_message || c.lastMessage || c.updated || '', unread: c.unread || 0 }));
+            out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+mapped.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="#" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
+            out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{ ev.preventDefault(); const id=a.dataset.id; try{ openAdminChat(id); }catch(e){ console.error(e) } }));
+            return;
+          }
+        }catch(e){ /* server may be unreachable or return no conversations; fall back to local */ }
+
+        // Fallback: Render admin chat list from localStorage keys or fallback chatNotifications
         let convs = [];
         try{ convs = JSON.parse(localStorage.getItem('adminChats') || '[]'); }catch(e){ convs = []; }
         if(!convs || !convs.length){ try{ convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]') }catch(e){ convs = []; } }

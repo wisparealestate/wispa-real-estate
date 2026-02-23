@@ -195,69 +195,102 @@ window.requireLogin = async function(){
 // Render admin chat list in the chat tab
 
 // Open chat conversation in fullview
-function openAdminChat(chatId) {
-    // Merge messages from all relevant keys
+async function openAdminChat(chatId) {
+    // Attempt to load messages from server first (DB-backed messages), fallback to localStorage
     let messages = [];
     let chat = null;
-    // Build all possible keys for this chatId
-    const keys = [];
-    keys.push('adminMessages_' + chatId);
-    keys.push('wispaMessages_' + chatId);
-    // Try to find userId from adminChats
-    let userId = null;
     try {
-        const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-        const meta = adminChats.find(c => c.id === chatId);
-        if (meta && meta.userId) userId = meta.userId;
-    } catch(e){}
-    if (!userId) {
-        const m = chatId.match(/^property-\d+-(WISPA-[^_]+)/);
-        if (m) userId = m[1];
-    }
-    if (userId) {
-        keys.push('wispaMessages_' + userId + '_' + chatId);
-    }
-    const m2 = chatId.match(/^property-(\d+)-(WISPA-[^_]+)/);
-    if (m2) {
-        const propertyId = m2[1];
-        const userId2 = m2[2];
-        keys.push('wispaMessages_' + userId2 + '_property-' + propertyId);
-    }
-    // Merge messages from all keys
-    const seen = new Set();
-    for (let i = 0; i < keys.length; i++) {
-        const arr = localStorage.getItem(keys[i]);
-        if (arr) {
+        if (window.apiFetch) {
             try {
-                const msgs = JSON.parse(arr);
-                if (Array.isArray(msgs)) {
-                    msgs.forEach(m => {
-                        const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                        if (!seen.has(sig)) {
-                            messages.push(m);
-                            seen.add(sig);
-                        }
-                    });
+                const res = await window.apiFetch('/api/conversations/' + encodeURIComponent(chatId) + '/messages');
+                if (res && res.ok) {
+                    const j = await res.json();
+                    const rows = Array.isArray(j.messages) ? j.messages : (Array.isArray(j) ? j : []);
+                    if (rows && rows.length) {
+                        messages = rows.map(r => {
+                            let meta = null;
+                            try { meta = (typeof r.meta === 'string') ? JSON.parse(r.meta) : r.meta; } catch(e){ meta = r.meta || null }
+                            return {
+                                sender: r.sender || (meta && meta.sender) || 'user',
+                                text: r.body || r.content || (meta && (meta.text || meta.body)) || '',
+                                timestamp: r.sent_at || r.sentAt || r.sentAt || (r.created_at || null) || null,
+                                userName: (meta && (meta.userName || meta.user_name)) || r.user_name || r.userName || null,
+                                meta: meta || null
+                            };
+                        });
+                        // sort by timestamp ascending
+                        messages.sort((a,b)=>{ const ta = new Date(a.timestamp).getTime()||0; const tb = new Date(b.timestamp).getTime()||0; return ta - tb; });
+                        // derive chat meta from first message
+                        const first = messages[0];
+                        chat = { id: chatId, userName: first.userName || (first.meta && first.meta.userName) || null, conversationTitle: (first.meta && first.meta.property && first.meta.property.title) || null };
+                    }
                 }
-            } catch(e){}
+            } catch(e) { /* ignore and fallback */ }
         }
+    } catch(e) { /* ignore */ }
+
+    // If server didn't return messages, fall back to localStorage merge
+    if (!messages || messages.length === 0) {
+        // Build all possible keys for this chatId
+        const keys = [];
+        keys.push('adminMessages_' + chatId);
+        keys.push('wispaMessages_' + chatId);
+        // Try to find userId from adminChats
+        let userId = null;
+        try {
+            const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+            const meta = adminChats.find(c => c.id === chatId);
+            if (meta && meta.userId) userId = meta.userId;
+        } catch(e){}
+        if (!userId) {
+            const m = chatId.match(/^property-\d+-(WISPA-[^_]+)/);
+            if (m) userId = m[1];
+        }
+        if (userId) {
+            keys.push('wispaMessages_' + userId + '_' + chatId);
+        }
+        const m2 = chatId.match(/^property-(\d+)-(WISPA-[^_]+)/);
+        if (m2) {
+            const propertyId = m2[1];
+            const userId2 = m2[2];
+            keys.push('wispaMessages_' + userId2 + '_property-' + propertyId);
+        }
+        // Merge messages from all keys
+        const seen = new Set();
+        for (let i = 0; i < keys.length; i++) {
+            const arr = localStorage.getItem(keys[i]);
+            if (arr) {
+                try {
+                    const msgs = JSON.parse(arr);
+                    if (Array.isArray(msgs)) {
+                        msgs.forEach(m => {
+                            const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                            if (!seen.has(sig)) {
+                                messages.push(m);
+                                seen.add(sig);
+                            }
+                        });
+                    }
+                } catch(e){}
+            }
+        }
+        // Sort by time/ts ascending
+        messages.sort((a,b) => {
+            const ta = a.time || a.ts || 0;
+            const tb = b.time || b.ts || 0;
+            return ta - tb;
+        });
+        // Get chat meta
+        try {
+            const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+            chat = adminChats.find(c => c.id === chatId);
+        } catch(e){}
+        if (!chat) {
+            const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+            chat = chats.find(c => c.id === chatId);
+        }
+        if (!chat) return;
     }
-    // Sort by time/ts ascending
-    messages.sort((a,b) => {
-        const ta = a.time || a.ts || 0;
-        const tb = b.time || b.ts || 0;
-        return ta - tb;
-    });
-    // Get chat meta
-    try {
-        const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-        chat = adminChats.find(c => c.id === chatId);
-    } catch(e){}
-    if (!chat) {
-        const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-        chat = chats.find(c => c.id === chatId);
-    }
-    if (!chat) return;
     document.getElementById('chat-fullview').style.display = 'block';
     document.getElementById('admin-chats-list').style.display = 'none';
     document.getElementById('chat-full-title').textContent = chat.userName || chat.conversationTitle || chat.participantName || chat.participantId;
