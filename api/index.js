@@ -969,12 +969,12 @@ app.post("/api/admin-login", async (req, res) => {
     // Create admin session cookie (separate from user session)
     try{
       const token = createSessionToken(admin.id);
+      // Only use SameSite=None when the cookie will be Secure (required by browsers).
+      const isSecureLocal = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
       const cookieOpts = {
         httpOnly: true,
-        // admin sessions may be set via cross-origin redirect; require SameSite=None and secure for cross-site cookies
-        sameSite: 'none',
-        // Only mark cookie `Secure` when the request is over HTTPS or when running in production
-        secure: (req.protocol === 'https') || (process.env.NODE_ENV === 'production'),
+        sameSite: isSecureLocal ? 'none' : 'lax',
+        secure: isSecureLocal,
         maxAge: 7*24*3600*1000
       };
       // use distinct cookie name for admin sessions
@@ -1020,7 +1020,8 @@ app.get('/set-session', async (req, res) => {
       const a = await pool.query('SELECT id FROM admin_logins WHERE id = $1', [payload.uid]);
       if(a && a.rows && a.rows[0]) isAdmin = true;
     }catch(e){}
-    const cookieOpts = { httpOnly: true, sameSite: 'none', secure: (req.protocol === 'https') || (process.env.NODE_ENV === 'production'), maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
+    const isSecure2 = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
+    const cookieOpts = { httpOnly: true, sameSite: isSecure2 ? 'none' : 'lax', secure: isSecure2, maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
     if(isAdmin) res.cookie('wispa_admin_session', st, cookieOpts);
     else res.cookie('wispa_session', st, cookieOpts);
     return res.redirect(r);
