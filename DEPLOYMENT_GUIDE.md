@@ -85,4 +85,30 @@ Follow these steps to deploy your project to production:
 
 ---
 
+## Helpful Environment Variables
+
+Set these environment variables in your Render (backend) and Vercel (frontend) dashboards as appropriate.
+
+- `API_HOST` (Render - backend): canonical public URL of your API. Example:
+
+	API_HOST=https://wispa-real-estate-2ew3.onrender.com
+
+	Purpose: When set, the backend will use this value to build absolute URLs for uploaded files (images, documents). This prevents mixed-content issues when your frontend is served over HTTPS.
+
+- `SESSION_SECRET` (Render - backend): a long, random secret for signing session tokens. Example:
+
+	SESSION_SECRET=change_this_to_a_secure_random_value
+
+	Purpose: Securely sign stateless session tokens.
+
+Notes:
+- After setting `API_HOST`, redeploy your backend so new upload responses return HTTPS URLs.
+- If your hosting provider exposes traffic via a proxy (e.g. Render), ensure `trust proxy` is enabled in Express so `req.protocol` reflects `https`.
+
+Persistent uploads:
+- Many PAAS platforms use ephemeral filesystem for app instances. For durable uploads across deploys/restarts, configure one of:
+	- S3 / DigitalOcean Spaces / GCS for object storage (recommended)
+	- A persistent disk attached to your backend (platform-dependent)
+
+If you'd like, I can add S3 upload support to the backend and provide the required env var examples.
 For more details or code samples, ask your developer or refer to the official documentation for Vercel and Render.
