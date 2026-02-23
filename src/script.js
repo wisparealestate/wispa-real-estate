@@ -138,6 +138,37 @@ function dataURLToBlob(dataURL){
     }catch(e){ return null; }
 }
 
+// Convert a File to a dataURL, compressing images via canvas when appropriate
+window.fileToDataUrlWithCompression = window.fileToDataUrlWithCompression || async function(file, opts){
+    opts = Object.assign({ maxWidth: 1280, quality: 0.8 }, opts || {});
+    if(!file) return null;
+    // Only attempt canvas compression for images
+    try{
+        if(file.type && file.type.indexOf('image/') === 0 && typeof document !== 'undefined' && typeof HTMLCanvasElement !== 'undefined'){
+            const imgUrl = URL.createObjectURL(file);
+            const img = await new Promise((resolve, reject)=>{
+                const i = new Image(); i.onload = ()=>{ resolve(i); }; i.onerror = (e)=>{ reject(e); }; i.src = imgUrl; 
+            });
+            try{ URL.revokeObjectURL(imgUrl); }catch(e){}
+            const canvas = document.createElement('canvas');
+            const ratio = Math.min(1, opts.maxWidth / img.width);
+            canvas.width = Math.round(img.width * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const mime = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
+            const dataUrl = canvas.toDataURL(mime, opts.quality);
+            return dataUrl;
+        }
+    }catch(e){ /* continue to simple read fallback */ }
+    // Fallback: read as data URL without compression
+    return await new Promise((resolve)=>{
+        try{
+            const r = new FileReader(); r.onload = ()=>resolve(r.result); r.onerror = ()=>resolve(null); r.readAsDataURL(file);
+        }catch(e){ resolve(null); }
+    });
+};
+
 // Upload data: photos stored under a localPhotos_<key> storage key and attach remote URLs back to property
 async function uploadLocalPhotosForProperty(property){
     if(!property || !property._localPhotosKey) return null;
@@ -1854,16 +1885,8 @@ if (typeof propertyImageIds === 'undefined') {
                 console.warn('Image upload failed, falling back to converting files to data URLs for persistence', e);
                 // Convert files to data URLs instead of using blob/object URLs which are not persistent across reloads
                 const files = Array.from(mediaInput.files);
-                const fileToDataUrl = (file) => new Promise((resolve) => {
-                    try {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.onerror = () => resolve(null);
-                        reader.readAsDataURL(file);
-                    } catch (err) { resolve(null); }
-                });
                 try {
-                    const converted = await Promise.all(files.map(f => fileToDataUrl(f)));
+                    const converted = await Promise.all(files.map(f => window.fileToDataUrlWithCompression ? window.fileToDataUrlWithCompression(f) : new Promise((resolve)=>{ try{ const r = new FileReader(); r.onload = ()=>resolve(r.result); r.onerror = ()=>resolve(null); r.readAsDataURL(f);}catch(e){resolve(null)} } )));
                     images = converted.filter(Boolean);
                 } catch (convErr) {
                     images = [];
