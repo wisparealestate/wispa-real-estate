@@ -567,7 +567,23 @@ async function openAdminChat(chatId) {
             const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
             chat = chats.find(c => c.id === chatId);
         }
-        if (!chat) return;
+        if (!chat) {
+            try {
+                const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                const found = (adminChats || []).find(c => c && c.id && String(c.id).indexOf(String(chatId)) !== -1);
+                if (found && found.id && found.id !== chatId) {
+                    console.log('openAdminChat: resolved partial id', chatId, '->', found.id);
+                    return openAdminChat(found.id);
+                }
+                const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                const found2 = (chats || []).find(c => c && c.id && String(c.id).indexOf(String(chatId)) !== -1);
+                if (found2 && found2.id && found2.id !== chatId) {
+                    console.log('openAdminChat: resolved partial id via chatNotifications', chatId, '->', found2.id);
+                    return openAdminChat(found2.id);
+                }
+            } catch(e){}
+            return;
+        }
     }
     document.getElementById('chat-fullview').style.display = 'block';
     document.getElementById('admin-chats-list').style.display = 'none';
