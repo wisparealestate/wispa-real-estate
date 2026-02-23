@@ -2568,7 +2568,59 @@ if (typeof propertyImageIds === 'undefined') {
                     if (!response.ok) throw new Error('API save failed');
                     await response.json();
                 }
-                // After a successful save, refresh server state so all devices sync
+                // After a successful save, send notifications (user + admin), refresh server state so all devices sync
+                try {
+                    // Notify the posting user (best-effort)
+                    (async function(){
+                        try{
+                            const u = (typeof window !== 'undefined' && window.getCurrentUser) ? await window.getCurrentUser() : null;
+                            const poster2 = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+                            const notif = {
+                                title: 'Your property was posted',
+                                message: `Your property "${property.title || property.location || 'Listing'}" was successfully created.`,
+                                timestamp: new Date().toISOString(),
+                                data: { propertyId: property.id || null }
+                            };
+                            if(u && u.id){
+                                try{
+                                    await poster2('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, notification: notif }) });
+                                }catch(e){
+                                    // fallback: save to local notifications for this user so UI can show it
+                                    try{
+                                        const key = 'notifications_' + u.id;
+                                        const arr = JSON.parse(localStorage.getItem(key) || '[]');
+                                        arr.unshift(Object.assign({}, notif, { read: false }));
+                                        localStorage.setItem(key, JSON.stringify(arr));
+                                        try{ localStorage.setItem('wispaMessageSignal_' + u.id, String(Date.now())); }catch(e){}
+                                    }catch(e){}
+                                }
+                            }
+                        }catch(e){}
+                    })();
+
+                    // Notify admins (best-effort). If unauthorized or offline, queue into 'pendingNotifications'
+                    (async function(){
+                        try{
+                            const poster2 = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+                            const title = 'New property created';
+                            const body = `A new property was posted: ${property.title || property.location || 'Listing'}`;
+                            try{
+                                const resp = await poster2('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, body: body, data: { property: property } }) });
+                                if(!resp || !resp.ok){
+                                    throw new Error('admin notify failed');
+                                }
+                            }catch(e){
+                                try{
+                                    const key = 'pendingNotifications';
+                                    const pending = JSON.parse(localStorage.getItem(key) || '[]');
+                                    pending.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
+                                    localStorage.setItem(key, JSON.stringify(pending));
+                                }catch(e){}
+                            }
+                        }catch(e){}
+                    })();
+                } catch(e){}
+
                 try { await loadProperties(); } catch (e) { /* ignore */ }
                 return property;
             } catch (err) {
