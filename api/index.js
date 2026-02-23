@@ -1,4 +1,6 @@
 
+import dotenv from 'dotenv';
+dotenv.config();
 import express from "express";
 import pkg from "pg";
 import bcrypt from "bcrypt";
@@ -379,12 +381,40 @@ app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
 
 // Upload multiple files for property photos
 // Upload multiple files for property photos
-app.post('/api/upload-photos', upload.array('files'), (req, res) => {
+app.post('/api/upload-photos', upload.array('files'), async (req, res) => {
   try {
     if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
     const hostBase = (process.env.API_HOST || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
     const urls = req.files.map(f => `${hostBase}/uploads/${f.filename}`);
-    res.json({ urls });
+
+    // If client provided a propertyId (form field or query), persist the photo URLs into DB
+    const propertyId = req.body && (req.body.propertyId || req.body.property_id) || req.query && (req.query.propertyId || req.query.property_id) || null;
+    if (propertyId) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Ensure property exists
+        const p = await client.query('SELECT id FROM properties WHERE id = $1', [propertyId]);
+        if (!p.rows || p.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ error: 'Property not found' });
+        }
+        // Insert uploaded photos (append, do not delete existing)
+        for (const u of urls) {
+          await client.query('INSERT INTO property_photos (property_id, photo_url) VALUES ($1, $2)', [propertyId, u]);
+        }
+        await client.query('COMMIT');
+        return res.json({ urls, persisted: true, propertyId });
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (e2) {}
+        return res.status(500).json({ error: 'Failed to persist photos', details: e.message });
+      } finally {
+        client.release();
+      }
+    }
+
+    // No propertyId: just return the public URLs
+    return res.json({ urls });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
