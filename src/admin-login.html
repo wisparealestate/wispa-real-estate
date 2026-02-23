@@ -42,12 +42,14 @@
     <script>
         const form = document.getElementById('adminLoginForm');
         const errorDiv = document.getElementById('adminLoginError');
+        function showError(msg){ try{ errorDiv.textContent = msg || 'Login failed'; errorDiv.style.display = 'block'; }catch(e){ alert(msg||'Login failed'); } }
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 errorDiv.style.display = 'none';
                 const email = document.getElementById('adminEmail').value.trim();
                 const password = document.getElementById('adminPassword').value;
-                const apiBase = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+            // Prefer configured API base; fall back to known backend host if missing
+            const apiBase = ((window.WISPA_API_BASE && String(window.WISPA_API_BASE)) ? String(window.WISPA_API_BASE) : 'https://wispa-real-estate-2ew3.onrender.com').replace(/\/$/, '');
                 const isCrossOrigin = apiBase && (new URL(apiBase)).origin !== window.location.origin;
                 try {
                     if (isCrossOrigin) {
