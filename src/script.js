@@ -469,7 +469,7 @@ async function openAdminChat(chatId) {
                 </div>
             </div>
             `;
-        }));
+        });
 
         msgsEl.innerHTML = htmlParts.join('');
     }

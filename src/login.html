@@ -335,7 +335,8 @@
             }
 
             // Use backend API for login
-            const API_URL = (window.API_URL || 'https://wispa-real-estate-2ew3.onrender.com');
+            // Use configured API base (project host) or fallback to the production API
+            const API_URL = (window.API_URL || window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com');
             fetch(API_URL + '/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
