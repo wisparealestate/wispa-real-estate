@@ -152,13 +152,16 @@ app.get("/api/conversations", async (req, res) => {
       // Attach the most-recent message.meta (if present) to each conversation so the frontend can render property previews reliably
       await Promise.all(rows.map(async (c, idx) => {
         try{
-          const mres = await pool.query('SELECT meta FROM messages WHERE conversation_id = $1 AND meta IS NOT NULL ORDER BY sent_at DESC LIMIT 1', [c.id]);
-          if(mres && mres.rows && mres.rows[0] && mres.rows[0].meta){
-            try{
-              const parsed = (typeof mres.rows[0].meta === 'string') ? JSON.parse(mres.rows[0].meta) : mres.rows[0].meta;
-              rows[idx].meta = parsed;
-              if(parsed && parsed.property) rows[idx].property = parsed.property;
-            }catch(e){}
+          // Try to find most recent message with meta; if none, attempt to parse legacy `content` column
+          const mres = await pool.query('SELECT meta, content, body FROM messages WHERE conversation_id = $1 ORDER BY sent_at DESC LIMIT 1', [c.id]);
+          if(mres && mres.rows && mres.rows[0]){
+            let mm = mres.rows[0].meta || null;
+            if(!mm && mres.rows[0].content && typeof mres.rows[0].content === 'string'){
+              try{ mm = JSON.parse(mres.rows[0].content); }catch(e){ mm = null }
+            }
+            if(mm){
+              try{ const parsed = (typeof mm === 'string') ? JSON.parse(mm) : mm; rows[idx].meta = parsed; if(parsed && parsed.property) rows[idx].property = parsed.property; }catch(e){}
+            }
           }
           // Fallback: if no meta/property found, and conversation id is of form property-<id>, try to load property row directly
           if((!rows[idx].property || !rows[idx].property.id) && typeof c.id === 'string'){
@@ -640,9 +643,16 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
     }
 
     const mapped = rows.map(r => {
-      // attempt parse meta
+      // attempt parse meta (modern column) and fall back to parsing legacy `content` JSON where present
       let meta = null;
       try{ meta = (typeof r.meta === 'string') ? JSON.parse(r.meta) : r.meta; }catch(e){ meta = r.meta || null }
+      // If no meta but a legacy `content` column exists and looks like JSON, try to parse it
+      if(!meta && r.content && typeof r.content === 'string'){
+        try{
+          const parsed = JSON.parse(r.content);
+          if(parsed && typeof parsed === 'object') meta = parsed;
+        }catch(e){ /* not JSON, leave meta null */ }
+      }
       const text = r.body || r.content || r.message || (meta && (meta.text || meta.body)) || null;
       const ts = r.sent_at || r.sentAt || r.created_at || null;
       // determine sender: prefer explicit r.sender, else compare sender_id to conversation user_id; else fall back to admin/user heuristics
@@ -654,6 +664,9 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
         else if(meta && meta.sender) sender = String(meta.sender).toLowerCase();
         else sender = (r.sender || null);
       }catch(e){ sender = (r.sender || null); }
+
+      // If meta is present but still a string, try ensure it's an object
+      try{ if(meta && typeof meta === 'string') meta = JSON.parse(meta); }catch(e){}
 
       return {
         id: r.id,
