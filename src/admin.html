@@ -924,9 +924,12 @@
     // Init tab from hash or default and load data
     (function(){
       const raw = (location.hash && location.hash.slice(1)) || 'overview';
+      const parts = String(raw).split('?');
+      const hashPath = parts[0] || 'overview';
+      const hashQuery = parts[1] || '';
       // Support legacy #conversation links by mapping them to the chat tab
-      if (raw === 'conversation') {
-        const params = new URLSearchParams(location.search || '');
+      if (hashPath === 'conversation') {
+        const params = new URLSearchParams(hashQuery);
         const convId = params.get('id') || params.get('conv') || null;
         switchTab('chat');
         // Load data then open the requested conversation (small delay ensures DOM panels are ready)
@@ -945,7 +948,7 @@
         return;
       }
       // Default flow for other hashes
-      switchTab(raw);
+      switchTab(hashPath || 'overview');
       loadProfile();
       loadOverview();
       loadRequests();
