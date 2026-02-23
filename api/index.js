@@ -180,7 +180,8 @@ app.get("/api/conversations", async (req, res) => {
           }
           // Fallback: if no meta/property found, and conversation id is of form property-<id>, try to load property row directly
           if((!rows[idx].property || !rows[idx].property.id) && typeof c.id === 'string'){
-            const m = c.id.match(/^property-(\d+)$/i);
+            // Match conversation ids that start with property-<id> (allow suffixes like property-524-WISPA-...)
+            const m = c.id.match(/^property-(\d+)/i);
             if(m){
               try{
                 const pid = parseInt(m[1],10);
@@ -698,7 +699,8 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
     // If conversation id references a property (property-<id>), attempt to attach property row for frontend preview
     let convProperty = null;
     try{
-      const m = String(convId).match(/^property-(\d+)$/i);
+      // Allow conversation ids that start with property-<id> and may include suffixes (e.g. property-524-WISPA...)
+      const m = String(convId).match(/^property-(\d+)/i);
       if(m){
         const pid = parseInt(m[1],10);
         const pres = await pool.query('SELECT id, title, image_url, images FROM properties WHERE id = $1 LIMIT 1', [pid]);
