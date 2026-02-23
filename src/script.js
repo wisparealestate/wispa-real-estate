@@ -2462,6 +2462,8 @@ if (typeof propertyImageIds === 'undefined') {
                 return Promise.resolve(properties);
             });
     }
+    // Expose a stable reference to this loader so page-specific scripts cannot shadow it
+    try{ window._globalLoadProperties = loadProperties; }catch(e){}
 
     async function saveProperty(property) {
         // Try saving to backend API first; attempt to upload any data: photos immediately
@@ -2731,10 +2733,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (featuredSection) featuredSection.style.display = 'none';
     if (listingsSection) listingsSection.style.display = 'none';
     
-    // Initial load
-    loadProperties().then((loadedProperties) => {
+    // Initial load — call the stable loader reference to avoid page overrides
+    (window._globalLoadProperties || loadProperties)().then((loadedProperties) => {
         properties = loadedProperties;
-        filteredProperties = [...properties];
+        filteredProperties = Array.isArray(properties) ? [...properties] : [];
         // Render main homepage sections — do NOT show the filtered "Search Results" section by default.
         if (document.getElementById('hot-properties-section')) renderHotProperties();
         renderFeaturedProperties();
