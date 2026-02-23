@@ -756,20 +756,32 @@
         const files = ev.target.files || [];
         Array.from(files).forEach(f=>{
           try{
-            const url = URL.createObjectURL(f);
             let mediaEl;
+            let url = null;
+            try{ url = URL.createObjectURL(f); }catch(e){ url = null; }
             if(f.type && f.type.indexOf('video/') === 0){
               mediaEl = document.createElement('video');
-              mediaEl.src = url; mediaEl.controls = true; mediaEl.muted = true; mediaEl.style.width='140px'; mediaEl.style.height='80px'; mediaEl.style.objectFit='cover'; mediaEl.title = f.name;
+              if(url) { mediaEl.src = url; mediaEl.controls = true; mediaEl.muted = true; }
+              mediaEl.style.width='140px'; mediaEl.style.height='80px'; mediaEl.style.objectFit='cover'; mediaEl.title = f.name;
             } else {
-              mediaEl = document.createElement('img'); mediaEl.src = url; mediaEl.style.width='120px'; mediaEl.style.height='80px'; mediaEl.style.objectFit='cover'; mediaEl.title = f.name;
+              mediaEl = document.createElement('img');
+              if(url) mediaEl.src = url;
+              mediaEl.style.width='120px'; mediaEl.style.height='80px'; mediaEl.style.objectFit='cover'; mediaEl.title = f.name;
+            }
+            // If URL.createObjectURL isn't available (some mobile browsers), fall back to FileReader
+            if(!url){
+              try{
+                const reader = new FileReader();
+                reader.onload = function(ev){ try{ if(mediaEl.tagName === 'IMG') mediaEl.src = ev.target.result; else mediaEl.src = ev.target.result; }catch(e){} };
+                reader.readAsDataURL(f);
+              }catch(e){}
             }
             mediaEl.style.borderRadius = '6px';
             const wrapper = document.createElement('div'); wrapper.style.position='relative'; wrapper.appendChild(mediaEl);
             const btn = document.createElement('button'); btn.textContent='✕'; btn.title='Remove'; btn.style.position='absolute'; btn.style.top='4px'; btn.style.right='4px'; btn.style.background='rgba(0,0,0,0.5)'; btn.style.color='#fff'; btn.style.border='0'; btn.style.borderRadius='50%'; btn.style.width='22px'; btn.style.height='22px'; btn.style.cursor='pointer';
             btn.addEventListener('click', ()=>{
               // remove file from input by rebuilding FileList via DataTransfer
-              const dt = new DataTransfer(); Array.from(postFilesEl.files).forEach(existing => { if(existing !== f) dt.items.add(existing); }); postFilesEl.files = dt.files; wrapper.remove(); try{ URL.revokeObjectURL(url); }catch(e){}
+              const dt = new DataTransfer(); Array.from(postFilesEl.files).forEach(existing => { if(existing !== f) dt.items.add(existing); }); postFilesEl.files = dt.files; wrapper.remove(); try{ if(url) URL.revokeObjectURL(url); }catch(e){}
             });
             wrapper.appendChild(btn);
             postPreview.appendChild(wrapper);
