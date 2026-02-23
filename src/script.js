@@ -80,12 +80,14 @@ window.clearAdminUnauthorized = function() {
         }catch(err){ console.error('debugAdminAuth error', err); return { error: String(err) }; }
     };
 
-// Disable localStorage usage in DB-only mode: make reads return null and writes no-ops.
-// This prevents accidental client-side persistence that can conflict with the real API.
+// Disable localStorage usage in DB-only mode only when explicitly configured.
+// Setting `window.WISPA_DISABLE_LOCALSTORAGE = true` or `window.WISPA_DB_ONLY = true`
+// will turn reads into no-ops to prevent accidental client-side persistence.
 try {
     const noop = function(){ return null; };
     const noWrite = function(){ /* no-op in DB-only mode */ };
-    if (typeof localStorage !== 'undefined') {
+    // Only override localStorage when a deliberate flag is present.
+    if (typeof localStorage !== 'undefined' && (window.WISPA_DISABLE_LOCALSTORAGE || window.WISPA_DB_ONLY)) {
         try { localStorage.getItem = noop; } catch(e){}
         try { localStorage.setItem = noWrite; } catch(e){}
         try { localStorage.removeItem = noWrite; } catch(e){}
