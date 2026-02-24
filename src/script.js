@@ -750,11 +750,45 @@ async function openAdminChat(chatId) {
             const isAdmin = (m.sender === 'admin' || m.from === 'Admin');
             const senderLabel = isAdmin ? 'Admin' : (m.userName || m.userEmail || m.sender || m.from || 'User');
             const ts = new Date(m.timestamp || m.ts || m.time || Date.now()).toLocaleString();
+
+            // If this message contains a property payload, render a property preview inside the bubble
+            let bodyHtml = '';
+            try {
+                const prop = (m && (m.meta && m.meta.property)) ? m.meta.property : (m && m.property ? m.property : null);
+                if (prop) {
+                    const p = prop;
+                    const img = p.image || (p.images && p.images[0]) || '';
+                    const imgSrc = img ? normalizeImageUrl(img) : '';
+                    const title = p.title || p.name || 'Property';
+                    const price = (p.price != null) ? (`€${Number(p.price).toLocaleString()}`) : '';
+                    const loc = p.location || p.address || '';
+                    const propId = p.id || p.propertyId || p.property_id || '';
+                    const link = 'property-detail.html?id=' + encodeURIComponent(propId) + '&conversation=true';
+                    bodyHtml = `
+                        <a href="${escapeHtml(link)}" style="text-decoration:none;color:inherit;display:block">
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <div style="width:84px;height:64px;flex:0 0 84px;">
+                                    ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)}" style="width:84px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">` : `<div style="width:84px;height:64px;border-radius:6px;background:#f5f7fa;border:1px solid #f1f5fb"></div>`}
+                                </div>
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-weight:700;font-size:14px;line-height:1.2;">${escapeHtml(title)}</div>
+                                    <div style="color:#666;font-size:13px;margin-top:4px">${escapeHtml((price ? price + ' — ' : '') + loc)}</div>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                } else {
+                    bodyHtml = `<div style="white-space:pre-wrap">${escapeHtml(String(m.text || m.body || m.content || ''))}</div>`;
+                }
+            } catch(e) {
+                bodyHtml = `<div style="white-space:pre-wrap">${escapeHtml(String(m.text || m.body || m.content || ''))}</div>`;
+            }
+
             return `
             <div style="display:flex;${isAdmin ? 'justify-content:flex-end' : 'justify-content:flex-start'};margin-bottom:8px;">
                 <div style="max-width:75%;background:${isAdmin ? '#3498db' : '#fff'};color:${isAdmin ? '#fff' : '#222'};padding:10px;border-radius:10px;box-shadow:var(--shadow);">
-                    <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:${isAdmin ? '#fff' : '#666'};">${escapeHtml(senderLabel)}</div>
-                    <div style="white-space:pre-wrap">${escapeHtml(String(m.text || m.body || ''))}</div>
+                    <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:${isAdmin ? '#fff' : '#666'};">${escapeHtml(senderLabel)}</div>
+                    ${bodyHtml}
                     <div style="font-size:11px;color:rgba(0,0,0,0.45);margin-top:6px;text-align:${isAdmin ? 'right' : 'left'};">${escapeHtml(ts)}</div>
                 </div>
             </div>
