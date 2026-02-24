@@ -592,18 +592,17 @@ async function openAdminChat(chatId) {
             chat = chats.find(c => c.id === chatId);
         }
         if (!chat) {
+            let resolved = null;
             try {
                 const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-                const found = (adminChats || []).find(c => c && c.id && String(c.id).indexOf(String(chatId)) !== -1);
-                if (found && found.id && found.id !== chatId) {
-                    console.log('openAdminChat: resolved partial id', chatId, '->', found.id);
-                    return openAdminChat(found.id);
+                resolved = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+                if (!resolved) {
+                    const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                    resolved = (chats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
                 }
-                const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-                const found2 = (chats || []).find(c => c && c.id && String(c.id).indexOf(String(chatId)) !== -1);
-                if (found2 && found2.id && found2.id !== chatId) {
-                    console.log('openAdminChat: resolved partial id via chatNotifications', chatId, '->', found2.id);
-                    return openAdminChat(found2.id);
+                if (resolved && resolved.id && resolved.id !== chatId) {
+                    console.log('openAdminChat: resolved partial id', chatId, '->', resolved.id);
+                    return openAdminChat(resolved.id);
                 }
                 // Try scanning all localStorage keys for messages that include the chatId
                 for (let i = 0; i < localStorage.length; i++) {
@@ -615,21 +614,29 @@ async function openAdminChat(chatId) {
                             if (Array.isArray(data) && data.length) {
                                 console.log('openAdminChat: found messages under storage key', key);
                                 messages = data.slice();
-                                // derive chat id from key suffix when possible
-                                const mKey = (key.match(/([A-Za-z0-9\-_:]+)$/) || [])[1];
-                                if (mKey) chatId = mKey;
                                 break;
                             }
                         } catch(e) {}
                     }
                 }
-                if (messages && messages.length) {
-                    console.log('openAdminChat: loaded messages from localStorage scan, count=', messages.length);
-                    // continue to render with found messages; attempt to derive chat meta
-                    try { chat = JSON.parse(localStorage.getItem('adminChats') || '[]').find(c=>c && c.id && String(c.id).indexOf(String(chatId)) !== -1) || null; } catch(e) { chat = chat || null; }
+            } catch(e){ console.warn('openAdminChat: resolution attempt failed', e); }
+
+            // If no chat metadata found, create a minimal chat object so the conversation view opens
+            if (!chat) {
+                chat = resolved || { id: chatId };
+                // prefer participantName from resolved metadata
+                if (!chat.userName && (chat.participantName || chat.userName || chat.user_email || chat.userName)) {
+                    chat.userName = chat.participantName || chat.userName || chat.user_email || chat.userName;
                 }
-            } catch(e){}
-            return;
+                // fallback: prettify id into a label
+                if (!chat.userName) {
+                    try {
+                        const pretty = String(chatId).replace(/^property-\d+-/,'').replace(/[-_]/g,' ');
+                        chat.userName = pretty || chatId;
+                    } catch(e){ chat.userName = chatId; }
+                }
+                console.log('openAdminChat: opening minimal chat view for', chatId, 'title=', chat.userName);
+            }
         }
     }
     document.getElementById('chat-fullview').style.display = 'block';
