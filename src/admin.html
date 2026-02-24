@@ -197,30 +197,23 @@
 
     <section id="profile" class="tab-panel">
       <h2>Admin Profile</h2>
-      <div id="admin-profile-panel" style="max-width:920px;background:#fff;border:1px solid var(--border);padding:14px;border-radius:10px;display:flex;gap:18px;align-items:flex-start">
-        <div style="width:120px;flex:0 0 120px;text-align:center">
-          <div id="admin-avatar" style="width:100px;height:100px;border-radius:50%;background:#f1f5f9;display:inline-block;overflow:hidden;border:1px solid var(--border)"></div>
-          <div style="margin-top:8px"><button id="changeAvatarBtn" class="icon-btn">Change</button></div>
+      <div id="admin-profile-panel" style="max-width:920px;background:#fff;border:1px solid var(--border);padding:18px;border-radius:12px;display:flex;gap:20px;align-items:center">
+        <div style="flex:0 0 140px;text-align:center">
+          <div id="admin-avatar" style="width:120px;height:120px;border-radius:50%;background:#f1f5f9;display:inline-block;overflow:hidden;border:1px solid var(--border);box-shadow:0 6px 16px rgba(8,24,50,0.06)"></div>
         </div>
         <div style="flex:1;min-width:0">
-          <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
-            <div style="flex:1">
-              <label style="display:block;margin-bottom:8px"><strong>Name</strong><input id="profileName" style="width:100%;padding:8px;margin-top:6px" /></label>
-              <label style="display:block;margin-bottom:8px"><strong>Email</strong><input id="profileEmail" style="width:100%;padding:8px;margin-top:6px" /></label>
-              <label style="display:block;margin-bottom:8px"><strong>Role</strong><input id="profileRole" style="width:100%;padding:8px;margin-top:6px" disabled /></label>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+            <div style="flex:1;min-width:0">
+              <div id="profileDisplayName" style="font-size:1.25rem;font-weight:700">—</div>
+              <div id="profileDisplayEmail" style="color:#666;margin-top:6px">—</div>
+              <div style="margin-top:12px;color:#444">Role: <span id="profileRole">Admin</span></div>
             </div>
-            <div style="width:220px;flex:0 0 220px">
-              <div style="background:#f7fbff;padding:10px;border-radius:8px;border:1px solid var(--overview-border);margin-bottom:8px">
-                <div style="font-weight:700" id="profileStatsName">—</div>
-                <div style="color:#666;font-size:13px" id="profileLastLogin">Last login: —</div>
-              </div>
-              <div>
-                <button id="saveProfileBtn" class="tab-btn" style="width:100%;margin-bottom:8px">Save Profile</button>
-                <button id="changePasswordBtn" class="tab-btn" style="width:100%">Change Password</button>
-              </div>
+            <div style="flex:0 0 180px;display:flex;flex-direction:column;gap:8px">
+              <a href="admin-edit-profile.html" id="profileSettingsBtn" class="tab-btn" style="text-align:center;display:inline-block;padding:10px 12px">Settings</a>
+              <button id="profilePrivacyBtn" class="tab-btn" style="text-align:center;display:inline-block;padding:10px 12px;background:#fff;border:1px solid var(--border)">Privacy Settings</button>
             </div>
           </div>
-          <div style="margin-top:12px;color:#666;font-size:13px">Tip: Use the Change button to upload an avatar (uploads to API host).</div>
+          <div style="margin-top:12px;color:#666;font-size:13px">Use Settings to edit your profile, update avatar, change password and adjust privacy options.</div>
         </div>
       </div>
       <div style="height:8px"></div>
