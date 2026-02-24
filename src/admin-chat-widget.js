@@ -84,14 +84,46 @@
         let property = null;
         if(j && j.property) property = j.property;
         if(!property && merged && merged.length){ for(const m of merged){ if(m && m.meta && m.meta.property){ property = m.meta.property; break; } if(m && m.property){ property = m.property; break; } } }
-        // render property card
+        // render property card (match user conversation page presentation)
         if(property){
           try{ const titleEl = document.getElementById('chat-full-title'); const subEl = document.getElementById('chat-full-sub'); if(titleEl){ titleEl.textContent = property.title || property.name || titleEl.textContent || id; titleEl.dataset.chatId = id; } if(subEl){ subEl.textContent = property.location || property.address || ''; } }catch(e){}
-          const cardHtml = `<div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;display:flex;gap:18px;align-items:center;border:1px solid var(--border);">
-            <div style="flex:1"><div style="font-weight:700">${this.escape(property.title||property.name||'Property')}</div><div style="color:#666">${this.escape(property.location||property.address||'')}</div></div>
-          </div>`;
-          try{ const existing = document.getElementById('messages-property-card'); if(existing && existing.parentNode) existing.parentNode.removeChild(existing); }catch(e){}
-          const temp = document.createElement('div'); temp.innerHTML = cardHtml; const node = temp.firstElementChild; if(this.messagesEl && this.messagesEl.parentNode) this.messagesEl.parentNode.insertBefore(node, this.messagesEl);
+          try{
+            const p = property;
+            const img = p.image || (p.images && p.images[0]) || '';
+            const imgSrc = img ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(img) : img) : '';
+            const title = p.title || p.name || 'Property';
+            const price = (p.price != null) ? (`€${Number(p.price).toLocaleString()}`) : '';
+            const loc = p.location || p.address || '';
+            const propId = p.id || p.propertyId || p.property_id || '';
+            const badge = p.hot ? '🔥 Hot Property' : (p.featured ? '⭐ Featured Property' : '✅ Available Property');
+            const beds = p.bedrooms || p.beds || p.bed || 0;
+            const baths = p.bathrooms || p.baths || p.bath || 0;
+            const typeLabel = (p.type === 'rent' || String(p.post_to||'').toLowerCase()==='rent') ? 'For Rent' : 'For Sale';
+            const html = `
+              <a href="property-detail.html?id=${this.escape(String(propId))}&conversation=true" style="text-decoration:none;color:inherit;display:block">
+              <div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;display:flex;gap:18px;align-items:center;border:1px solid var(--border);max-width:900px;">
+                  <div style="width:110px;height:80px;flex:0 0 110px;">
+                      ${imgSrc ? `<img src="${this.escape(imgSrc)}" alt="${this.escape(title)}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f7f7f7;">` : `<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;border:1px solid var(--border);"></div>`}
+                  </div>
+                  <div style="flex:1;min-width:0">
+                      <div style="font-weight:700;font-size:17px;line-height:1.2;">${this.escape(title)}</div>
+                      <div style="display:flex;align-items:center;gap:10px;color:var(--secondary);font-size:14px;margin:2px 0 6px 0;">
+                          <span>${this.escape(loc)}</span>
+                          <span style='background:#3498db;color:#fff;font-size:12px;padding:2px 8px;border-radius:6px;'>${this.escape(badge)}</span>
+                      </div>
+                      <div style="display:flex;gap:16px;font-size:14px;color:#444;align-items:center;">
+                          <span>${this.escape(price)}</span>
+                          <span>${this.escape(String(beds))} bed</span>
+                          <span>${this.escape(String(baths))} bath</span>
+                          <span style="background:#eaf6ff;color:#3498db;padding:2px 8px;border-radius:6px;font-size:13px;">${this.escape(typeLabel)}</span>
+                      </div>
+                  </div>
+              </div>
+              </a>
+            `;
+            try{ const existing = document.getElementById('messages-property-card'); if(existing && existing.parentNode) existing.parentNode.removeChild(existing); }catch(e){}
+            const temp = document.createElement('div'); temp.innerHTML = html; const node = temp.firstElementChild; if(this.messagesEl && this.messagesEl.parentNode) this.messagesEl.parentNode.insertBefore(node, this.messagesEl);
+          }catch(e){ /* ignore property render errors */ }
         }
 
         if(!merged || !merged.length){ this.messagesEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>'; try{ if(this.inputEl) this.inputEl.disabled = false; }catch(e){} return; }
