@@ -582,6 +582,73 @@ async function openAdminChat(chatId) {
             const tb = b.time || b.ts || 0;
             return ta - tb;
         });
+
+        // If still empty, perform a deep scan of all localStorage entries to find messages
+        if ((!messages || messages.length === 0)) {
+            try {
+                const seenKeys = new Set(keys);
+                // derive numeric property id if possible (property-585 -> 585)
+                let propNum = null;
+                try {
+                    const m = String(chatId).match(/^property-(\d+)/);
+                    if (m) propNum = m[1];
+                } catch(e){}
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!key || seenKeys.has(key)) continue;
+                    try {
+                        const raw = localStorage.getItem(key);
+                        if (!raw) continue;
+                        const parsed = JSON.parse(raw);
+                        let candidateMsgs = [];
+                        if (Array.isArray(parsed)) {
+                            candidateMsgs = parsed;
+                        } else if (parsed && Array.isArray(parsed.messages)) {
+                            candidateMsgs = parsed.messages;
+                        } else if (parsed && Array.isArray(parsed.items)) {
+                            candidateMsgs = parsed.items;
+                        }
+                        if (!candidateMsgs || !candidateMsgs.length) continue;
+                        // Filter messages that reference this property/chatId
+                        const matches = candidateMsgs.filter(m => {
+                            try {
+                                if (!m) return false;
+                                // check meta.property presence
+                                if (m.meta && m.meta.property) {
+                                    const pp = m.meta.property;
+                                    if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
+                                    if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
+                                    if (pp.key && String(pp.key).indexOf(String(chatId)) !== -1) return true;
+                                }
+                                // check message-level property
+                                if (m.property) {
+                                    const pp = m.property;
+                                    if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
+                                    if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
+                                }
+                                // check if message id or conversation id matches chatId
+                                if (m.conversationId && String(m.conversationId).indexOf(String(chatId)) !== -1) return true;
+                                if (m.id && String(m.id).indexOf(String(chatId)) !== -1) return true;
+                                // finally, if text contains property id or chatId
+                                if (m.text && String(m.text).indexOf(String(propNum || chatId)) !== -1) return true;
+                                return false;
+                            } catch(e){ return false; }
+                        });
+                        if (matches && matches.length) {
+                            console.log('openAdminChat: deep-scan found', matches.length, 'messages in', key);
+                            matches.forEach(m => {
+                                const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                                try { if (!seen.has(sig)) { messages.push(m); seen.add(sig); } } catch(e) { messages.push(m); }
+                            });
+                        }
+                    } catch(e) {}
+                }
+                // resort if we found anything
+                if (messages && messages.length) {
+                    messages.sort((a,b) => { const ta = a.time || a.ts || 0; const tb = b.time || b.ts || 0; return ta - tb; });
+                }
+            } catch(e){ console.warn('openAdminChat: deep localStorage scan failed', e); }
+        }
         // Get chat meta
         try {
             const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
