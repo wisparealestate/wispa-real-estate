@@ -400,6 +400,12 @@
 
     // Render admin chat list: prefer server-backed conversations, fall back to localStorage
     async function renderAdminChatList(){
+      // If the new AdminChatWidget is available, delegate to it and skip the legacy renderer
+      try{
+        if (window._adminChatWidget && typeof window._adminChatWidget.loadConversations === 'function'){
+          try{ window._adminChatWidget.loadConversations(); return; }catch(e){ console.warn('AdminChatWidget.loadConversations failed', e); }
+        }
+      }catch(e){}
       const out = document.getElementById('admin-chats-list');
       out.innerHTML = 'Loading…';
       try{

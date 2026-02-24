@@ -876,7 +876,13 @@ function backToChatList() {
 document.addEventListener('DOMContentLoaded', function() {
     const chatTab = document.getElementById('chat');
     if (chatTab && typeof renderAdminChatList === 'function') {
-        renderAdminChatList();
+        // If admin widget exists, let it initialize and load conversations instead of legacy renderer
+        if (window._adminChatWidget && typeof window._adminChatWidget.loadConversations === 'function') {
+            try { window._adminChatWidget.loadConversations(); }
+            catch(e){ console.warn('admin widget load failed', e); renderAdminChatList(); }
+        } else {
+            renderAdminChatList();
+        }
     }
 });
 
