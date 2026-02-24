@@ -282,16 +282,30 @@
           const settingsBtn = document.getElementById('profileSettingsBtn');
           const privacyBtn = document.getElementById('profilePrivacyBtn');
 
-          const u = await window.getCurrentUser();
+          // Try to obtain current user. If admin-401 flag present, attempt an explicit admin profile fetch
+          let u = null;
+          try {
+            if (window._wispaAdminUnauthorized) {
+              try {
+                const ar = window.apiFetch ? await window.apiFetch('/api/admin/profile') : await fetch('/api/admin/profile', { credentials: 'include' });
+                if (ar && ar.ok) {
+                  const aj = await ar.json().catch(()=>null);
+                  u = (aj && (aj.user || aj.profile || aj.admin)) || aj || null;
+                  // If admin profile shape is { profile: { adminName, adminEmail } } try to normalise
+                  if (u && !u.id && aj && aj.profile) {
+                    const p = aj.profile;
+                    u = { id: p.id || null, username: p.adminName || p.adminEmail || null, email: p.adminEmail || null, full_name: p.adminName || null, role: (p.adminRole || 'admin'), avatar: p.adminAvatar || null };
+                  }
+                  if (u) try{ window._wispaAdminUnauthorized = false; }catch(e){}
+                }
+              } catch (e) { /* ignore and fallback to getCurrentUser */ }
+            }
+          } catch(e){}
+          if(!u) u = await window.getCurrentUser();
           // Determine admin status from fetched user object
           const isAdmin = !!(u && (u.role === 'admin' || u.adminRole === 'admin' || u.isAdmin));
-          // If we've already observed admin 401s but the user object shows admin, clear the flag
           if (isAdmin) { try{ window._wispaAdminUnauthorized = false; }catch(e){} }
-          // If admin endpoints returned 401 and we do not have an admin user, show notice
-          if (window._wispaAdminUnauthorized && !isAdmin) {
-            if (msgs) msgs.textContent = 'Admin session not validated; please re-login via Settings.';
-            return;
-          }
+          if (window._wispaAdminUnauthorized && !isAdmin) { if (msgs) msgs.textContent = 'Admin session not validated; please re-login via Settings.'; return; }
           if(!u){ if(msgs) msgs.textContent = 'Not signed in as admin.'; return; }
           const displayName = u.full_name || u.name || u.displayName || u.username || '';
           const displayEmail = u.email || u.user_email || '';
