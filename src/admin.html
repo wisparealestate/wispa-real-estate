@@ -203,7 +203,10 @@
         </div>
         <div style="flex:1 1 520px;min-width:0">
           <div style="display:flex;flex-direction:column;gap:6px">
-            <div id="profileDisplayName" style="font-size:1.25rem;font-weight:700">—</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div id="profileDisplayName" style="font-size:1.25rem;font-weight:700">—</div>
+              <span id="profileVerified" title="Verified admin" aria-hidden="true" style="display:none;color:#27ae60;font-size:0.95rem;line-height:1">✔︎</span>
+            </div>
             <div id="profileDisplayEmail" style="color:#666;margin-top:6px">—</div>
             <div style="margin-top:12px;color:#444;font-size:14px">Role: <span id="profileRole">Admin</span></div>
             <div style="margin-top:12px;color:#666;font-size:13px">Use Settings to edit your profile, update avatar, change password and adjust privacy options.</div>
@@ -294,6 +297,12 @@
           if(roleEl) roleEl.textContent = roleText;
           if(msgs) msgs.textContent = '';
           if(u.avatar && avatar) avatar.innerHTML = '<img src="'+ (u.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
+          // Show verified icon for admin sessions
+          try{
+            const verifiedEl = document.getElementById('profileVerified');
+            const isAdmin = !!(u && (u.role === 'admin' || u.adminRole === 'admin' || String(u.adminRole || '').toLowerCase() === 'admin'));
+            if(verifiedEl) verifiedEl.style.display = isAdmin ? 'inline-block' : 'none';
+          }catch(e){}
 
           // If a legacy save button exists, wire it. Otherwise the Settings link handles editing.
           if(saveBtn){
