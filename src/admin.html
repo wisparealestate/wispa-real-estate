@@ -237,6 +237,18 @@
       </div>
     </section>
 
+    <script src="admin-chat-widget.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function(){
+        try{
+          // initialize new admin chat widget
+          if(typeof AdminChatWidget === 'function'){
+            window._adminChatWidget = new AdminChatWidget({ listId: 'admin-chats-list', fullViewId: 'chat-fullview', messagesId: 'chat-full-messages', inputId: 'chat-full-input', sendBtnId: 'chat-full-send' });
+          }
+        }catch(e){ console.warn('AdminChatWidget init failed', e); }
+      });
+    </script>
+
     <section id="alerts" class="tab-panel">
       <h2>System Alerts</h2>
       <p><button id="refreshAlerts">Refresh</button></p>
