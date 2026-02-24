@@ -455,8 +455,25 @@ window._wispaCurrentUser = null;
 window.getCurrentUser = async function(force){
     if(window._wispaCurrentUser && !force) return window._wispaCurrentUser;
     try{
+        // If we're on an admin page, prefer the admin-profile endpoint first
+        const href = (typeof window !== 'undefined' && window.location) ? String(window.location.href || '') : '';
+        const path = (typeof window !== 'undefined' && window.location) ? String(window.location.pathname || '') : '';
+        const isAdminPage = (href.indexOf('admin.html') !== -1) || (path.indexOf('/admin') !== -1) || (path.indexOf('admin') !== -1);
+        if (isAdminPage && window.apiFetch) {
+            try{
+                const ar = await window.apiFetch('/api/admin/profile');
+                if (ar && ar.ok) {
+                    const aj = await ar.json();
+                    // Normalise common shapes: { user }, { profile }, or direct user object
+                    const adminUser = (aj && (aj.user || aj.profile || aj.admin)) || (aj && typeof aj === 'object' && (aj.id || aj.email) ? aj : null);
+                    if (adminUser) { window._wispaCurrentUser = adminUser; return adminUser; }
+                }
+            }catch(e){}
+        }
+
+        // Fallback to standard /api/me
         const r = window.apiFetch ? await window.apiFetch('/api/me') : await fetch('/api/me');
-        if(r && r.ok){ const j = await r.json(); if(j && j.user){ window._wispaCurrentUser = j.user; return j.user; } }
+        if(r && r.ok){ const j = await r.json(); if(j && j.user){ window._wispaCurrentUser = j.user; return j.user; } else if (j && (j.id || j.email)) { window._wispaCurrentUser = j; return j; } }
     }catch(e){}
     window._wispaCurrentUser = null;
     return null;
