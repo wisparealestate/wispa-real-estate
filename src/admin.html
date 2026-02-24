@@ -269,40 +269,45 @@
       // Wire profile panel: load current user and attach save handler
       document.addEventListener('DOMContentLoaded', async function(){
         try{
-          const nameEl = document.getElementById('profileName');
-          const emailEl = document.getElementById('profileEmail');
+          const nameInput = document.getElementById('profileName');
+          const nameDisplay = document.getElementById('profileDisplayName');
+          const emailInput = document.getElementById('profileEmail');
+          const emailDisplay = document.getElementById('profileDisplayEmail');
           const roleEl = document.getElementById('profileRole');
-          const statsName = document.getElementById('profileStatsName');
-          const lastLogin = document.getElementById('profileLastLogin');
           const msgs = document.getElementById('profileMessages');
           const avatar = document.getElementById('admin-avatar');
           const saveBtn = document.getElementById('saveProfileBtn');
-          const changeAvatar = document.getElementById('changeAvatarBtn');
-          const changePw = document.getElementById('changePasswordBtn');
+          const settingsBtn = document.getElementById('profileSettingsBtn');
+          const privacyBtn = document.getElementById('profilePrivacyBtn');
 
           const u = await window.getCurrentUser();
-          if(!u){ msgs.textContent = 'Not signed in as admin.'; return; }
-          nameEl.value = u.full_name || u.name || u.displayName || u.username || '';
-          emailEl.value = u.email || u.user_email || '';
-          roleEl.value = (u.role || u.roles || u.isAdmin) ? (u.role || (u.isAdmin? 'Administrator':'Admin')) : 'Admin';
-          statsName.textContent = nameEl.value || 'Admin';
-          lastLogin.textContent = 'Last login: ' + (u.last_login || u.lastLogin || u.updated_at || 'Unknown');
-          msgs.textContent = '';
-          if(u.avatar){ avatar.innerHTML = '<img src="'+ (u.avatar) + '" style="width:100%;height:100%;object-fit:cover">'; }
+          if(!u){ if(msgs) msgs.textContent = 'Not signed in as admin.'; return; }
+          const displayName = u.full_name || u.name || u.displayName || u.username || '';
+          const displayEmail = u.email || u.user_email || '';
+          const roleText = (u.role || u.roles || u.isAdmin) ? (u.role || (u.isAdmin? 'Administrator':'Admin')) : 'Admin';
 
-          saveBtn.addEventListener('click', async function(){
-            try{
-              saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
-              const payload = { full_name: nameEl.value, email: emailEl.value };
-              await window.saveAdminProfile(payload);
-              msgs.textContent = 'Profile saved.';
-              saveBtn.textContent = 'Saved';
-              setTimeout(()=>{ saveBtn.textContent = 'Save Profile'; saveBtn.disabled = false; }, 1200);
-            }catch(e){ msgs.textContent = 'Save failed.'; saveBtn.disabled = false; saveBtn.textContent = 'Save Profile'; }
-          });
+          if(nameInput) nameInput.value = displayName; if(nameDisplay) nameDisplay.textContent = displayName;
+          if(emailInput) emailInput.value = displayEmail; if(emailDisplay) emailDisplay.textContent = displayEmail;
+          if(roleEl) roleEl.textContent = roleText;
+          if(msgs) msgs.textContent = '';
+          if(u.avatar && avatar) avatar.innerHTML = '<img src="'+ (u.avatar) + '" style="width:100%;height:100%;object-fit:cover">';
 
-          changeAvatar.addEventListener('click', function(){ alert('Avatar upload: use the admin API to upload and set avatar.'); });
-          changePw.addEventListener('click', function(){ window.location.href = 'admin-edit-profile.html'; });
+          // If a legacy save button exists, wire it. Otherwise the Settings link handles editing.
+          if(saveBtn){
+            saveBtn.addEventListener('click', async function(){
+              try{
+                saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+                const payload = { full_name: (nameInput?nameInput.value:displayName), email: (emailInput?emailInput.value:displayEmail) };
+                await window.saveAdminProfile(payload);
+                if(msgs) msgs.textContent = 'Profile saved.';
+                saveBtn.textContent = 'Saved';
+                setTimeout(()=>{ saveBtn.textContent = 'Save Profile'; saveBtn.disabled = false; }, 1200);
+              }catch(e){ if(msgs) msgs.textContent = 'Save failed.'; saveBtn.disabled = false; saveBtn.textContent = 'Save Profile'; }
+            });
+          }
+
+          if(settingsBtn){ settingsBtn.addEventListener('click', function(){ /* anchor navigates to edit page */ }); }
+          if(privacyBtn){ privacyBtn.addEventListener('click', function(){ window.location.href = 'admin-edit-profile.html#privacy'; }); }
         }catch(e){ console.warn('Profile panel init failed', e); }
       });
     </script>
