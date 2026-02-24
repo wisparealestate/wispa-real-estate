@@ -462,6 +462,25 @@ window.getCurrentUser = async function(force){
     return null;
 };
 
+// Save admin profile (tries admin endpoint then falls back to /api/me)
+window.saveAdminProfile = async function(profile){
+    try{
+        const body = { user: profile };
+        const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+        // Try admin endpoint first
+        try{
+            const r = await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if(r && r.ok) return await r.json();
+        }catch(e){}
+        // Fallback to /api/me update
+        try{
+            const r2 = await poster('/api/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
+            if(r2 && r2.ok) return await r2.json();
+        }catch(e){}
+        throw new Error('Profile save failed');
+    }catch(err){ console.error('saveAdminProfile failed', err); throw err; }
+};
+
 // Ensure user is authenticated or redirect to login
 window.requireLogin = async function(){
     const u = await window.getCurrentUser();

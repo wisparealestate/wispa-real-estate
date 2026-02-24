@@ -196,11 +196,35 @@
     </section>
 
     <section id="profile" class="tab-panel">
-      <h2>Profile</h2>
-      <div class="profile-field"><strong>Name:</strong> <span id="profileName">—</span></div>
-      <div class="profile-field"><strong>Email:</strong> <span id="profileEmail">—</span></div>
-      <div class="profile-field"><strong>Role:</strong> <span id="profileRole">—</span></div>
-      <button id="refreshProfile">Refresh</button>
+      <h2>Admin Profile</h2>
+      <div id="admin-profile-panel" style="max-width:920px;background:#fff;border:1px solid var(--border);padding:14px;border-radius:10px;display:flex;gap:18px;align-items:flex-start">
+        <div style="width:120px;flex:0 0 120px;text-align:center">
+          <div id="admin-avatar" style="width:100px;height:100px;border-radius:50%;background:#f1f5f9;display:inline-block;overflow:hidden;border:1px solid var(--border)"></div>
+          <div style="margin-top:8px"><button id="changeAvatarBtn" class="icon-btn">Change</button></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
+            <div style="flex:1">
+              <label style="display:block;margin-bottom:8px"><strong>Name</strong><input id="profileName" style="width:100%;padding:8px;margin-top:6px" /></label>
+              <label style="display:block;margin-bottom:8px"><strong>Email</strong><input id="profileEmail" style="width:100%;padding:8px;margin-top:6px" /></label>
+              <label style="display:block;margin-bottom:8px"><strong>Role</strong><input id="profileRole" style="width:100%;padding:8px;margin-top:6px" disabled /></label>
+            </div>
+            <div style="width:220px;flex:0 0 220px">
+              <div style="background:#f7fbff;padding:10px;border-radius:8px;border:1px solid var(--overview-border);margin-bottom:8px">
+                <div style="font-weight:700" id="profileStatsName">—</div>
+                <div style="color:#666;font-size:13px" id="profileLastLogin">Last login: —</div>
+              </div>
+              <div>
+                <button id="saveProfileBtn" class="tab-btn" style="width:100%;margin-bottom:8px">Save Profile</button>
+                <button id="changePasswordBtn" class="tab-btn" style="width:100%">Change Password</button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;color:#666;font-size:13px">Tip: Use the Change button to upload an avatar (uploads to API host).</div>
+        </div>
+      </div>
+      <div style="height:8px"></div>
+      <div id="profileMessages" style="color:#666">Loading profile…</div>
     </section>
 
     <section id="requests" class="tab-panel">
@@ -246,6 +270,47 @@
             window._adminChatWidget = new AdminChatWidget({ listId: 'admin-chats-list', fullViewId: 'chat-fullview', messagesId: 'chat-full-messages', inputId: 'chat-full-input', sendBtnId: 'chat-full-send' });
           }
         }catch(e){ console.warn('AdminChatWidget init failed', e); }
+      });
+    </script>
+    <script>
+      // Wire profile panel: load current user and attach save handler
+      document.addEventListener('DOMContentLoaded', async function(){
+        try{
+          const nameEl = document.getElementById('profileName');
+          const emailEl = document.getElementById('profileEmail');
+          const roleEl = document.getElementById('profileRole');
+          const statsName = document.getElementById('profileStatsName');
+          const lastLogin = document.getElementById('profileLastLogin');
+          const msgs = document.getElementById('profileMessages');
+          const avatar = document.getElementById('admin-avatar');
+          const saveBtn = document.getElementById('saveProfileBtn');
+          const changeAvatar = document.getElementById('changeAvatarBtn');
+          const changePw = document.getElementById('changePasswordBtn');
+
+          const u = await window.getCurrentUser();
+          if(!u){ msgs.textContent = 'Not signed in as admin.'; return; }
+          nameEl.value = u.full_name || u.name || u.displayName || u.username || '';
+          emailEl.value = u.email || u.user_email || '';
+          roleEl.value = (u.role || u.roles || u.isAdmin) ? (u.role || (u.isAdmin? 'Administrator':'Admin')) : 'Admin';
+          statsName.textContent = nameEl.value || 'Admin';
+          lastLogin.textContent = 'Last login: ' + (u.last_login || u.lastLogin || u.updated_at || 'Unknown');
+          msgs.textContent = '';
+          if(u.avatar){ avatar.innerHTML = '<img src="'+ (u.avatar) + '" style="width:100%;height:100%;object-fit:cover">'; }
+
+          saveBtn.addEventListener('click', async function(){
+            try{
+              saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+              const payload = { full_name: nameEl.value, email: emailEl.value };
+              await window.saveAdminProfile(payload);
+              msgs.textContent = 'Profile saved.';
+              saveBtn.textContent = 'Saved';
+              setTimeout(()=>{ saveBtn.textContent = 'Save Profile'; saveBtn.disabled = false; }, 1200);
+            }catch(e){ msgs.textContent = 'Save failed.'; saveBtn.disabled = false; saveBtn.textContent = 'Save Profile'; }
+          });
+
+          changeAvatar.addEventListener('click', function(){ alert('Avatar upload: use the admin API to upload and set avatar.'); });
+          changePw.addEventListener('click', function(){ window.location.href = 'admin-edit-profile.html'; });
+        }catch(e){ console.warn('Profile panel init failed', e); }
       });
     </script>
 
