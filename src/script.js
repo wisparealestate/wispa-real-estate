@@ -80,6 +80,20 @@ window.clearAdminUnauthorized = function() {
         }catch(err){ console.error('debugAdminAuth error', err); return { error: String(err) }; }
     };
 
+    // Debug helper for regular user session (calls /api/me)
+    window.debugUserAuth = async function(){
+        try{
+            const base = window.WISPA_API_BASE || '';
+            const url = (base.replace(/\/+$/,'') || '') + '/api/me';
+            console.log('debugUserAuth ->', url);
+            const r = await fetch(url, { method: 'GET', credentials: 'include' });
+            console.log('debugUserAuth status:', r.status);
+            const body = await r.text();
+            console.log('debugUserAuth body:', body);
+            return { status: r.status, body };
+        }catch(err){ console.error('debugUserAuth error', err); return { error: String(err) }; }
+    };
+
     // Attempt cross-origin admin login via API host and open the URL that sets the session cookie.
     // Usage: await window.adminLoginRedirect('admin','password');
     window.adminLoginRedirect = async function(username, password, returnTo){
