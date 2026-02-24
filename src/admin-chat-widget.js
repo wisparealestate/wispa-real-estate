@@ -119,10 +119,26 @@
       const text = (this.inputEl && this.inputEl.value) ? String(this.inputEl.value).trim() : '';
       if(!text) return;
       try{
+        // Try per-conversation endpoint first
         const j = await this.apiPost('/api/conversations/' + encodeURIComponent(this.currentConv) + '/messages', { text });
-        // add to view optimistically
-        if(this.inputEl) this.inputEl.value = '';
-        await this.openConversation(this.currentConv);
+        if (j) {
+          if(this.inputEl) this.inputEl.value = '';
+          await this.openConversation(this.currentConv);
+          return;
+        }
+        // Fallback: some servers expect a single endpoint '/api/conversations/messages' with body { convId, message }
+        try{
+          const poster = window.apiFetch ? window.apiFetch : fetch;
+          const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ convId: this.currentConv, message: { sender: 'admin', text } }) };
+          const res = await poster('/api/conversations/messages', opts);
+          if (res && res.ok) {
+            if(this.inputEl) this.inputEl.value = '';
+            await this.openConversation(this.currentConv);
+            return;
+          }
+        }catch(e){ /* ignore fallback failure */ }
+
+        alert('Send failed');
       }catch(e){ alert('Send failed'); }
     }
   }
