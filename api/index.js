@@ -227,7 +227,21 @@ app.get("/api/conversations", async (req, res) => {
 // Protect admin API routes: require authenticated user with role 'admin'
 app.use('/api/admin', async (req, res, next) => {
   try {
-    const admin = await getAdminSessionUser(req);
+    // Prefer explicit admin session cookie
+    let admin = await getAdminSessionUser(req);
+    // Fallback: if no admin cookie, allow a regular session to qualify if its uid exists in admin_logins
+    if (!admin) {
+      const sessUser = await getSessionUser(req);
+      if (sessUser && sessUser.id) {
+        try{
+          const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1', [sessUser.id]);
+          if (a && a.rows && a.rows[0]) {
+            const ar = a.rows[0];
+            admin = { id: ar.id, username: ar.username, email: ar.email, full_name: ar.full_name || null, role: 'admin', created_at: ar.created_at };
+          }
+        }catch(e){}
+      }
+    }
     if (!admin || admin.role !== 'admin') return res.status(401).json({ error: 'Admin authentication required' });
     // attach admin to request for downstream handlers
     req.currentUser = admin;
