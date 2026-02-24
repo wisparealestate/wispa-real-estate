@@ -456,7 +456,11 @@
 
     document.getElementById('refreshChats').addEventListener('click', renderAdminChatList);
     document.getElementById('chat-back').addEventListener('click', (e)=>{ e.preventDefault(); backToChatList(); });
-    document.getElementById('chat-full-send').addEventListener('click', (e)=>{ const text = document.getElementById('chat-full-input').value || ''; if(!text.trim()) return; try{ const id = (document.getElementById('chat-full-title').dataset && document.getElementById('chat-full-title').dataset.chatId) || null; if(!id){ /* try to infer from title */ } sendAdminMessage(id, text); document.getElementById('chat-full-input').value=''; }catch(err){ console.error(err) } });
+    document.getElementById('chat-full-send').addEventListener('click', (e)=>{ 
+      // If new AdminChatWidget is present, let it handle sending
+      if(window._adminChatWidget && typeof window._adminChatWidget.sendMessage === 'function') return;
+      const text = document.getElementById('chat-full-input').value || ''; if(!text.trim()) return; try{ const id = (document.getElementById('chat-full-title').dataset && document.getElementById('chat-full-title').dataset.chatId) || null; if(!id){ /* try to infer from title */ } sendAdminMessage(id, text); document.getElementById('chat-full-input').value=''; }catch(err){ console.error(err) } 
+    });
 
     async function sendAdminMessage(chatId, text){
       if(!chatId){ console.warn('Missing chatId for sendAdminMessage'); return }

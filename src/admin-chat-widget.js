@@ -59,7 +59,15 @@
       this.currentConv = id;
       this.fullView.style.display = 'block';
       this.listEl.style.display = 'none';
+      // Set global chat title and dataset so legacy handlers can work
+      try{
+        const titleEl = document.getElementById('chat-full-title');
+        const subEl = document.getElementById('chat-full-sub');
+        if(titleEl){ titleEl.textContent = id; titleEl.dataset.chatId = id; }
+        if(subEl) subEl.textContent = '';
+      }catch(e){}
       this.messagesEl.innerHTML = 'Loading messages...';
+      try{ if(this.inputEl) { this.inputEl.disabled = false; } }catch(e){}
       try{
         const j = await this.apiGet('/api/conversations/' + encodeURIComponent(id) + '/messages');
         const msgs = Array.isArray(j && j.messages ? j.messages : j) ? (j.messages || j) : [];
@@ -78,6 +86,7 @@
         if(!property && merged && merged.length){ for(const m of merged){ if(m && m.meta && m.meta.property){ property = m.meta.property; break; } if(m && m.property){ property = m.property; break; } } }
         // render property card
         if(property){
+          try{ const titleEl = document.getElementById('chat-full-title'); const subEl = document.getElementById('chat-full-sub'); if(titleEl){ titleEl.textContent = property.title || property.name || titleEl.textContent || id; titleEl.dataset.chatId = id; } if(subEl){ subEl.textContent = property.location || property.address || ''; } }catch(e){}
           const cardHtml = `<div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;display:flex;gap:18px;align-items:center;border:1px solid var(--border);">
             <div style="flex:1"><div style="font-weight:700">${this.escape(property.title||property.name||'Property')}</div><div style="color:#666">${this.escape(property.location||property.address||'')}</div></div>
           </div>`;
@@ -85,7 +94,7 @@
           const temp = document.createElement('div'); temp.innerHTML = cardHtml; const node = temp.firstElementChild; if(this.messagesEl && this.messagesEl.parentNode) this.messagesEl.parentNode.insertBefore(node, this.messagesEl);
         }
 
-        if(!merged || !merged.length){ this.messagesEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>'; return; }
+        if(!merged || !merged.length){ this.messagesEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>'; try{ if(this.inputEl) this.inputEl.disabled = false; }catch(e){} return; }
         merged.sort((a,b)=>{ const ta = new Date(a.timestamp||a.ts||a.time||0).getTime()||0; const tb = new Date(b.timestamp||b.ts||b.time||0).getTime()||0; return ta-tb; });
         const parts = merged.map(m => {
           const isAdmin = (m.sender === 'admin' || m.from === 'Admin');
@@ -99,6 +108,7 @@
             `</div></div>`;
         });
         this.messagesEl.innerHTML = parts.join('');
+        try{ if(this.inputEl) { this.inputEl.disabled = false; this.inputEl.focus(); } }catch(e){}
       }catch(e){ this.messagesEl.innerHTML = 'Failed to load messages.'; }
     }
 
