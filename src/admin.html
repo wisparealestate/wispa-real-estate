@@ -650,8 +650,10 @@
       }
     }
 
-    document.getElementById('refreshProfile').addEventListener('click', loadProfile);
-    document.getElementById('refreshOverview').addEventListener('click', loadOverview);
+    const refreshProfileBtn = document.getElementById('refreshProfile');
+    if (refreshProfileBtn) refreshProfileBtn.addEventListener('click', loadProfile);
+    const refreshOverviewBtn = document.getElementById('refreshOverview');
+    if (refreshOverviewBtn) refreshOverviewBtn.addEventListener('click', loadOverview);
 
     // Data loaders for new panels
     async function safeApi(path, opts){
