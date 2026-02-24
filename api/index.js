@@ -251,23 +251,17 @@ app.use('/api/admin', async (req, res, next) => {
   try {
     // Prefer explicit admin session cookie
     let admin = await getAdminSessionUser(req);
-    // Fallback: if no admin cookie, allow a regular session to qualify if its uid exists in admin_logins
+    // Fallback: if no admin cookie, allow a regular session only if its uid or email exists in admin_logins
     if (!admin) {
       const sessUser = await getSessionUser(req);
       if (sessUser && sessUser.id) {
-        // If the session user already has role 'admin' (e.g., created via scripts/create-admin-user.js),
-        // treat it as an admin without requiring the admin cookie.
-        if (sessUser.role && String(sessUser.role).toLowerCase() === 'admin') {
-          admin = { id: sessUser.id, username: sessUser.username || sessUser.email || null, email: sessUser.email || null, full_name: sessUser.full_name || null, role: 'admin', created_at: sessUser.created_at };
-        } else {
-          try{
-            const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1', [sessUser.id]);
-            if (a && a.rows && a.rows[0]) {
-              const ar = a.rows[0];
-              admin = { id: ar.id, username: ar.username, email: ar.email, full_name: ar.full_name || null, role: 'admin', created_at: ar.created_at };
-            }
-          }catch(e){}
-        }
+        try{
+          const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1 OR email = $2 LIMIT 1', [sessUser.id, sessUser.email]);
+          if (a && a.rows && a.rows[0]) {
+            const ar = a.rows[0];
+            admin = { id: ar.id, username: ar.username, email: ar.email, full_name: ar.full_name || null, role: 'admin', created_at: ar.created_at };
+          }
+        }catch(e){}
       }
     }
     if (!admin || admin.role !== 'admin') return res.status(401).json({ error: 'Admin authentication required' });
@@ -994,56 +988,29 @@ app.post("/api/admin-login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
   try {
-    // Try admin_logins first (admin-specific accounts)
-    let admin = null;
-    try{
-      const result = await pool.query("SELECT * FROM admin_logins WHERE username = $1 OR email = $1", [username]);
-      if (result.rows.length > 0) admin = result.rows[0];
-    }catch(e){}
-
-    // If not found in admin_logins, allow login via `users` table when role='admin'
-    let viaUsers = false;
-    if (!admin) {
-      try{
-        const ures = await pool.query("SELECT * FROM users WHERE (username = $1 OR email = $1) AND role = 'admin'", [username]);
-        if (ures.rows.length > 0) { admin = ures.rows[0]; viaUsers = true; }
-      }catch(e){}
-    }
-
-    if (!admin) {
+    // Authenticate only against admin_logins (admin-specific accounts)
+    const result = await pool.query("SELECT * FROM admin_logins WHERE username = $1 OR email = $1", [username]);
+    if (result.rows.length === 0) {
       console.warn('[admin-login] no admin user found for', username);
       return res.status(401).json({ error: "Invalid credentials or not an admin" });
     }
-
-    // Compare password against available password hash field name(s)
-    const pwHash = admin.password_hash || admin.password || '';
+    const admin = result.rows[0];
+    const pwHash = admin.password_hash || '';
     const match = await bcrypt.compare(password, pwHash);
     if (!match) {
       console.warn('[admin-login] password mismatch for user', username, 'id', admin.id);
       return res.status(401).json({ error: "Invalid credentials or not an admin" });
     }
-
-    console.log('[admin-login] success for user', username, 'id', admin.id, 'viaUsers=' + viaUsers);
-    // Create session cookies: if login via users, set both wispa_session and wispa_admin_session
+    // Create admin session cookie only
     try{
       const token = createSessionToken(admin.id);
       const isSecureLocal = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
       const cookieOpts = { httpOnly: true, sameSite: isSecureLocal ? 'none' : 'lax', secure: isSecureLocal, maxAge: 7*24*3600*1000 };
-      // always set admin session cookie
       res.cookie('wispa_admin_session', token, cookieOpts);
-      // if this account exists in `users` (viaUsers) we also set the regular session cookie
-      if (viaUsers) {
-        const userToken = createSessionToken(admin.id);
-        res.cookie('wispa_session', userToken, cookieOpts);
-      }
     }catch(e){ /* ignore cookie set errors */ }
-
-    // Build response object including verified flag when present
     const respUser = { id: admin.id, username: admin.username || admin.email, email: admin.email || null, full_name: admin.full_name || admin.fullName || 'Administrator', role: 'admin', created_at: admin.created_at };
     if (typeof admin.verified !== 'undefined') respUser.verified = !!admin.verified;
-    // indicate source of authentication so frontend can decide flow (admin_logins vs users)
-    const source = viaUsers ? 'users' : 'admin_logins';
-    res.json({ user: respUser, source });
+    res.json({ user: respUser, source: 'admin_logins' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1054,13 +1021,11 @@ app.post('/api/admin-login-redirect', async (req, res) => {
   const { username, password, returnTo } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   try {
-    // Try admin_logins first
-    let admin = null; let viaUsers = false;
-    try{ const result = await pool.query("SELECT * FROM admin_logins WHERE username = $1 OR email = $1", [username]); if(result.rows.length>0) admin = result.rows[0]; }catch(e){}
-    // Fallback to users table when role='admin'
-    if(!admin){ try{ const ures = await pool.query("SELECT * FROM users WHERE (username = $1 OR email = $1) AND role = 'admin'", [username]); if(ures.rows.length>0){ admin = ures.rows[0]; viaUsers = true; } }catch(e){}
-    if(!admin) return res.status(401).json({ error: 'Invalid credentials' });
-    const pwHash = admin.password_hash || admin.password || '';
+    // Authenticate only against admin_logins
+    const result = await pool.query("SELECT * FROM admin_logins WHERE username = $1 OR email = $1", [username]);
+    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    const admin = result.rows[0];
+    const pwHash = admin.password_hash || '';
     const match = await bcrypt.compare(password, pwHash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
     const token = createSessionToken(admin.id); // default expiry (7 days)
@@ -1081,28 +1046,19 @@ app.get('/set-session', async (req, res) => {
     const payload = parseSessionToken(st);
     if (!payload || !payload.uid) return res.status(400).send('Invalid token');
     // Determine whether token belongs to an admin; check admin_logins OR users.role='admin'
-    let isAdmin = false; let isUserAdmin = false;
-    try{
-      const a = await pool.query('SELECT id FROM admin_logins WHERE id = $1', [payload.uid]);
-      if(a && a.rows && a.rows[0]) isAdmin = true;
-    }catch(e){}
-    try{
-      const u = await pool.query('SELECT id, role FROM users WHERE id = $1', [payload.uid]);
-      if(u && u.rows && u.rows[0]){
-        if(u.rows[0].role && String(u.rows[0].role).toLowerCase() === 'admin') {
-          isUserAdmin = true; isAdmin = true;
-        }
+      // Determine whether token belongs to an admin in admin_logins only
+      let isAdmin = false;
+      try{
+        const a = await pool.query('SELECT id FROM admin_logins WHERE id = $1', [payload.uid]);
+        if(a && a.rows && a.rows[0]) isAdmin = true;
+      }catch(e){}
+      const isSecure2 = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
+      const cookieOpts = { httpOnly: true, sameSite: isSecure2 ? 'none' : 'lax', secure: isSecure2, maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
+      if(isAdmin) {
+        res.cookie('wispa_admin_session', st, cookieOpts);
+      } else {
+        res.cookie('wispa_session', st, cookieOpts);
       }
-    }catch(e){}
-    const isSecure2 = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
-    const cookieOpts = { httpOnly: true, sameSite: isSecure2 ? 'none' : 'lax', secure: isSecure2, maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
-    if(isAdmin) {
-      // set admin session; also set regular session when the id is a users-admin so the UI's /api/me reflects the user
-      res.cookie('wispa_admin_session', st, cookieOpts);
-      if(isUserAdmin) res.cookie('wispa_session', st, cookieOpts);
-    } else {
-      res.cookie('wispa_session', st, cookieOpts);
-    }
     return res.redirect(r);
   } catch (e) { return res.status(500).send('Failed to set session'); }
 });
