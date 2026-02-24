@@ -120,6 +120,28 @@ async function getAdminSessionUser(req){
   }catch(e){ }
   return null;
 }
+// Expose a safe validation endpoint: checks current session and returns admin record
+// when the session corresponds to an admin login (by id or email). This endpoint
+// does not require the admin cookie but does require a valid session cookie.
+app.get('/api/admin/validate', async (req, res) => {
+  try {
+    const sessUser = await getSessionUser(req);
+    if (!sessUser) return res.status(401).json({ error: 'No session' });
+    try {
+      const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1 OR email = $2 LIMIT 1', [sessUser.id, sessUser.email]);
+      if (a && a.rows && a.rows[0]) {
+        const ar = a.rows[0];
+        const admin = { id: ar.id, username: ar.username, email: ar.email, full_name: ar.full_name || null, role: 'admin', created_at: ar.created_at };
+        return res.json({ admin });
+      }
+    } catch (e) {
+      // ignore DB lookup issues
+    }
+    return res.status(403).json({ error: 'Not an admin' });
+  } catch (e) {
+    return res.status(500).json({ error: 'Admin validate failed' });
+  }
+});
 async function readJson(name){
   try{
     await ensureDataDir();

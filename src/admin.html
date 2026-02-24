@@ -295,6 +295,20 @@
                   const p = aj.profile;
                   u = { id: p.id || null, username: p.adminName || p.adminEmail || null, email: p.adminEmail || null, full_name: p.adminName || null, role: (p.adminRole || 'admin'), avatar: p.adminAvatar || null };
                 }
+              } else if (ar && ar.status === 401) {
+                // Try a session-to-admin mapping check: this endpoint verifies whether the
+                // current session corresponds to an admin in admin_logins (by id or email).
+                try {
+                  const vr = window.apiFetch ? await window.apiFetch('/api/admin/validate') : await fetch('/api/admin/validate', { credentials: 'include' });
+                  if (vr && vr.ok) {
+                    const vj = await vr.json().catch(()=>null);
+                    if (vj && vj.admin) {
+                      const a = vj.admin;
+                      u = { id: a.id || null, username: a.username || a.email || null, email: a.email || null, full_name: a.full_name || null, role: 'admin', avatar: a.avatar || null };
+                      try { if (typeof window.clearAdminUnauthorized === 'function') window.clearAdminUnauthorized(); else try{ window._wispaAdminUnauthorized = false; }catch(e){} } catch(e){}
+                    }
+                  }
+                } catch (e) { /* ignore */ }
               }
             } catch (e) { /* ignore admin-profile failure and fallback to getCurrentUser */ }
           } catch(e){}
