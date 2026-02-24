@@ -283,8 +283,12 @@
           const privacyBtn = document.getElementById('profilePrivacyBtn');
 
           const u = await window.getCurrentUser();
-          // If admin endpoints returned 401, show a simple notice but do not inject a sign-in control here
-          if (window._wispaAdminUnauthorized) {
+          // Determine admin status from fetched user object
+          const isAdmin = !!(u && (u.role === 'admin' || u.adminRole === 'admin' || u.isAdmin));
+          // If we've already observed admin 401s but the user object shows admin, clear the flag
+          if (isAdmin) { try{ window._wispaAdminUnauthorized = false; }catch(e){} }
+          // If admin endpoints returned 401 and we do not have an admin user, show notice
+          if (window._wispaAdminUnauthorized && !isAdmin) {
             if (msgs) msgs.textContent = 'Admin session not validated; please re-login via Settings.';
             return;
           }
