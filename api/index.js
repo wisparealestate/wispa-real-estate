@@ -255,13 +255,19 @@ app.use('/api/admin', async (req, res, next) => {
     if (!admin) {
       const sessUser = await getSessionUser(req);
       if (sessUser && sessUser.id) {
-        try{
-          const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1', [sessUser.id]);
-          if (a && a.rows && a.rows[0]) {
-            const ar = a.rows[0];
-            admin = { id: ar.id, username: ar.username, email: ar.email, full_name: ar.full_name || null, role: 'admin', created_at: ar.created_at };
-          }
-        }catch(e){}
+        // If the session user already has role 'admin' (e.g., created via scripts/create-admin-user.js),
+        // treat it as an admin without requiring the admin cookie.
+        if (sessUser.role && String(sessUser.role).toLowerCase() === 'admin') {
+          admin = { id: sessUser.id, username: sessUser.username || sessUser.email || null, email: sessUser.email || null, full_name: sessUser.full_name || null, role: 'admin', created_at: sessUser.created_at };
+        } else {
+          try{
+            const a = await pool.query('SELECT id, username, email, created_at, full_name FROM admin_logins WHERE id = $1', [sessUser.id]);
+            if (a && a.rows && a.rows[0]) {
+              const ar = a.rows[0];
+              admin = { id: ar.id, username: ar.username, email: ar.email, full_name: ar.full_name || null, role: 'admin', created_at: ar.created_at };
+            }
+          }catch(e){}
+        }
       }
     }
     if (!admin || admin.role !== 'admin') return res.status(401).json({ error: 'Admin authentication required' });
