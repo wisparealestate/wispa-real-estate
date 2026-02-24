@@ -1041,7 +1041,9 @@ app.post("/api/admin-login", async (req, res) => {
     // Build response object including verified flag when present
     const respUser = { id: admin.id, username: admin.username || admin.email, email: admin.email || null, full_name: admin.full_name || admin.fullName || 'Administrator', role: 'admin', created_at: admin.created_at };
     if (typeof admin.verified !== 'undefined') respUser.verified = !!admin.verified;
-    res.json({ user: respUser });
+    // indicate source of authentication so frontend can decide flow (admin_logins vs users)
+    const source = viaUsers ? 'users' : 'admin_logins';
+    res.json({ user: respUser, source });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

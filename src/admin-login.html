@@ -71,8 +71,16 @@
                         const res = await fetch((apiBase || '') + '/api/admin-login', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ username: email, password }), credentials: 'include' });
                         const j = await res.json().catch(()=>null);
                         if (!res.ok) return showError((j && j.error) || 'Login failed');
-                        // navigate to admin UI on same origin
-                        window.location.href = 'admin.html';
+                        // Only redirect to admin panel when auth source is admin_logins
+                        try{
+                            const src = (j && j.source) ? String(j.source) : null;
+                            if (src === 'admin_logins') {
+                                window.location.href = 'admin.html';
+                            } else {
+                                // Authenticated but not via admin_logins: inform user
+                                return showError('Logged in, but account is not an admin_logins account. Use admin-specific login.');
+                            }
+                        }catch(e){ window.location.href = 'admin.html'; }
                     }
                 } catch (e) { showError('Network error'); }
         });
