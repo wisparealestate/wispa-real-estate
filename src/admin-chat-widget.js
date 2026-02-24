@@ -8,6 +8,8 @@
       this.inputEl = document.getElementById(opts.inputId);
       this.sendBtn = document.getElementById(opts.sendBtnId);
       this.currentConv = null;
+      this.pollTimer = null;
+      this.sending = false;
       this.init();
     }
 
@@ -27,7 +29,13 @@
     }
 
     async apiPost(path, body){
-      try{ const r = window.apiFetch ? await window.apiFetch(path, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }) : await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }); return r && r.ok ? await r.json() : null; }catch(e){ return null; }
+      try{
+        const r = window.apiFetch ? await window.apiFetch(path, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }) : await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        if(!r) return null;
+        if(r.ok){ try{ return await r.json(); }catch(e){ return {}; } }
+        // non-OK response: try to provide useful info
+        try{ const txt = await r.text(); let parsed = null; try{ parsed = JSON.parse(txt); }catch(e){}; return { _error: true, status: r.status, body: parsed || txt }; }catch(e){ return { _error: true, status: r.status }; }
+      }catch(e){ return { _error: true, error: String(e && e.message ? e.message : e) }; }
     }
 
     async loadConversations(){
@@ -54,6 +62,21 @@
 
     escape(s){ try{ return String(s||''); }catch(e){ return ''; } }
 
+    showStatus(msg, timeout){
+      try{
+        if(!this._statusEl){
+          this._statusEl = document.createElement('div');
+          this._statusEl.style.fontSize = '13px';
+          this._statusEl.style.color = 'var(--secondary)';
+          this._statusEl.style.margin = '6px 0';
+          if(this.messagesEl && this.messagesEl.parentNode) this.messagesEl.parentNode.insertBefore(this._statusEl, this.messagesEl);
+          else if(this.fullView) this.fullView.appendChild(this._statusEl);
+        }
+        this._statusEl.textContent = msg || '';
+        if(timeout && timeout > 0){ setTimeout(()=>{ try{ if(this._statusEl) this._statusEl.textContent = ''; }catch(e){} }, timeout); }
+      }catch(e){}
+    }
+
     async openConversation(id){
       if(!id) return;
       this.currentConv = id;
@@ -67,6 +90,8 @@
         if(subEl) subEl.textContent = '';
       }catch(e){}
       this.messagesEl.innerHTML = 'Loading messages...';
+      // stop any existing poll then start a new one after successful load
+      this.stopPolling();
       try{ if(this.inputEl) { this.inputEl.disabled = false; } }catch(e){}
       try{
         const j = await this.apiGet('/api/conversations/' + encodeURIComponent(id) + '/messages');
@@ -141,7 +166,15 @@
         });
         this.messagesEl.innerHTML = parts.join('');
         try{ if(this.inputEl) { this.inputEl.disabled = false; this.inputEl.focus(); } }catch(e){}
+        // start polling to refresh messages periodically
+        this.startPolling();
       }catch(e){ this.messagesEl.innerHTML = 'Failed to load messages.'; }
+    }
+
+    startPolling(){
+      try{ this.stopPolling(); if(!this.currentConv) return; this.pollTimer = setInterval(()=>{ try{ if(this.currentConv) this.openConversation(this.currentConv); }catch(e){} }, 8000); }catch(e){}
+    }
+    stopPolling(){ try{ if(this.pollTimer){ clearInterval(this.pollTimer); this.pollTimer = null; } }catch(e){}
     }
 
     closeConversation(){ this.fullView.style.display='none'; this.listEl.style.display='block'; }
@@ -150,12 +183,17 @@
       if(!this.currentConv) return alert('No conversation open');
       const text = (this.inputEl && this.inputEl.value) ? String(this.inputEl.value).trim() : '';
       if(!text) return;
+      if(this.sending) return;
+      this.sending = true;
       try{
+        if(this.sendBtn) this.sendBtn.disabled = true;
+        if(this.inputEl) this.inputEl.disabled = true;
         // Try per-conversation endpoint first
         const j = await this.apiPost('/api/conversations/' + encodeURIComponent(this.currentConv) + '/messages', { text });
-        if (j) {
+        if (j && !j._error) {
           if(this.inputEl) this.inputEl.value = '';
           await this.openConversation(this.currentConv);
+          this.showStatus('Sent', 1500);
           return;
         }
         // Fallback: some servers expect a single endpoint '/api/conversations/messages' with body { convId, message }
@@ -167,11 +205,15 @@
             if(this.inputEl) this.inputEl.value = '';
             await this.openConversation(this.currentConv);
             return;
+          } else {
+            try{ const txt = await (res && res.text ? res.text() : ''); let parsed = null; try{ parsed = JSON.parse(txt); }catch(e){}; console.warn('send fallback failed', res && res.status, parsed || txt); }
+            catch(e){}
           }
         }catch(e){ /* ignore fallback failure */ }
-
+        this.showStatus('Send failed', 3000);
         alert('Send failed');
       }catch(e){ alert('Send failed'); }
+      finally{ this.sending = false; try{ if(this.sendBtn) this.sendBtn.disabled = false; if(this.inputEl) this.inputEl.disabled = false; }catch(e){} }
     }
   }
 
