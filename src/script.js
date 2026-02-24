@@ -423,13 +423,7 @@ function resolvePropertyImages(property){
 // Process pending admin notifications stored in localStorage under 'pendingNotifications'
 async function processPendingNotifications(force = false){
     try{
-        // If we've observed repeated 401 Unauthorized responses for admin endpoints,
-        // avoid attempting admin POSTs until the admin session is re-established.
-        // Allow callers to force a retry by passing `force = true` (useful after re-login).
-        if (window._wispaAdminUnauthorized && !force) {
-            console.log('processPendingNotifications: aborting due to admin unauthorized backoff');
-            return;
-        }
+        // Attempt pending admin POSTs. Callers may pass `force = true` to bypass retries.
         const key = 'pendingNotifications';
         let pending = [];
         try{ pending = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ pending = []; }
@@ -527,7 +521,7 @@ async function openAdminChat(chatId) {
     let messages = [];
     let chat = null;
     try {
-        if (window.apiFetch && !window._wispaAdminUnauthorized) {
+        if (window.apiFetch) {
             console.log('openAdminChat: attempting server fetch for', chatId);
             try {
                 const res = await window.apiFetch('/api/conversations/' + encodeURIComponent(chatId) + '/messages');
@@ -576,7 +570,7 @@ async function openAdminChat(chatId) {
             } catch(e) { /* ignore and fallback */ }
             // If server fetch returned empty, try listing conversations to resolve partial ids
             try{
-                if ((!messages || messages.length === 0) && window.apiFetch && !window._wispaAdminUnauthorized) {
+                if ((!messages || messages.length === 0) && window.apiFetch) {
                     console.log('openAdminChat: attempting to resolve id via /api/conversations');
                     const listRes = await window.apiFetch('/api/conversations');
                     if (listRes && listRes.ok) {
@@ -1076,11 +1070,8 @@ async function updateNavUnreadCounts(){
         // Prefer server-side conversation unread counts for admin badge; fallback to localStorage
         let adminChatCount = 0;
         try {
-            // If we've recently seen admin 401 responses, avoid calling admin endpoints
-            if (window._wispaAdminUnauthorized) {
-                const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-                adminChatCount = convs.filter(n => !n.read).length;
-            } else {
+            // Prefer server-side conversation unread counts for admin badge; fallback to localStorage
+            try {
                 const convRes = window.apiFetch ? await window.apiFetch('/api/conversations') : await fetch('/api/conversations');
                 if (convRes && convRes.ok) {
                     const cj = await convRes.json();
@@ -1091,6 +1082,8 @@ async function updateNavUnreadCounts(){
                     const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
                     adminChatCount = convs.filter(n => !n.read).length;
                 }
+            } catch (e) {
+                try { const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]'); adminChatCount = convs.filter(n => !n.read).length; } catch(e) { adminChatCount = 0; }
             }
         } catch (e) {
             try { const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]'); adminChatCount = convs.filter(n => !n.read).length; } catch(e) { adminChatCount = 0; }
