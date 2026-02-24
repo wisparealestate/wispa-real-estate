@@ -390,6 +390,22 @@ window.addEventListener('online', () => { try{ processLocalPhotosQueue(); }catch
 // Also poll occasionally
 try{ setInterval(()=>{ try{ processLocalPhotosQueue(); }catch(e){} }, 60000); }catch(e){}
 
+// Resolve images for a property: prioritize localPhotos stored under _localPhotosKey,
+// then photoUrls/photos, then images array, then single image field.
+function resolvePropertyImages(property){
+    try{
+        if(!property) return [];
+        if(property._localPhotosKey){
+            try{ const raw = localStorage.getItem(property._localPhotosKey); if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; } }catch(e){}
+        }
+        if(Array.isArray(property.photoUrls) && property.photoUrls.length) return property.photoUrls;
+        if(Array.isArray(property.photos) && property.photos.length) return property.photos;
+        if(Array.isArray(property.images) && property.images.length) return property.images;
+        if(property.image) return [property.image];
+        return [];
+    }catch(e){ return []; }
+}
+
 // Process pending admin notifications stored in localStorage under 'pendingNotifications'
 async function processPendingNotifications(force = false){
     try{
@@ -1490,10 +1506,34 @@ if (typeof propertyImageIds === 'undefined') {
             displayedProperties = [];
         }
 
+        // Helper to resolve a property's image array, preferring persisted remote URLs,
+        // then local data-URLs stored under `property._localPhotosKey`, then `property.images` or `property.image`.
+        function getPropertyImages(property){
+            try{
+                if(!property) return [];
+                // If property has an explicit localPhotos key, prefer those data-URLs
+                if(property._localPhotosKey){
+                    try{
+                        const raw = localStorage.getItem(property._localPhotosKey);
+                        if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; }
+                    }catch(e){}
+                }
+                // Prefer photoUrls / photos (may contain data: or remote URLs)
+                if(Array.isArray(property.photoUrls) && property.photoUrls.length) return property.photoUrls;
+                if(Array.isArray(property.photos) && property.photos.length) return property.photos;
+                // Then images array
+                if(Array.isArray(property.images) && property.images.length) return property.images;
+                // Single image field
+                if(property.image) return [property.image];
+                return [];
+            }catch(e){ return []; }
+        }
+
         propertiesToShow.forEach(property => {
             // Render homepage post using the similar-property-card layout
-            const mainImage = property.images && property.images.length ? property.images[0] : (property.image || '');
-            const totalMedia = property.images ? property.images.length : (property.image ? 1 : 0);
+            const imgs = getPropertyImages(property);
+            const mainImage = imgs && imgs.length ? imgs[0] : '';
+            const totalMedia = imgs ? imgs.length : 0;
             const imageCountBadge = totalMedia >= 2 ? `<div class="image-counter">${totalMedia} 📷</div>` : '';
             const categoryClass = property.postTo || (property.featured ? 'featured' : (property.hot ? 'hot' : 'available'));
             const categoryLabel = categoryClass === 'hot' ? '🔥 Hot' : categoryClass === 'featured' ? '⭐ Featured' : '✓ Available';
@@ -1600,8 +1640,9 @@ if (typeof propertyImageIds === 'undefined') {
 
             featuredToShow.forEach((property, idx) => {
                 const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
-                const mainImage = property.images && property.images.length ? property.images[0] : placeholder;
-                const featuredTotalMedia = property.images ? property.images.length : (property.image ? 1 : 0);
+                const fImgs = resolvePropertyImages(property);
+                const mainImage = fImgs && fImgs.length ? fImgs[0] : placeholder;
+                const featuredTotalMedia = fImgs ? fImgs.length : (property.image ? 1 : 0);
                 const featuredMediaBadge = featuredTotalMedia >= 2 ? `<div class="image-counter">${featuredTotalMedia} 📷</div>` : '';
                 const categoryClass = property.featured ? 'featured' : (property.hot ? 'hot' : 'available');
                 const categoryLabel = categoryClass === 'hot' ? '🔥 Hot' : categoryClass === 'featured' ? '⭐ Featured' : '✓ Available';
@@ -1703,8 +1744,9 @@ if (typeof propertyImageIds === 'undefined') {
 
         selected.forEach((property, idx) => {
             const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
-            const img = property.images && property.images.length ? property.images[0] : placeholder;
-            const hotTotalMedia = property.images ? property.images.length : (property.image ? 1 : 0);
+            const hImgs = resolvePropertyImages(property);
+            const img = hImgs && hImgs.length ? hImgs[0] : placeholder;
+            const hotTotalMedia = hImgs ? hImgs.length : (property.image ? 1 : 0);
             const hotMediaBadge = hotTotalMedia >= 2 ? `<div class="image-counter">${hotTotalMedia} 📷</div>` : '';
             const categoryClass = property.featured ? 'featured' : (property.hot ? 'hot' : 'available');
             const categoryLabel = categoryClass === 'hot' ? '🔥 Hot' : categoryClass === 'featured' ? '⭐ Featured' : '✓ Available';
@@ -1804,8 +1846,9 @@ if (typeof propertyImageIds === 'undefined') {
         // listings visually match Hot/Featured (badge, like button, clickable card).
         availableProps.slice(0, 50).forEach(prop => {
             const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2NjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
-            const imgSrc = prop.images && prop.images.length ? prop.images[0] : (prop.image || placeholder);
-            const availTotalMedia = prop.images ? prop.images.length : (prop.image ? 1 : 0);
+            const aImgs = resolvePropertyImages(prop);
+            const imgSrc = aImgs && aImgs.length ? aImgs[0] : (prop.image || placeholder);
+            const availTotalMedia = aImgs ? aImgs.length : (prop.image ? 1 : 0);
             const availMediaBadge = availTotalMedia >= 2 ? `<div class="image-counter">${availTotalMedia} 📷</div>` : '';
             const card = document.createElement('a');
             card.className = 'similar-property-card';
