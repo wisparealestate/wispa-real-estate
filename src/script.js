@@ -1695,7 +1695,7 @@ if (typeof propertyImageIds === 'undefined') {
                 card.href = `property-detail.html?id=${property.id}&category=${categoryClass}`;
                 card.innerHTML = `
                     <div style="position: relative;">
-                        <img src="${mainImage}" alt="${property.title}" class="similar-property-image">
+                        <img src="${mainImage}" alt="${property.title}" class="similar-property-image" onload="this.setAttribute('loaded','')" onerror="this.onerror=null;this.style.display='none';this.parentNode.classList.add('image-placeholder');this.setAttribute('loaded','')">
                         ${featuredMediaBadge}
                     </div>
                     <div class="similar-property-info">
@@ -1799,7 +1799,7 @@ if (typeof propertyImageIds === 'undefined') {
             card.href = `property-detail.html?id=${property.id}&category=hot`;
             card.innerHTML = `
                 <div style="position:relative;">
-                        <img src="${img}" alt="${property.title}" class="similar-property-image" onload="this.setAttribute('loaded', '')" onerror="this.onerror=null;this.src='${placeholder}';this.setAttribute('loaded','')">
+                        <img src="${img}" alt="${property.title}" class="similar-property-image" onload="this.setAttribute('loaded', '')" onerror="this.onerror=null;this.style.display='none';this.parentNode.classList.add('image-placeholder');this.setAttribute('loaded','')">
                         ${hotMediaBadge}
                 </div>
                 <div class="similar-property-info">
@@ -1898,7 +1898,7 @@ if (typeof propertyImageIds === 'undefined') {
             card.href = `property-detail.html?id=${prop.id}&category=available`;
             card.innerHTML = `
                 <div style="position:relative;">
-                    <img src="${imgSrc}" alt="${prop.title || 'Property'}" class="similar-property-image" onload="this.setAttribute('loaded', '')" onerror="this.onerror=null;this.src='${placeholder}';this.setAttribute('loaded','')">
+                    <img src="${imgSrc}" alt="${prop.title || 'Property'}" class="similar-property-image" onload="this.setAttribute('loaded', '')" onerror="this.onerror=null;this.style.display='none';this.parentNode.classList.add('image-placeholder');this.setAttribute('loaded','')">
                     ${availMediaBadge}
                 </div>
                 <div class="similar-property-info">
