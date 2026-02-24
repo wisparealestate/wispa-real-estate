@@ -281,6 +281,24 @@
           const privacyBtn = document.getElementById('profilePrivacyBtn');
 
           const u = await window.getCurrentUser();
+          // If admin endpoints returned 401, apiFetch sets a global flag — prompt admin sign-in
+          if (window._wispaAdminUnauthorized) {
+            if (msgs) {
+              msgs.innerHTML = '';
+              const note = document.createElement('div');
+              note.style.color = '#d35400';
+              note.style.marginBottom = '8px';
+              note.textContent = 'Not signed in as admin.';
+              const btn = document.createElement('button');
+              btn.textContent = 'Sign in as admin';
+              btn.className = 'tab-btn';
+              btn.style.marginLeft = '8px';
+              btn.addEventListener('click', function(){ try{ window.adminLoginPrompt && window.adminLoginPrompt(); }catch(e){} });
+              msgs.appendChild(note);
+              msgs.appendChild(btn);
+            }
+            return;
+          }
           if(!u){ if(msgs) msgs.textContent = 'Not signed in as admin.'; return; }
           const displayName = u.full_name || u.name || u.displayName || u.username || '';
           const displayEmail = u.email || u.user_email || '';
