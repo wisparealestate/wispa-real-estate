@@ -1387,6 +1387,28 @@
         } else {
           rpHtml += '<div>No properties.</div>';
         }
+
+        // Recent notifications: show up to 5 from sentNotifs (fallback to empty)
+        try {
+          const recentNotifs = (sentNotifs && (Array.isArray(sentNotifs.notifications) ? sentNotifs.notifications : (Array.isArray(sentNotifs) ? sentNotifs : []))).slice(0,5);
+          let notifHtml = '<div class="recent-notifs" style="margin-top:10px"><h4>Recent Notifications</h4>';
+          if (recentNotifs && recentNotifs.length) {
+            notifHtml += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:680px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Preview</th><th style="padding:6px">Time</th></tr></thead><tbody>';
+            notifHtml += recentNotifs.map(n => {
+              const title = escapeHtml(n.title || (n.message||'').slice(0,60) || 'Notification');
+              const body = escapeHtml((n.message || n.body || (n.data && (n.data.body||n.data.message)) || '').slice(0,140));
+              const time = escapeHtml(n.sentAt || n.createdAt || n.time || n.ts || '');
+              return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${body}</td><td style="padding:6px">${time}</td></tr>`;
+            }).join('');
+            notifHtml += '</tbody></table></div>';
+          } else {
+            notifHtml += '<div>No notifications.</div>';
+          }
+          notifHtml += '<div style="text-align:right;margin-top:8px"><button id="overviewNotifAllBtn" class="tab-btn">All</button></div>';
+          notifHtml += '</div>';
+          rpHtml += notifHtml;
+        } catch(e) { /* ignore notification rendering errors */ }
+
         rpHtml += '</div>';
         // Render recent users as a compact table (include phone) and enable scrolling
         let ruHtml = '<div class="recent-users" style="min-width:320px"><h3>Recent Users</h3>';
@@ -1408,6 +1430,14 @@
 
         // Wrap recent cards in a scrollable container for mobile so full data is reachable
         recentsEl.innerHTML = `<div class="overview-recents-flex">${rpHtml}${ruHtml}</div>`;
+
+        // Wire the 'All' button inside the Recent Notifications card to open the notifications tab
+        try{
+          const allBtn = document.getElementById('overviewNotifAllBtn');
+          if(allBtn){
+            allBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('notifications'); setTimeout(()=>{ try{ renderNotificationsView('all'); }catch(_){ } }, 50); });
+          }
+        }catch(e){}
 
         intro.textContent = `Overview — showing ${pCount} properties and ${uCount} users.`;
         // Company dashboard metrics
