@@ -605,7 +605,8 @@
     (function(){
       const btn = document.getElementById('adminBackBtn');
       if(!btn) return;
-      btn.addEventListener('click', function(e){ e.preventDefault(); try{ if(window.history && window.history.length>1) { window.history.back(); } else { switchTab('overview'); } }catch(err){ try{ switchTab('overview'); }catch(e){} } });
+      // Always navigate to the Overview when the back arrow is clicked
+      btn.addEventListener('click', function(e){ e.preventDefault(); try{ switchTab('overview'); }catch(err){} });
       window.addEventListener('hashchange', updateBackButton);
       document.addEventListener('DOMContentLoaded', function(){ setTimeout(updateBackButton, 40); });
     })();
