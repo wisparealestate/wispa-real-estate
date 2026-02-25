@@ -1331,7 +1331,24 @@
         // Recents: show up to 3 recent properties and users
         const recentProps = props && Array.isArray(props.properties) ? props.properties.slice(0,3) : [];
         const recentUsers = users && Array.isArray(users.users) ? users.users.slice(0,3) : [];
-        let rpHtml = '<div style="min-width:260px"><h3>Recent Properties</h3>'+(recentProps.length?'<ul>'+recentProps.map(p=>`<li>${escapeHtml(p.title||p.address||('Property #'+(p.id||'')))}</li>`).join('')+'</ul>':'<div>No properties.</div>')+'</div>';
+        // Recent properties: render as compact table with image/video counts
+        let rpHtml = '<div style="min-width:320px"><h3>Recent Properties</h3>';
+        if (recentProps.length) {
+          rpHtml += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Price</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th><th style="padding:6px">Images</th><th style="padding:6px">Videos</th></tr></thead><tbody>';
+          rpHtml += recentProps.map(p => {
+            const title = escapeHtml(p.title || p.address || ('Property #'+(p.id||'')));
+            const price = escapeHtml(p.price ? ('$' + Number(p.price).toLocaleString()) : (p.price_display || 'N/A'));
+            const location = escapeHtml(p.location || p.address || '');
+            const created = escapeHtml(p.created_at ? new Date(p.created_at).toLocaleDateString() : (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''));
+            const imagesCount = (Array.isArray(p.images) ? p.images.length : (p.photo_count || 0)) || 0;
+            const videosCount = (Array.isArray(p.videos) ? p.videos.length : (p.video_count || 0)) || 0;
+            return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${price}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td><td style="padding:6px;text-align:center">${imagesCount}</td><td style="padding:6px;text-align:center">${videosCount}</td></tr>`;
+          }).join('');
+          rpHtml += '</tbody></table></div>';
+        } else {
+          rpHtml += '<div>No properties.</div>';
+        }
+        rpHtml += '</div>';
         // Render recent users as a compact table (same columns as Users tab, limited rows)
         let ruHtml = '<div style="min-width:260px"><h3>Recent Users</h3>';
         if (recentUsers.length) {
