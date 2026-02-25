@@ -118,6 +118,17 @@
     .menu-dropdown { position:absolute; right:16px; top:56px; background:#fff; color:#111; border:1px solid rgba(0,0,0,0.08); box-shadow:0 6px 18px rgba(0,0,0,0.08); min-width:160px; display:none; z-index:2000 }
     .menu-dropdown a{ display:block; padding:8px 12px; color:inherit; text-decoration:none }
     .menu-dropdown a:hover{ background:#f6f6f6 }
+    /* Notifications dropdown specific tweaks */
+    #notifDropdown{ min-width:420px; max-width:520px; right:70px; top:56px; border-radius:10px; overflow:hidden }
+    #notifDropdownContent{ padding:12px; max-height:360px; overflow:auto; background:transparent }
+    #notifDropdownContent .notif-item{ padding:10px;border-radius:8px;margin-bottom:8px;background:#fff;border:1px solid #f1f6fb;box-shadow:0 6px 18px rgba(8,24,50,0.03) }
+    #notifDropdownContent .notif-item:last-child{ margin-bottom:0 }
+    /* Notifications panel styles */
+    #notificationsContent{ background:#fff;border:1px solid #f1f6fb;padding:12px;border-radius:10px }
+    #notificationsContent ul{ list-style:none;margin:0;padding:0 }
+    #notificationsContent li{ padding:12px;border-bottom:1px solid #eef6fb }
+    #notificationsContent li:hover{ background:#fbfdff }
+    #notificationsContent li div:first-child{ font-weight:700 }
     .admin-main{ padding:18px }
     .tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center }
     .tab-btn { padding:8px 12px; background:#f1f5f9; border-radius:6px; cursor:pointer; flex:0 1 auto; min-width:0; white-space:nowrap; font-size:0.95rem }
@@ -142,7 +153,15 @@
       <button id="notificationsBtn" class="icon-btn icon-badge" title="Notifications" aria-label="Notifications">🔔<span class="badge" id="notifBadge" style="display:none">0</span></button>
       <div id="notifDropdown" class="menu-dropdown" style="right:70px;top:56px;min-width:320px;display:none;">
         <div id="notifDropdownContent" style="max-height:360px;overflow:auto;padding:8px"></div>
-        <div style="padding:8px;border-top:1px solid #f1f5fb;text-align:right"><a href="#notifications" id="notifOpenFull" style="text-decoration:none">Open all</a></div>
+          <div style="padding:8px;border-top:1px solid #f1f5fb;display:flex;gap:8px;justify-content:space-between;align-items:center">
+            <div style="display:flex;gap:6px">
+              <a href="#notifications" data-notif-view="all" class="notifQuickLink" style="text-decoration:none">All</a>
+              <a href="#notifications" data-notif-view="messages" class="notifQuickLink" style="text-decoration:none">Messages</a>
+              <a href="#notifications" data-notif-view="alerts" class="notifQuickLink" style="text-decoration:none">Alerts</a>
+              <a href="#notifications" data-notif-view="activities" class="notifQuickLink" style="text-decoration:none">Activities</a>
+            </div>
+            <div style="text-align:right"><a href="#notifications" id="notifOpenFull" style="text-decoration:none">Open all</a></div>
+          </div>
       </div>
       <button id="chatsBtn" class="icon-btn" title="Chats" aria-label="Chats">💬</button>
     </div>
@@ -360,9 +379,16 @@
     </section>
 
     <section id="notifications" class="tab-panel">
-      <h2>Sent Notifications</h2>
-      <p><button id="refreshNotifications">Refresh</button></p>
-      <div id="notificationsList">Loading notifications…</div>
+      <h2>Notifications</h2>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <button class="tab-btn notif-tab" data-view="all">All</button>
+        <button class="tab-btn notif-tab" data-view="messages">Messages</button>
+        <button class="tab-btn notif-tab" data-view="alerts">Alerts</button>
+        <button class="tab-btn notif-tab" data-view="activities">Activities</button>
+        <button class="tab-btn" id="sendAlertBtn" style="margin-left:auto">Send Alert</button>
+        <button id="refreshNotifications">Refresh</button>
+      </div>
+      <div id="notificationsContent">Loading notifications…</div>
     </section>
 
     <section id="create-post" class="tab-panel">
@@ -514,10 +540,11 @@
         notifDropdownContent.innerHTML = rows.slice(0,12).map(n=>`<div style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="font-weight:700">${escapeHtml(n.title||n.message||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:4px">${escapeHtml((n.message||'').slice(0,240))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(n.sentAt||n.createdAt||'')}</div></div>`).join('');
       }catch(e){ notifDropdownContent.innerHTML = '<div style="padding:12px;color:#c33">Failed to load</div>' }
     }
-    notificationsBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); if(notifDropdown.style.display==='block'){ notifDropdown.style.display='none'; } else { notifDropdown.style.display='block'; renderNotifDropdown(); } });
+    // Open full notifications view (All) when bell icon is clicked
+    notificationsBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50); });
     // clicking outside should close dropdown
     window.addEventListener('click', (e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#notificationsBtn')) notifDropdown.style.display='none'; });
-    notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); loadNotifications(); });
+    notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); renderNotificationsView('all'); });
 
     // Chats: open property chats (admin conversations)
     chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('chat'); renderAdminChatList(); });
@@ -761,16 +788,140 @@
       }catch(e){ out.textContent = 'Failed to load alerts.' }
     }
 
-    async function loadNotifications(){
-      const out = document.getElementById('notificationsList');
-      out.textContent = 'Loading…';
+    // Render notifications across multiple views: all, messages, alerts, activities, send
+    async function renderNotificationsView(view){
+      view = view || 'all';
+      const out = document.getElementById('notificationsContent');
+      if(!out) return;
+      out.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
       try{
-        const data = await safeApi('/api/admin/sent-notifications');
-        if(!data) return;
-        if(!Array.isArray(data)) data = data.items || [];
-        out.innerHTML = data.length ? '<ul>'+data.map(n=>`<li>${escapeHtml(n.title||n.message||'Notification')} — ${escapeHtml(n.sentAt||n.createdAt||'')}</li>`).join('')+'</ul>' : 'No notifications.';
-      }catch(e){ out.textContent = 'Failed to load notifications.' }
+        if(view === 'send'){
+          out.innerHTML = `
+            <div style="max-width:720px">
+              <h3>Send Alert / Notification</h3>
+              <div style="margin:8px 0"><input id="sendAlertTitle" placeholder="Title" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"/></div>
+              <div style="margin:8px 0"><textarea id="sendAlertMessage" placeholder="Message" rows="6" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"></textarea></div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <select id="sendAlertTarget" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All users</option><option value="admins">All admins</option><option value="custom">Custom (enter user IDs/emails)</option></select>
+                <input id="sendAlertCustom" placeholder="comma-separated emails/ids" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;display:none" />
+                <button id="sendAlertSubmit" class="tab-btn">Send</button>
+              </div>
+              <div id="sendAlertStatus" style="margin-top:8px;color:#666"></div>
+            </div>
+          `;
+          // wire controls
+          document.getElementById('sendAlertTarget').addEventListener('change', function(){ document.getElementById('sendAlertCustom').style.display = this.value==='custom' ? 'block' : 'none'; });
+          document.getElementById('sendAlertSubmit').addEventListener('click', async function(){
+            const title = (document.getElementById('sendAlertTitle').value||'').trim();
+            const message = (document.getElementById('sendAlertMessage').value||'').trim();
+            const target = (document.getElementById('sendAlertTarget').value||'all');
+            const custom = (document.getElementById('sendAlertCustom').value||'').trim();
+            const status = document.getElementById('sendAlertStatus');
+            if(!title || !message){ status.textContent = 'Title and message are required.'; return; }
+            status.textContent = 'Sending…';
+            try{
+              const payload = { title, message, target, custom: custom || null };
+              const poster = window.apiFetch ? window.apiFetch : (p,o)=>fetch(p,o);
+              // Try common admin endpoint first, fall back to sent-notifications collection
+              let res = null;
+              try{ res = await poster('/api/admin/send-notification', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){}
+              if(!res || !res.ok){ try{ res = await poster('/api/admin/sent-notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){} }
+              if(res && res.ok){ status.textContent = 'Sent.'; setTimeout(()=>renderNotificationsView('all'),600); return; }
+              // fallback to localStorage if server not available
+              try{ const key='sentNotifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift(Object.assign({ id: 'local-'+Date.now(), title, message, sentAt: new Date().toISOString(), target }, {})); localStorage.setItem(key, JSON.stringify(arr)); status.textContent='Saved locally (offline)'; setTimeout(()=>renderNotificationsView('all'),600); return; }catch(e){ status.textContent='Send failed'; }
+            }catch(e){ console.error(e); status.textContent='Send failed'; }
+          });
+          return;
+        }
+
+        // helper to normalise arrays
+        const norm = (d)=>{ if(!d) return []; if(Array.isArray(d)) return d; if(Array.isArray(d.items)) return d.items; if(Array.isArray(d.notifications)) return d.notifications; return [] };
+        // load relevant sources
+        const [sent, contacts, reqs, alerts, activities, convs] = await Promise.all([
+          safeApi('/api/admin/sent-notifications').catch(()=>null),
+          safeApi('/api/contact-messages').catch(()=>null),
+          safeApi('/api/property-requests').catch(()=>null),
+          safeApi('/api/system-alerts').catch(()=>null),
+          safeApi('/api/activities').catch(()=>null),
+          safeApi('/api/conversations').catch(()=>null)
+        ]);
+
+        const items = [];
+        // messages: combine contact messages + property requests + conversation notifications
+        if(view==='all' || view==='messages'){
+          const c = norm(contacts).map(m=>Object.assign({ _type:'message', title: m.subject||m.email||m.from||'Message', body: m.message||m.body||'', time: m.createdAt||m.sentAt||m.ts||m.time||m.date || m.created || (m.ts?new Date(m.ts).toISOString():null) }, m));
+          const r = norm(reqs).map(m=>Object.assign({ _type:'request', title: m.name||m.email||'Request', body: m.message||m.note||'', time: m.createdAt||m.sentAt||m.ts||m.date }, m));
+          const cv = norm(convs).map(cn=>Object.assign({ _type:'conversation', title: cn.participantName||cn.title||('Conversation '+(cn.id||'')), body: cn.last || cn.lastMessage || cn.preview || '', time: cn.updated || cn.lastUpdated || cn.updatedAt || cn.updated_at || cn.updatedAt || cn.updated }, cn));
+          items.push(...c, ...r, ...cv);
+        }
+        if(view==='all' || view==='alerts'){
+          const a = norm(alerts).map(x=>Object.assign({ _type:'alert', title: x.title||x.message||'Alert', body: x.message||'', time: x.sentAt||x.createdAt||x.time }, x));
+          items.push(...a);
+        }
+        if(view==='all' || view==='activities'){
+          const act = norm(activities).map(x=>Object.assign({ _type:'activity', title: x.title||x.action||'Activity', body: x.summary||'', time: x.ts||x.createdAt||x.time }, x));
+          items.push(...act);
+        }
+        if(view==='all'){
+          const s = norm(sent).map(x=>Object.assign({ _type:'sent', title: x.title||x.message||'Notification', body: x.message||x.body||'', time: x.sentAt||x.createdAt||x.time }, x));
+          items.push(...s);
+        }
+
+        // If no items for this view, check localStorage fallbacks
+        if(!items.length){
+          const localKey = (view==='all' || view==='messages') ? 'chatNotifications' : ((view==='all' || view==='alerts') ? 'systemAlerts' : 'activities');
+          try{ const fallback = JSON.parse(localStorage.getItem(localKey)||'[]'); if(Array.isArray(fallback) && fallback.length) fallback.forEach(x=>items.push(Object.assign({ _type: x._type || 'local', title: x.title||x.message||'', body: x.message||x.body||'', time: x.sentAt||x.createdAt||x.ts||Date.now() }, x))); }catch(e){}
+        }
+
+        if(!items.length){ out.innerHTML = '<div style="padding:12px;color:#666">No notifications.</div>'; return; }
+        // sort by time desc
+        items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
+        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+items.map(it=>{
+          const dtype = escapeHtml(it._type||'');
+          const did = escapeHtml(it.id||it._id||'');
+          return `<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a></li>`;
+        }).join('')+'</ul>';
+      }catch(e){ console.error('renderNotificationsView failed', e); out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load notifications.</div>'; }
     }
+
+    // Wire notification controls
+    document.addEventListener('DOMContentLoaded', function(){
+      // header dropdown quick links
+      document.querySelectorAll('.notifQuickLink').forEach(a=>a.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); const v = this.dataset.notifView || 'all'; notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView(v),50); }));
+      // notifOpenFull opens full notifications (all)
+      const notifOpenFullEl = document.getElementById('notifOpenFull'); if(notifOpenFullEl) notifOpenFullEl.addEventListener('click', function(e){ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50); });
+      // notif-tab buttons inside notifications panel
+      document.querySelectorAll('.notif-tab').forEach(b=>b.addEventListener('click', function(){ document.querySelectorAll('.notif-tab').forEach(x=>x.classList.toggle('active', x===b)); const v = b.dataset.view || 'all'; renderNotificationsView(v); }));
+      // set default active notif tab
+      const defaultNotifTab = document.querySelector('.notif-tab[data-view="all"]'); if(defaultNotifTab) defaultNotifTab.classList.add('active');
+      // clicks on notification items: open corresponding tab or chat
+      const notifContent = document.getElementById('notificationsContent');
+      if(notifContent){
+        notifContent.addEventListener('click', function(ev){
+          const a = ev.target.closest && ev.target.closest('.notif-link');
+          if(!a) return;
+          ev.preventDefault(); ev.stopPropagation();
+          const t = a.dataset.type || '';
+          const id = a.dataset.id || '';
+          if(t === 'conversation' || t === 'conversation' || t === 'conv'){
+            switchTab('chat'); setTimeout(()=>{ if(id && typeof openAdminChat === 'function') openAdminChat(id); else renderAdminChatList(); },120);
+            return;
+          }
+          if(t === 'message' || t === 'request'){
+            if(t === 'request') switchTab('requests'); else switchTab('messages');
+            return;
+          }
+          if(t === 'alert') { switchTab('alerts'); return; }
+          if(t === 'activity') { switchTab('overview'); return; }
+          // fallback: open notifications tab
+          switchTab('notifications');
+        });
+      }
+      // refresh button
+      const refreshNot = document.getElementById('refreshNotifications'); if(refreshNot) refreshNot.addEventListener('click', ()=>renderNotificationsView('all'));
+      // send alert main button
+      const sendAlertBtn = document.getElementById('sendAlertBtn'); if(sendAlertBtn) sendAlertBtn.addEventListener('click', ()=>{ switchTab('notifications'); setTimeout(()=>renderNotificationsView('send'),50); });
+    });
 
     // Properties
     let _propertiesCache = [];
@@ -927,7 +1078,7 @@
     document.getElementById('refreshRequests').addEventListener('click', loadRequests);
     document.getElementById('refreshMessages').addEventListener('click', loadMessages);
     document.getElementById('refreshAlerts').addEventListener('click', loadAlerts);
-    document.getElementById('refreshNotifications').addEventListener('click', loadNotifications);
+    document.getElementById('refreshNotifications').addEventListener('click', function(){ renderNotificationsView('all'); });
     document.getElementById('refreshProperties').addEventListener('click', loadProperties);
     document.getElementById('refreshUsers').addEventListener('click', loadUsers);
     // wire filters
@@ -1107,7 +1258,7 @@
         loadRequests();
         loadMessages();
         loadAlerts();
-        loadNotifications();
+        renderNotificationsView('all');
         loadProperties();
         loadUsers();
         // Open conversation when hash changes (supports admin.html#conversation?id=... links)
@@ -1138,7 +1289,7 @@
       loadRequests();
       loadMessages();
       loadAlerts();
-      loadNotifications();
+      renderNotificationsView('all');
       loadProperties();
       loadUsers();
     })();
