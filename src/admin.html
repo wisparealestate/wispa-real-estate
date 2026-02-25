@@ -240,6 +240,7 @@
 <body>
   <header class="admin-header">
     <div style="display:flex;align-items:center;gap:12px">
+      <button id="adminBackBtn" class="icon-btn" title="Back" style="display:none;align-items:center;justify-content:center;padding:6px 8px">←</button>
       <div class="admin-title">Wispa Admin</div>
       <div style="font-size:0.9rem; opacity:0.9" id="logged-as"></div>
     </div>
@@ -548,6 +549,7 @@
       // expose current tab on body for easy querying
       try{ document.body.dataset.currentTab = name; }catch(e){}
       location.hash = '#'+name;
+      try{ if(typeof updateBackButton === 'function') updateBackButton(); }catch(e){}
     }
 
     // Helper: return currently opened tab id (or null)
