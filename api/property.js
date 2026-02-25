@@ -28,6 +28,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     // Use full address in `address` column; leave city/state/zip_code null (frontend provides full address)
     let propertyRow = null;
     let propertyId = null;
+    let didInsertNew = false;
     if (incomingId) {
       // Update existing property
       const updateRes = await client.query(
@@ -143,6 +144,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         );
         propertyRow = propRes.rows[0];
         propertyId = propertyRow.id;
+        didInsertNew = true;
       }
     }
 
@@ -160,6 +162,31 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     // Fetch photos and return assembled property
     const photosRes = await client.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [propertyId]);
     const photos = photosRes.rows.map(r => r.photo_url);
+    // Create a site-wide notification about the new property only when a new row was inserted
+    if (didInsertNew) {
+      try {
+        const notifPayload = { propertyId: propertyId, title: p.title || propertyRow.title || null };
+        try {
+          await client.query(
+            `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,now(),now())`,
+            ['properties', (p.title || propertyRow.title) ? `New property: ${p.title || propertyRow.title}` : 'New property posted', p.description || null, null, JSON.stringify(notifPayload), false]
+          );
+        } catch (errInsert) {
+          // If the enum type doesn't include 'properties', try to add it then retry once
+          try {
+            await client.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'notification_category'::regtype AND enumlabel = 'properties') THEN ALTER TYPE notification_category ADD VALUE 'properties'; END IF; END$$;`);
+            await client.query(
+              `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,now(),now())`,
+              ['properties', (p.title || propertyRow.title) ? `New property: ${p.title || propertyRow.title}` : 'New property posted', p.description || null, null, JSON.stringify(notifPayload), false]
+            );
+          } catch (e2) {
+            // ignore notification failures
+          }
+        }
+      } catch(e){ /* ignore notification failures */ }
+    }
     await client.query('COMMIT');
     // Merge provided property fields (e.g. type, bedrooms, bathrooms, location) into returned row
     const merged = Object.assign({}, propertyRow, p || {}, { images: photos });

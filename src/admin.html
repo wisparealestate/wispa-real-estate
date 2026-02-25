@@ -985,7 +985,9 @@
           const numericId = String(rawId).match(/^\d+$/) ? String(rawId) : '';
           const markBtn = numericId ? `<button class="notif-mark-btn" data-id="${escapeHtml(numericId)}" style="margin-left:8px;padding:6px 8px;border-radius:6px;border:1px solid #e6eef7;background:#fff;cursor:pointer;font-size:12px">${isRead? 'Mark Unread':'Mark Read'}</button>` : '';
           const readClass = isRead ? 'notif-read' : '';
-          return `<li class="${readClass}" style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="display:flex;justify-content:space-between;align-items:flex-start"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block;flex:1"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a>${markBtn}</div></li>`;
+          const propId = (it.data && (it.data.propertyId || it.data.property_id)) || (it.property && it.property.id) || (it.meta && it.meta.property && it.meta.property.id) || null;
+          const viewLink = propId ? `<a href="property-detail.html?id=${escapeHtml(propId)}" target="_blank" style="margin-left:8px;font-size:12px;color:#0e76a8">View property</a>` : '';
+          return `<li class="${readClass}" style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="display:flex;justify-content:space-between;align-items:flex-start"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block;flex:1"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a>${markBtn}${viewLink}</div></li>`;
         }).join('')+'</ul>';
 
         // wire the filter select after rendering
