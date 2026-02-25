@@ -1040,16 +1040,16 @@
           throw new Error('Failed');
         }
         const data = await res.json();
-        document.getElementById('profileName').textContent = data.name || data.username || 'Admin';
+        document.getElementById('profileName').textContent = data.full_name || data.name || data.username || 'Admin';
         document.getElementById('profileEmail').textContent = data.email || '—';
         document.getElementById('profileRole').textContent = data.role || 'admin';
         try{ const pg = document.getElementById('profileGender'); if(pg) pg.textContent = data.gender ? (String(data.gender).charAt(0).toUpperCase() + String(data.gender).slice(1)) : '—'; }catch(e){}
         try{ const pb = document.getElementById('profileBio'); if(pb) pb.textContent = data.bio || data.about || ''; }catch(e){}
         // update header profile display
         try{ const headName = document.getElementById('adminHeaderName'); if(headName) headName.textContent = data.name || data.username || data.email || 'Admin'; }catch(e){}
-        try{ const headAvatar = document.getElementById('adminHeaderAvatar'); if(headAvatar){ if(data.avatar) headAvatar.innerHTML = '<img src="'+data.avatar+'" style="width:100%;height:100%;object-fit:cover">'; else headAvatar.innerHTML = ''; } }catch(e){}
-        try{ const bigAvatar = document.getElementById('admin-avatar'); if(bigAvatar){ if(data.avatar) bigAvatar.innerHTML = '<img src="'+data.avatar+'" style="width:100%;height:100%;object-fit:cover">'; else bigAvatar.innerHTML = ''; } }catch(e){}
-        document.getElementById('overviewIntro').textContent = `Welcome back, ${data.name || data.email || 'Admin'}.`;
+        try{ const headAvatar = document.getElementById('adminHeaderAvatar'); if(headAvatar){ const av = data.avatar || data.avatar_url || data.adminAvatar || null; if(av) headAvatar.innerHTML = '<img src="'+av+'" style="width:100%;height:100%;object-fit:cover">'; else headAvatar.innerHTML = ''; } }catch(e){}
+        try{ const bigAvatar = document.getElementById('admin-avatar'); if(bigAvatar){ const av = data.avatar || data.avatar_url || data.adminAvatar || null; if(av) bigAvatar.innerHTML = '<img src="'+av+'" style="width:100%;height:100%;object-fit:cover">'; else bigAvatar.innerHTML = ''; } }catch(e){}
+        document.getElementById('overviewIntro').textContent = `Welcome back, ${data.full_name || data.name || data.email || 'Admin'}.`;
         // keep existing overview content intact (do not overwrite dashboard)
       }catch(err){
         document.getElementById('overviewIntro').textContent = 'Unable to load profile — please login.';

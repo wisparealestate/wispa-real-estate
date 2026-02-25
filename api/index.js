@@ -375,17 +375,34 @@ app.post('/api/admin/notifications/:id/unread', async (req, res) => {
 
 app.get('/api/admin/profile', async (req, res) => {
   try {
-    const user = req.currentUser || null;
-    if (!user) return res.status(401).json({ error: 'Admin authentication required' });
-    // Build a presentation-friendly profile object for admin UI
+    // Prefer admin session user when available
+    const adminRow = await getAdminSessionUser(req);
+    if (!adminRow) {
+      // fallback to regular session user if admin session not present
+      const sess = await getSessionUser(req);
+      if (!sess) return res.status(401).json({ error: 'Admin authentication required' });
+      // return session user directly
+      return res.json(sess);
+    }
+
+    // Try to find a corresponding users row (extended profile) by id or email
+    try{
+      const u = await pool.query('SELECT id, username, email, full_name, role, created_at, location, avatar_url, phone, bio, gender FROM users WHERE id = $1 OR email = $2 LIMIT 1', [adminRow.id, adminRow.email]);
+      if(u && u.rows && u.rows[0]){
+        return res.json(u.rows[0]);
+      }
+    }catch(e){ /* ignore and fall back to adminRow mapping */ }
+
+    // If no users row, return admin_logins presentation mapping
     const profile = {
-      adminName: user.full_name || user.username || user.email || null,
-      adminRole: user.role || 'admin',
-      adminEmail: user.email || user.username || null,
-      adminAvatar: user.avatar_url || user.avatar || null,
-      adminSince: user.created_at ? new Date(user.created_at).toISOString() : null
+      id: adminRow.id,
+      username: adminRow.username,
+      email: adminRow.email,
+      full_name: adminRow.full_name || adminRow.username || adminRow.email || null,
+      role: 'admin',
+      created_at: adminRow.created_at || null
     };
-    return res.json({ profile });
+    return res.json(profile);
   } catch (e) {
     return res.status(500).json({ error: 'Failed to load admin profile', details: e.message });
   }
