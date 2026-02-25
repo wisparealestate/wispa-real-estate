@@ -158,16 +158,26 @@ async function writeJson(name, data){
 // Get notifications for a user (real DB)
 app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
+  const category = req.query.category;
   try {
-    const result = userId
-      ? await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId])
-      : await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+    let result;
+    if (userId && category) {
+      result = await pool.query('SELECT * FROM notifications WHERE (user_id = $1 OR target = $1) AND category = $2 ORDER BY created_at DESC', [userId, category]);
+    } else if (userId) {
+      result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 OR target = $1 ORDER BY created_at DESC', [userId]);
+    } else if (category) {
+      result = await pool.query('SELECT * FROM notifications WHERE category = $1 ORDER BY created_at DESC', [category]);
+    } else {
+      result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+    }
     return res.json({ notifications: result.rows });
   } catch (err) {
     // Fallback: deployments may not have a `notifications` table. Try file-backed store.
     try {
       const rows = await readJson('notifications.json');
-      const filtered = userId ? (rows.filter(r => String(r.user_id || r.userId || r.user) === String(userId))) : rows;
+      let filtered = rows;
+      if (userId) filtered = rows.filter(r => String(r.user_id || r.userId || r.user || r.target) === String(userId));
+      if (category) filtered = filtered.filter(r => String(r.category || 'all') === String(category));
       return res.json({ notifications: filtered });
     } catch (e) {
       res.status(500).json({ error: 'Database error fetching notifications', details: err.message });
@@ -313,6 +323,46 @@ app.post('/api/admin/sent-notifications', async (req, res) => {
     }
   } catch (err) {
     return res.status(500).json({ error: 'Failed to create sent notification', details: err.message });
+  }
+});
+
+// Admin: list notifications (optionally filter by category)
+app.get('/api/admin/notifications', async (req, res) => {
+  try {
+    const category = req.query.category;
+    let result;
+    if (category) {
+      result = await pool.query('SELECT * FROM notifications WHERE category = $1 ORDER BY created_at DESC', [category]);
+    } else {
+      result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+    }
+    return res.json({ notifications: result.rows });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to load notifications', details: err.message });
+  }
+});
+
+// Admin: mark notification as read
+app.post('/api/admin/notifications/:id/read', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await pool.query('UPDATE notifications SET is_read = true, updated_at = now() WHERE id = $1 RETURNING *', [id]);
+    if (!result.rows || result.rows.length === 0) return res.status(404).json({ error: 'Notification not found' });
+    return res.json({ notification: result.rows[0] });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to mark notification read', details: err.message });
+  }
+});
+
+// Admin: mark notification as unread
+app.post('/api/admin/notifications/:id/unread', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await pool.query('UPDATE notifications SET is_read = false, updated_at = now() WHERE id = $1 RETURNING *', [id]);
+    if (!result.rows || result.rows.length === 0) return res.status(404).json({ error: 'Notification not found' });
+    return res.json({ notification: result.rows[0] });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to mark notification unread', details: err.message });
   }
 });
 
