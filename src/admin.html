@@ -914,7 +914,8 @@
         // helper to normalise arrays
         const norm = (d)=>{ if(!d) return []; if(Array.isArray(d)) return d; if(Array.isArray(d.items)) return d.items; if(Array.isArray(d.notifications)) return d.notifications; return [] };
         // load relevant sources
-        const [sent, contacts, reqs, alerts, activities, convs] = await Promise.all([
+        const [notifications, sent, contacts, reqs, alerts, activities, convs] = await Promise.all([
+          safeApi('/api/notifications').catch(()=>null),
           safeApi('/api/admin/sent-notifications').catch(()=>null),
           safeApi('/api/contact-messages').catch(()=>null),
           safeApi('/api/property-requests').catch(()=>null),
@@ -939,6 +940,27 @@
           const act = norm(activities).map(x=>Object.assign({ _type:'activity', title: x.title||x.action||'Activity', body: x.summary||'', time: x.ts||x.createdAt||x.time }, x));
           items.push(...act);
         }
+        // include DB-backed notifications (from /api/notifications)
+        try{
+          const dbNotifs = norm(notifications).map(n=>{
+            const cat = (n.category || (n.data && n.data.category) || '').toString().toLowerCase();
+            let t = 'notification';
+            if(cat==='messages' || cat==='message') t = 'message';
+            else if(cat==='alerts' || cat==='alert') t = 'alert';
+            else if(cat==='activities' || cat==='activity') t = 'activity';
+            else if(cat==='sent_alert' || cat==='sent') t = 'sent';
+            // try to infer message/request/conversation
+            if(n.data && n.data.type) t = n.data.type;
+            return Object.assign({ _type: t, title: n.title|| (n.data && n.data.title) || '', body: n.body|| (n.data && n.data.body) || '', time: n.created_at||n.createdAt||n.time, id: n.id, is_read: n.is_read||n.read||false }, n);
+          });
+          if(dbNotifs && dbNotifs.length){
+            if(view==='all') items.push(...dbNotifs);
+            else if(view==='messages') items.push(...dbNotifs.filter(d=>['message','conversation','request'].indexOf(d._type)!==-1));
+            else if(view==='alerts') items.push(...dbNotifs.filter(d=>d._type==='alert'));
+            else if(view==='activities') items.push(...dbNotifs.filter(d=>d._type==='activity'));
+          }
+        }catch(e){ /* ignore DB notification parse errors */ }
+
         if(view==='all'){
           const s = norm(sent).map(x=>Object.assign({ _type:'sent', title: x.title||x.message||'Notification', body: x.message||x.body||'', time: x.sentAt||x.createdAt||x.time }, x));
           items.push(...s);
