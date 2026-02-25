@@ -1,15 +1,6 @@
--- Backfill `location` on users from their most-recent property
--- Preference: city, then address, then state
+-- Backfill intentionally skipped.
+-- Per project decision, do NOT auto-populate `users.location` from properties.
+-- Users' `location` should always be whatever they enter themselves.
+-- This file is a no-op to avoid accidental overwrites or schema-dependent failures.
 
-WITH latest AS (
-  SELECT DISTINCT ON (user_id) user_id,
-    COALESCE(NULLIF(city,''), NULLIF(address,''), NULLIF(state,'')) AS inferred_location
-  FROM properties
-  WHERE user_id IS NOT NULL
-  ORDER BY user_id, created_at DESC
-)
-UPDATE users
-SET location = latest.inferred_location
-FROM latest
-WHERE users.id = latest.user_id
-  AND (users.location IS NULL OR users.location = '');
+-- No SQL performed here.
