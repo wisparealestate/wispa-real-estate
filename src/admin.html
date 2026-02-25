@@ -1429,10 +1429,18 @@
           }
         }
         // saveProperty returns a Promise
-        await saveProperty(newProp);
+        const savedProp = await saveProperty(newProp);
         status.textContent = 'Post created.';
-        // refresh list
-        try{ await loadProperties(); }catch(e){}
+        // Immediately show the created property in this admin session using the returned object
+        try{
+          const created = savedProp && (savedProp.property || savedProp) ? (savedProp.property || savedProp) : null;
+          if(created && created.id){
+            try{ _propertiesCache = _propertiesCache || []; _propertiesCache.unshift(created); renderPropertiesList(_propertiesCache); }catch(e){}
+          } else {
+            // fallback: refresh list from server
+            try{ await loadProperties(); }catch(e){}
+          }
+        }catch(e){ try{ await loadProperties(); }catch(e){} }
         // optionally notify users via admin API
         if(notify){
             try{
