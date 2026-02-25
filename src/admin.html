@@ -1028,7 +1028,10 @@
         }catch(e){}
         items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
         // add a small filter select at the top (helps mobile users switch views)
-        const headerSelect = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>';
+        const headerSelect = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between">'
+               + '<div><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>'
+               + '<div style="display:flex;gap:8px;align-items:center"><button id="notifMarkAllBtn" class="tab-btn" style="white-space:nowrap">Mark All Read</button></div>'
+               + '</div>';
         out.innerHTML = headerSelect + '<ul style="list-style:none;margin:0;padding:0">'+items.map(it=>{
           const dtype = escapeHtml(it._type||'');
           const rawId = (it.id||it._id||'');
@@ -1046,6 +1049,36 @@
         try{
           window._notifItems = window._notifItems || {};
           items.forEach(it=>{ try{ if(it && (it.id||it._id)) window._notifItems[String(it.id||it._id)] = it; }catch(e){} });
+        }catch(e){}
+        // Wire "Mark All Read" button to mark visible notifications as read
+        try{
+          const markAllBtn = document.getElementById('notifMarkAllBtn');
+          if(markAllBtn){
+            markAllBtn.addEventListener('click', async function(){
+              try{
+                markAllBtn.disabled = true; markAllBtn.textContent = 'Marking...';
+                const listRoot = document.getElementById('notificationsContent');
+                if(!listRoot){ markAllBtn.disabled = false; markAllBtn.textContent = 'Mark All Read'; return; }
+                const anchors = Array.from(listRoot.querySelectorAll('.notif-link'));
+                const ids = anchors.map(a=>a.dataset.id).filter(Boolean);
+                for(const id of ids){
+                  try{
+                    if(/^[0-9]+$/.test(String(id))){
+                      await safeApi(`/api/admin/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }).catch(()=>null);
+                    }
+                    try{
+                      const a = anchors.find(a=>String(a.dataset.id)===String(id));
+                      const li = a ? a.closest('li') : null;
+                      if(li) li.classList.add('notif-read');
+                      const btn = li && li.querySelector('.notif-mark-btn'); if(btn) btn.textContent = 'Mark Unread';
+                    }catch(e){}
+                  }catch(e){ }
+                }
+                try{ const badge = document.getElementById('notifBadge'); if(badge){ badge.style.display='none'; badge.textContent='0'; } }catch(e){}
+                markAllBtn.disabled = false; markAllBtn.textContent = 'Mark All Read';
+              }catch(e){ markAllBtn.disabled = false; markAllBtn.textContent = 'Mark All Read'; }
+            });
+          }
         }catch(e){}
 
         // wire the filter select after rendering
