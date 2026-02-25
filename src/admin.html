@@ -932,17 +932,18 @@
         // helper to normalise arrays
         const norm = (d)=>{ if(!d) return []; if(Array.isArray(d)) return d; if(Array.isArray(d.items)) return d.items; if(Array.isArray(d.notifications)) return d.notifications; return [] };
         // load relevant sources
-        const [notifications, sent, contacts, reqs, alerts, activities, convs] = await Promise.all([
+        const [notifications, sent, contacts, reqs, alerts, activities, propsData, convs] = await Promise.all([
           safeApi('/api/notifications').catch(()=>null),
           safeApi('/api/admin/sent-notifications').catch(()=>null),
           safeApi('/api/contact-messages').catch(()=>null),
           safeApi('/api/property-requests').catch(()=>null),
           safeApi('/api/system-alerts').catch(()=>null),
           safeApi('/api/activities').catch(()=>null),
+          safeApi('/api/properties').catch(()=>null),
           safeApi('/api/conversations').catch(()=>null)
         ]);
 
-        const items = [];
+        let items = [];
         // messages: combine contact messages + property requests + conversation notifications
         if(view==='all' || view==='messages'){
           const c = norm(contacts).map(m=>Object.assign({ _type:'message', title: m.subject||m.email||m.from||'Message', body: m.message||m.body||'', time: m.createdAt||m.sentAt||m.ts||m.time||m.date || m.created || (m.ts?new Date(m.ts).toISOString():null) }, m));
@@ -957,6 +958,28 @@
         if(view==='all' || view==='activities'){
           const act = norm(activities).map(x=>Object.assign({ _type:'activity', title: x.title||x.action||'Activity', body: x.summary||'', time: x.ts||x.createdAt||x.time }, x));
           items.push(...act);
+
+          // Include recent property posts as activities so admins see new listings in the Activities view
+          try{
+            const props = (propsData && (Array.isArray(propsData.properties) ? propsData.properties : (Array.isArray(propsData) ? propsData : []))) || [];
+            const recent = (props||[]).slice(0,50).map(p=>({ _type: 'activity', title: 'New property: ' + (p.title || p.address || ('#'+(p.id||''))), body: p.description || p.address || '', time: p.created_at || p.createdAt || p.posted_at || p.postedAt || p.updated || p.updated_at || null, data: { propertyId: p.id, property: p } }));
+            if(recent && recent.length) items.push(...recent);
+          }catch(e){}
+
+          // Also ensure property-like 'likes' show up: include any notifications that represent likes
+          try{
+            const likeNotifs = norm(notifications).filter(n=>{
+              try{
+                const cat = String((n.category||'')).toLowerCase();
+                const t = n.data && (n.data.type||n.data.action) ? String(n.data.type||n.data.action).toLowerCase() : '';
+                if(cat==='likes' || t==='like' || t==='liked') return true;
+                const ttl = String(n.title||'').toLowerCase();
+                if(ttl.indexOf('liked')!==-1 || ttl.indexOf('like')!==-1) return true;
+              }catch(e){}
+              return false;
+            }).map(n=>Object.assign({ _type:'activity', title: n.title || 'Like', body: n.body || (n.data && n.data.summary) || '', time: n.created_at||n.createdAt||n.time, id: n.id, data: n.data }, n));
+            if(likeNotifs && likeNotifs.length) items.push(...likeNotifs);
+          }catch(e){}
         }
         // include DB-backed notifications (from /api/notifications)
         try{
@@ -991,7 +1014,17 @@
         }
 
         if(!items.length){ out.innerHTML = '<div style="padding:12px;color:#666">No notifications.</div>'; return; }
-        // sort by time desc
+        // deduplicate items by id or a content key to avoid repeats, then sort by time desc
+        try{
+          const seen = new Set();
+          const uniq = [];
+          items.forEach(it=>{
+            const key = it && (it.id ? ('id:'+it.id) : ('type:'+ (it._type||'') + '|' + (it.title||'') + '|' + (it.time||'')));
+            if(!key) return;
+            if(!seen.has(key)) { seen.add(key); uniq.push(it); }
+          });
+          items = uniq;
+        }catch(e){}
         items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
         // add a small filter select at the top (helps mobile users switch views)
         const headerSelect = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>';
