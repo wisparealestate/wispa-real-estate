@@ -349,6 +349,46 @@ app.get('/api/admin/notifications', async (req, res) => {
   }
 });
 
+// Admin: recent messages summary (contact messages + conversations)
+app.get('/api/admin/messages', async (req, res) => {
+  try {
+    // recent contact messages
+    let contacts = [];
+    try{
+      const cm = await pool.query('SELECT id, name, email, subject, message, created_at FROM contact_messages ORDER BY created_at DESC LIMIT 100');
+      contacts = (cm && cm.rows) ? cm.rows.map(r=>({ id: r.id, from: r.email || r.name, subject: r.subject || null, body: r.message, createdAt: r.created_at })) : [];
+    }catch(e){ contacts = []; }
+
+    // recent conversations
+    let convs = [];
+    try{
+      const cr = await pool.query('SELECT id, title, last_message, updated FROM conversations ORDER BY updated DESC LIMIT 100');
+      convs = (cr && cr.rows) ? cr.rows.map(r=>({ id: r.id, title: r.title, lastMessage: r.last_message || r.lastMessage || '', updated: r.updated })) : [];
+    }catch(e){ convs = []; }
+
+    // merge into a single list for the admin overview
+    const messages = [].concat(convs.map(c=>({ type: 'conversation', id: c.id, title: c.title, preview: c.lastMessage, time: c.updated })), contacts.map(m=>({ type: 'contact', id: m.id, title: m.subject||m.from, preview: m.body, time: m.createdAt })));
+    return res.json({ messages });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to load admin messages', details: err.message });
+  }
+});
+
+// Activities feed: expose recent notifications as activities
+app.get('/api/activities', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, category, title, body, target, data, is_read, created_at, updated_at FROM notifications ORDER BY created_at DESC LIMIT 200');
+    return res.json({ activities: result.rows });
+  } catch (err) {
+    try {
+      const rows = await readJson('notifications.json');
+      return res.json({ activities: rows });
+    } catch (e) {
+      return res.status(500).json({ error: 'Activities not available', details: err.message });
+    }
+  }
+});
+
 // Admin: mark notification as read
 app.post('/api/admin/notifications/:id/read', async (req, res) => {
   try {
