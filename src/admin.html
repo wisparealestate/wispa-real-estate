@@ -111,10 +111,23 @@
   .overview-recents-flex .recent-users{order:1}
   .overview-recents-flex .recent-props{order:2}
   .overview-recents-flex > .recent-props,
-  .overview-recents-flex > .recent-users {
-    flex: 1 1 48%;
-    min-width: 0;
+  .overview-recents-flex > .recent-users,
+  .overview-recents-flex > .recent-notifs {
+    flex: 1 1 32%;
+    min-width: 260px;
     box-sizing: border-box;
+  }
+
+  /* Ensure each card looks like a distinct section */
+  .overview-recents-flex > div {
+    background: var(--overview-card);
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+    border: 1px solid var(--overview-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
   @media (max-width:600px){
     .overview-recents-flex{flex-direction:column}
