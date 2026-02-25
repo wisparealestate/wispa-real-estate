@@ -658,8 +658,13 @@
       try{
         const status = document.getElementById('editStatus'); if(status) status.textContent = 'Loading…';
         let u = null;
-        try{ if(window.getCurrentUser) u = await window.getCurrentUser(); }catch(e){}
-        if(!u){ try{ const res = await fetch('/api/admin/profile', { credentials:'include' }); if(res && res.ok){ const j = await res.json().catch(()=>null); u = (j && (j.user||j.profile||j.admin)) || j || null; } }catch(e){} }
+        // Prefer the admin profile API to ensure we read authoritative DB values
+        try{
+          const res = window.apiFetch ? await window.apiFetch('/api/admin/profile') : await fetch('/api/admin/profile', { credentials: 'include' });
+          if(res && res.ok){ const j = await res.json().catch(()=>null); u = (j && (j.user||j.profile||j.admin)) || j || null; }
+        }catch(e){}
+        // Fallback to getCurrentUser or /api/me
+        if(!u){ try{ if(window.getCurrentUser) u = await window.getCurrentUser(); else { const r = await fetch('/api/me',{credentials:'include'}); if(r && r.ok){ const jm = await r.json().catch(()=>null); u = (jm && (jm.user||jm.profile)) || jm || null; } } }catch(e){} }
         if(!u){ if(status) status.textContent = 'Not signed in.'; return; }
         // Populate fields
         try{ document.getElementById('editFullName').value = u.full_name || u.name || u.username || ''; }catch(e){}
@@ -701,7 +706,9 @@
               try{
                 await window.saveAdminProfile(payload);
                 if(status) status.textContent = 'Saved.';
-                setTimeout(()=>{ try{ switchTab('profile'); }catch(e){} }, 600);
+                try{ if(typeof loadProfile === 'function') await loadProfile(); }catch(e){}
+                try{ if(typeof loadHamburgerProfile === 'function') await loadHamburgerProfile(); }catch(e){}
+                setTimeout(()=>{ try{ switchTab('profile'); }catch(e){} }, 400);
               }catch(e){ if(status) status.textContent = 'Save failed.'; throw e; }
             }catch(err){ console.error(err); }
             saveBtn.disabled = false;
