@@ -241,10 +241,8 @@
   <header class="admin-header">
     <div style="display:flex;align-items:center;gap:12px">
       <button id="adminBackBtn" class="icon-btn" title="Back" style="display:none;align-items:center;justify-content:center;padding:6px 8px">←</button>
-      <button id="adminProfileBtn" class="icon-btn" title="Profile" style="display:flex;align-items:center;gap:8px;background:transparent;border:0;cursor:pointer;padding:6px">
-        <div id="adminHeaderAvatar" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;overflow:hidden;border:1px solid rgba(255,255,255,0.12);display:inline-block"></div>
-        <span id="adminHeaderName" style="font-weight:600;color:#fff;font-size:0.98rem">Wispa Admin</span>
-      </button>
+      <div class="admin-title">Wispa Admin</div>
+      <div style="font-size:0.9rem; opacity:0.9" id="logged-as"></div>
     </div>
     <div class="header-icons" aria-hidden="false">
       <button id="quickSearchBtn" class="icon-btn" title="Quick search" aria-label="Search">🔍</button>
