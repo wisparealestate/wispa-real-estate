@@ -292,11 +292,25 @@ app.post('/api/admin/sent-notifications', async (req, res) => {
     if (!title && !body) return res.status(400).json({ error: 'Missing title or body' });
     const payload = Object.assign({}, data || {}, { sentByAdmin: true, adminId: admin.id });
     const createdAt = new Date().toISOString();
-    const insert = await pool.query(
-      'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [null, title || null, body || null, JSON.stringify(payload), createdAt, false]
-    );
-    return res.json({ notification: insert.rows[0] });
+    try {
+      const insert = await pool.query(
+        `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        ['sent_alert', title || null, body || null, null, JSON.stringify(payload), false, createdAt, createdAt]
+      );
+      return res.json({ notification: insert.rows[0] });
+    } catch (errInsert) {
+      // Fallback for older deployments that expect legacy columns (user_id, read)
+      try {
+        const insert2 = await pool.query(
+          'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+          [null, title || null, body || null, JSON.stringify(payload), createdAt, false]
+        );
+        return res.json({ notification: insert2.rows[0] });
+      } catch (err2) {
+        return res.status(500).json({ error: 'Failed to create sent notification', details: err2.message || errInsert.message });
+      }
+    }
   } catch (err) {
     return res.status(500).json({ error: 'Failed to create sent notification', details: err.message });
   }
@@ -539,11 +553,38 @@ app.post('/api/notifications', async (req, res) => {
   const { userId, notification } = req.body || {};
   if (!userId || !notification) return res.status(400).json({ error: 'Missing userId or notification' });
   try {
-    const result = await pool.query(
-      'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [userId, notification.title || null, notification.message || notification.fullMessage || null, JSON.stringify(notification || {}), notification.timestamp || new Date().toISOString(), notification.read ? true : false]
-    );
-    return res.json({ notification: result.rows[0] });
+    // Prefer new schema: category, target, data, is_read
+    const createdAt = notification.timestamp || new Date().toISOString();
+    const category = (notification && notification.category) || 'all';
+    const target = userId ? String(userId) : (notification && (notification.userId || notification.target)) || null;
+    try {
+      const result = await pool.query(
+        `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [category, notification.title || null, notification.message || notification.fullMessage || null, target, JSON.stringify(notification || {}), notification.read ? true : false, createdAt, createdAt]
+      );
+      return res.json({ notification: result.rows[0] });
+    } catch (errInsert) {
+      // Fallback to legacy schema if present
+      try {
+        const result2 = await pool.query(
+          'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+          [userId, notification.title || null, notification.message || notification.fullMessage || null, JSON.stringify(notification || {}), createdAt, notification.read ? true : false]
+        );
+        return res.json({ notification: result2.rows[0] });
+      } catch (err2) {
+        // Final fallback: persist to a file-backed JSON store so notifications aren't lost
+        try {
+          const arr = await readJson('notifications.json');
+          const entry = { id: Date.now(), category, target, title: notification.title || null, body: notification.message || notification.fullMessage || null, data: notification || {}, is_read: notification.read ? true : false, created_at: createdAt };
+          arr.unshift(entry);
+          await writeJson('notifications.json', arr);
+          return res.json({ notification: entry, fallback: true });
+        } catch (e) {
+          return res.status(500).json({ error: 'Database error creating notification', details: errInsert.message + ' / ' + (err2 && err2.message) });
+        }
+      }
+    }
   } catch (err) {
     res.status(500).json({ error: 'Database error creating notification', details: err.message });
   }
