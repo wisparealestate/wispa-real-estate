@@ -241,8 +241,10 @@
   <header class="admin-header">
     <div style="display:flex;align-items:center;gap:12px">
       <button id="adminBackBtn" class="icon-btn" title="Back" style="display:none;align-items:center;justify-content:center;padding:6px 8px">←</button>
-      <div class="admin-title">Wispa Admin</div>
-      <div style="font-size:0.9rem; opacity:0.9" id="logged-as"></div>
+      <button id="adminProfileBtn" class="icon-btn" title="Profile" style="display:flex;align-items:center;gap:8px;background:transparent;border:0;cursor:pointer;padding:6px">
+        <div id="adminHeaderAvatar" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;overflow:hidden;border:1px solid rgba(255,255,255,0.12);display:inline-block"></div>
+        <span id="adminHeaderName" style="font-weight:600;color:#fff;font-size:0.98rem">Wispa Admin</span>
+      </button>
     </div>
     <div class="header-icons" aria-hidden="false">
       <button id="quickSearchBtn" class="icon-btn" title="Quick search" aria-label="Search">🔍</button>
@@ -584,6 +586,12 @@
     document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
     document.querySelectorAll('#menuDropdown a[data-tab]').forEach(a=>a.addEventListener('click', (e)=>{ e.preventDefault(); switchTab(a.dataset.tab); menu.style.display='none' }));
 
+    // Header profile button opens profile tab
+    (function(){
+      const pBtn = document.getElementById('adminProfileBtn');
+      if(pBtn){ pBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('profile'); }); }
+    })();
+
     document.getElementById('logoutLink').addEventListener('click', async (e)=>{
       e.preventDefault();
       try{ await fetch('/api/logout',{method:'POST', credentials:'include'}); }catch(e){}
@@ -899,7 +907,10 @@
         document.getElementById('profileName').textContent = data.name || data.username || 'Admin';
         document.getElementById('profileEmail').textContent = data.email || '—';
         document.getElementById('profileRole').textContent = data.role || 'admin';
-        document.getElementById('logged-as').textContent = data.email ? `Signed in as ${data.email}` : '';
+        // update header profile display
+        try{ const headName = document.getElementById('adminHeaderName'); if(headName) headName.textContent = data.name || data.username || data.email || 'Admin'; }catch(e){}
+        try{ const headAvatar = document.getElementById('adminHeaderAvatar'); if(headAvatar){ if(data.avatar) headAvatar.innerHTML = '<img src="'+data.avatar+'" style="width:100%;height:100%;object-fit:cover">'; else headAvatar.innerHTML = ''; } }catch(e){}
+        try{ const bigAvatar = document.getElementById('admin-avatar'); if(bigAvatar){ if(data.avatar) bigAvatar.innerHTML = '<img src="'+data.avatar+'" style="width:100%;height:100%;object-fit:cover">'; else bigAvatar.innerHTML = ''; } }catch(e){}
         document.getElementById('overviewIntro').textContent = `Welcome back, ${data.name || data.email || 'Admin'}.`;
         // keep existing overview content intact (do not overwrite dashboard)
       }catch(err){
