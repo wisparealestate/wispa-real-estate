@@ -107,13 +107,19 @@
     .hamburger { font-size:1.1rem }
   }
   /* Recents responsive stacking: default (desktop) is horizontal, on small screens stack with users first */
-  .overview-recents-flex{display:flex;gap:12px;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+  .overview-recents-flex{display:flex;gap:12px;overflow:visible;-webkit-overflow-scrolling:touch;padding-bottom:6px;align-items:flex-start}
   .overview-recents-flex .recent-users{order:1}
   .overview-recents-flex .recent-props{order:2}
+  .overview-recents-flex > .recent-props,
+  .overview-recents-flex > .recent-users {
+    flex: 1 1 48%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
   @media (max-width:600px){
     .overview-recents-flex{flex-direction:column}
-    .overview-recents-flex .recent-users{order:1}
-    .overview-recents-flex .recent-props{order:2}
+    .overview-recents-flex > .recent-users{order:1}
+    .overview-recents-flex > .recent-props{order:2}
   }
   /* Allow each recent-card to scroll internally so its table can be fully viewed.
      Enable both vertical and horizontal scrolling so wide tables remain accessible
