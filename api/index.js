@@ -41,6 +41,13 @@ app.set('trust proxy', true);
 // Support multiple origins via comma-separated `CORS_ORIGINS` env var or sensible defaults
 const DEFAULT_CORS = (process.env.CORS_ORIGINS || 'https://wispa-real-estate-one.vercel.app,https://wispa-real-estate-2ew3.onrender.com,http://localhost:3000,http://localhost:3001').split(',').map(s=>s.trim()).filter(Boolean);
 console.log('[startup] allowed CORS origins:', DEFAULT_CORS);
+// Mask and log DATABASE_URL to help confirm which DB the running instance uses (credentials masked)
+try{
+  const rawDb = process.env.DATABASE_URL || '';
+  let masked = rawDb;
+  try{ masked = String(rawDb).replace(/\/\/.*@/, '//***@'); }catch(e){ masked = rawDb ? '***' : '' }
+  console.log('[startup] DATABASE_URL (masked):', masked || '(not set)');
+}catch(e){ console.warn('[startup] failed to read DATABASE_URL', e && e.message ? e.message : e); }
 app.use(cors({
   origin: function(origin, callback){
     // allow non-browser tools (no origin)
