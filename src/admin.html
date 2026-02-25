@@ -141,6 +141,11 @@
     .tab-panel { display:none }
     .tab-panel.active { display:block }
     .profile-field { margin:8px 0 }
+    /* Notification detail modal */
+    #notifDetailModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:4000; align-items:center; justify-content:center }
+    #notifDetailModal .modal-card { background:#fff; padding:16px; border-radius:10px; width:92%; max-width:720px; box-shadow:0 12px 40px rgba(8,24,50,0.3); }
+    #notifDetailModal .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
+    #notifDetailModal h3 { margin:0 0 6px 0 }
   </style>
 </head>
 <body>
@@ -436,6 +441,19 @@
         <div id="usersList">Loading users…</div>
       </section>
   </main>
+
+  <!-- Notification detail modal -->
+  <div id="notifDetailModal" role="dialog" aria-hidden="true">
+    <div class="modal-card" role="document">
+      <div id="notifDetailHeader"><h3 id="notifDetailTitle">Notification</h3><div id="notifDetailTime" style="color:#666;font-size:12px"></div></div>
+      <div id="notifDetailBody" style="margin-top:8px;color:#222;line-height:1.4"></div>
+      <div class="modal-actions">
+        <button id="notifDetailPrimary" class="tab-btn">Open</button>
+        <button id="notifDetailMark" class="tab-btn">Mark Read</button>
+        <button id="notifDetailClose" class="tab-btn" style="background:#fff;border:1px solid #e6eef7">Close</button>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
   <script>
@@ -990,6 +1008,12 @@
           return `<li class="${readClass}" style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="display:flex;justify-content:space-between;align-items:flex-start"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block;flex:1"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a>${markBtn}${viewLink}</div></li>`;
         }).join('')+'</ul>';
 
+        // cache items for detail view lookup by id
+        try{
+          window._notifItems = window._notifItems || {};
+          items.forEach(it=>{ try{ if(it && (it.id||it._id)) window._notifItems[String(it.id||it._id)] = it; }catch(e){} });
+        }catch(e){}
+
         // wire the filter select after rendering
         try{
           const sel = document.getElementById('notifViewSelect');
@@ -1058,7 +1082,17 @@
           const t = a.dataset.type || '';
           const id = a.dataset.id || '';
 
-          // If this notification has a numeric id, attempt to mark it read in DB
+          // Try to show a detailed note/modal for this notification
+          try{
+            const cache = window._notifItems || {};
+            const item = cache[String(id)] || null;
+            if(item){
+              openNotifDetail(item);
+              return;
+            }
+          }catch(e){}
+
+          // Fallback behaviour when detailed payload not available: try to mark read then navigate
           try{ if(id && /^\d+$/.test(id)) { safeApi(`/api/admin/notifications/${id}/read`, { method: 'POST' }).catch(()=>{}); } }catch(e){}
 
           if(t === 'conversation' || t === 'conversation' || t === 'conv'){
@@ -1483,6 +1517,73 @@
             }catch(e){ console.error(e); alert('retryPendingNotifications error: '+e); }
         });
     })();
+  </script>
+  <script>
+    // Notification detail modal helpers
+    function openNotifDetail(item){
+      try{
+        const modal = document.getElementById('notifDetailModal');
+        if(!modal) return;
+        const titleEl = document.getElementById('notifDetailTitle');
+        const timeEl = document.getElementById('notifDetailTime');
+        const bodyEl = document.getElementById('notifDetailBody');
+        const primaryBtn = document.getElementById('notifDetailPrimary');
+        const markBtn = document.getElementById('notifDetailMark');
+        const closeBtn = document.getElementById('notifDetailClose');
+
+        const title = item.title || (item.data && item.data.title) || item.message || 'Notification';
+        const body = item.body || (item.data && (item.data.body || item.data.message)) || item.message || '';
+        const time = item.time || item.sentAt || item.createdAt || item.created || item.ts || null;
+
+        titleEl.textContent = title;
+        bodyEl.textContent = body;
+        try{ timeEl.textContent = time ? new Date(time).toLocaleString() : ''; }catch(e){ timeEl.textContent = String(time||''); }
+
+        modal.dataset.currentId = item.id || item._id || '';
+        modal.dataset.currentType = item._type || (item.data && item.data.type) || '';
+
+        // Primary action
+        primaryBtn.onclick = function(ev){ ev.preventDefault(); try{
+          // prefer explicit URL in data
+          const url = (item.data && (item.data.url || item.data.link)) || item.url || item.link || null;
+          const propId = (item.data && (item.data.propertyId || item.data.property_id)) || (item.property && item.property.id) || null;
+          const t = (item._type || '').toLowerCase();
+          if(url){ window.location.href = url; return; }
+          if(propId){ window.location.href = 'property-detail.html?id=' + encodeURIComponent(propId); return; }
+          if(t === 'conversation' || t === 'conv'){
+            closeNotifDetail(); switchTab('chat'); setTimeout(()=>{ if(typeof openAdminChat === 'function') openAdminChat(item.id || item.convId || item.conversation_id); },120); return;
+          }
+          if(t === 'message' || t === 'request'){ closeNotifDetail(); if(t==='request') switchTab('requests'); else switchTab('messages'); return; }
+          // default: close modal and open notifications
+          closeNotifDetail(); switchTab('notifications');
+        }catch(e){ console.warn(e); } };
+
+        // Mark button wiring
+        const isRead = !!(item.is_read===true || item.read===true || item.isRead===true);
+        markBtn.textContent = isRead ? 'Mark Unread' : 'Mark Read';
+        markBtn.onclick = async function(ev){ ev.preventDefault(); try{
+          const id = modal.dataset.currentId;
+          if(!id || !/^\d+$/.test(String(id))) return;
+          const endpoint = isRead ? `/api/admin/notifications/${id}/unread` : `/api/admin/notifications/${id}/read`;
+          try{ await safeApi(endpoint, { method: 'POST' }); }catch(e){ try{ await fetch(endpoint, { method:'POST', credentials:'include' }); }catch(e){} }
+          // refresh view to reflect change
+          try{ const current = document.getElementById('notifViewSelect') && document.getElementById('notifViewSelect').value ? document.getElementById('notifViewSelect').value : 'all'; renderNotificationsView(current); }catch(e){}
+          // update cached item
+          try{ if(window._notifItems && window._notifItems[String(id)]){ window._notifItems[String(id)].is_read = !isRead; } }catch(e){}
+          closeNotifDetail();
+        }catch(e){ console.warn('mark action failed', e); } };
+
+        closeBtn.onclick = function(){ closeNotifDetail(); };
+
+        // show modal
+        modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false');
+        // handle escape key to close
+        function escHandler(ev){ if(ev.key === 'Escape'){ closeNotifDetail(); window.removeEventListener('keydown', escHandler); } }
+        window.addEventListener('keydown', escHandler);
+      }catch(e){ console.warn('openNotifDetail failed', e); }
+    }
+
+    function closeNotifDetail(){ try{ const modal = document.getElementById('notifDetailModal'); if(!modal) return; modal.style.display='none'; modal.setAttribute('aria-hidden','true'); modal.dataset.currentId=''; modal.dataset.currentType=''; }catch(e){} }
   </script>
 </body>
 </html>
