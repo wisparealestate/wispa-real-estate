@@ -1474,9 +1474,24 @@
             notifsCard += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:680px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Preview</th><th style="padding:6px">Time</th></tr></thead><tbody>';
             notifsCard += recentNotifs.map(n => {
               const title = escapeHtml(n.title || (n.message||'').slice(0,60) || 'Notification');
-              const body = escapeHtml((n.message || n.body || (n.data && (n.data.body||n.data.message)) || '').slice(0,140));
-              const time = escapeHtml(n.sentAt || n.createdAt || n.time || n.ts || '');
-              return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${body}</td><td style="padding:6px">${time}</td></tr>`;
+                // Prepare a safe preview for the notification body. If the body contains
+                // simple HTML we allow it (after stripping script/style tags); otherwise
+                // show escaped plain-text to avoid XSS and double-escaped output.
+                const rawBody = (n.message || n.body || (n.data && (n.data.body||n.data.message)) || '');
+                function sanitizePreviewHtml(str){
+                  if(!str) return '';
+                  try{
+                    return String(str).replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi,'');
+                  }catch(e){ return escapeHtml(String(str)); }
+                }
+                let body = String(rawBody).slice(0,140);
+                if(/<\/?[a-z][\s\S]*>/i.test(body)){
+                  body = sanitizePreviewHtml(body);
+                } else {
+                  body = escapeHtml(body);
+                }
+                const time = escapeHtml(n.sentAt || n.createdAt || n.time || n.ts || '');
+                return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${body}</td><td style="padding:6px">${time}</td></tr>`;
             }).join('');
             notifsCard += '</tbody></table></div>';
           } else {
