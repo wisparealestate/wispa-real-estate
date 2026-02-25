@@ -125,11 +125,14 @@
      Enable both vertical and horizontal scrolling so wide tables remain accessible
      on narrow viewports. */
   .overview-recents-flex .recent-props > div,
-  .overview-recents-flex .recent-users > div {
+  .overview-recents-flex .recent-users > div,
+  .overview-recents-flex .recent-notifs > div {
     max-height: 260px;
     overflow: auto; /* allow both x and y scrolling */
     overflow-x: auto; /* ensure horizontal scroll for wide tables */
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y; /* allow vertical page pans while enabling horizontal swipes inside */
+    -ms-overflow-style: -ms-autohiding-scrollbar;
   }
   /* Tables inside the recent cards should size to their contents and allow
      horizontal scrolling when wider than the card. */
@@ -141,11 +144,14 @@
   }
   @media (max-width:600px){
     .overview-recents-flex .recent-props > div,
-    .overview-recents-flex .recent-users > div {
+    .overview-recents-flex .recent-users > div,
+    .overview-recents-flex .recent-notifs > div {
       max-height: 320px;
       overflow-y: auto; /* allow vertical scroll if content is tall */
       overflow-x: auto; /* ensure horizontal scroll on small screens */
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-y; /* allow vertical page pans while enabling horizontal swipes inside */
+      -ms-overflow-style: -ms-autohiding-scrollbar;
       padding-bottom: 6px;
     }
     /* Make inner tables not shrink so horizontal scrolling is available */
