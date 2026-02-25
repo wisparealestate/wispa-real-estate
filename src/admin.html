@@ -582,7 +582,12 @@
         try { if(window.getCurrentUser) u = await window.getCurrentUser(); }catch(e){}
         if(!u){ try{ const res = await fetch('/api/admin/profile', { credentials: 'include' }); if(res && res.ok){ const j = await res.json().catch(()=>null); u = (j && (j.user||j.profile||j.admin)) || j || null; } }catch(e){} }
         if(u){
-          try{ if(avatarEl) avatarEl.innerHTML = u.avatar ? '<img src="'+u.avatar+'" style="width:100%;height:100%;object-fit:cover">' : ''; }catch(e){}
+          try{
+            if(avatarEl){
+              const av = u.avatar || u.avatar_url || u.adminAvatar || null;
+              avatarEl.innerHTML = av ? '<img src="'+av+'" style="width:100%;height:100%;object-fit:cover">' : '';
+            }
+          }catch(e){}
           try{
             if(nameEl){
               const displayName = (u.full_name || u.name || u.username || u.email || 'Admin');
@@ -710,7 +715,7 @@
               const payload = { full_name, email, phone, location };
               try{ const bioEl = document.getElementById('editBio'); if(bioEl) payload.bio = bioEl.value || ''; }catch(e){}
               try{ const gEl = document.getElementById('editGender'); if(gEl) payload.gender = gEl.value || ''; }catch(e){}
-              if(avatarUrl) payload.avatar = avatarUrl;
+              if(avatarUrl){ payload.avatar_url = avatarUrl; payload.avatar = avatarUrl; }
               // Use global saveAdminProfile helper
               try{
                 await window.saveAdminProfile(payload);

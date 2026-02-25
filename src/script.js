@@ -490,11 +490,10 @@ window.getCurrentUser = async function(force){
 // Save admin profile (tries admin endpoint then falls back to /api/me)
 window.saveAdminProfile = async function(profile){
     try{
-        const body = { user: profile };
         const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
-        // Try admin endpoint first
+        // Try admin endpoint first - send profile object directly
         try{
-            const r = await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const r = await poster('/api/admin/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
             if(r && r.ok) return await r.json();
         }catch(e){}
         // Fallback to /api/me update
