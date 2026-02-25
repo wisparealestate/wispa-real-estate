@@ -115,6 +115,20 @@
     .overview-recents-flex .recent-users{order:1}
     .overview-recents-flex .recent-props{order:2}
   }
+  /* Allow each recent-card to scroll internally so its table can be fully viewed
+     Set a sensible max-height and enable vertical scrolling on overflow. */
+  .overview-recents-flex .recent-props > div,
+  .overview-recents-flex .recent-users > div {
+    max-height: 260px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  @media (max-width:600px){
+    .overview-recents-flex .recent-props > div,
+    .overview-recents-flex .recent-users > div {
+      max-height: 320px;
+    }
+  }
   </style>
   <style>
     /* Minimal overrides to ensure header/hamburger visible */
