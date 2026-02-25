@@ -563,6 +563,23 @@
     // expose for debugging/other scripts
     window.getCurrentTab = getCurrentTab;
 
+    // Back button helpers: show when not on overview and handle click
+    function updateBackButton(){
+      try{
+        const btn = document.getElementById('adminBackBtn'); if(!btn) return;
+        const cur = getCurrentTab();
+        // show whenever current tab is not overview (or when there's history)
+        if(cur && cur !== 'overview') btn.style.display = 'inline-flex'; else btn.style.display = 'none';
+      }catch(e){}
+    }
+    (function(){
+      const btn = document.getElementById('adminBackBtn');
+      if(!btn) return;
+      btn.addEventListener('click', function(e){ e.preventDefault(); try{ if(window.history && window.history.length>1) { window.history.back(); } else { switchTab('overview'); } }catch(err){ try{ switchTab('overview'); }catch(e){} } });
+      window.addEventListener('hashchange', updateBackButton);
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(updateBackButton, 40); });
+    })();
+
     document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
     document.querySelectorAll('#menuDropdown a[data-tab]').forEach(a=>a.addEventListener('click', (e)=>{ e.preventDefault(); switchTab(a.dataset.tab); menu.style.display='none' }));
 
