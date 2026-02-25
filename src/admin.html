@@ -555,14 +555,22 @@
       }catch(e){ notifDropdownContent.innerHTML = '<div style="padding:12px;color:#c33">Failed to load</div>' }
     }
     // Open notifications when bell icon is clicked.
-    // Always open the full Notifications panel; responsiveness is handled by CSS so
-    // the same layout is used on desktop and mobile (it will fit to the screen).
+    // Always open the full Notifications panel; on mobile it should behave like
+    // the chat page (full panel). After opening, focus the notifications panel
+    // and show the 'all' view.
     notificationsBtn.addEventListener('click', (e)=>{
       e.preventDefault(); e.stopPropagation();
       try{
         switchTab('notifications');
         setActiveNotifTab('all');
-        setTimeout(()=>renderNotificationsView('all'),50);
+        setTimeout(()=>{
+          renderNotificationsView('all');
+          try{
+            const panel = document.getElementById('notifications');
+            if(panel && panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth'});
+            const sel = document.getElementById('notifViewSelect'); if(sel) sel.focus();
+          }catch(_){}
+        },50);
       }catch(e){ console.warn('Failed to open notifications', e); }
     });
     // clicking outside should close dropdown (use element.contains for reliability)
@@ -830,6 +838,7 @@
         if(view === 'send'){
           out.innerHTML = `
             <div style="max-width:720px">
+              <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>
               <h3>Send Alert / Notification</h3>
               <div style="margin:8px 0"><input id="sendAlertTitle" placeholder="Title" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"/></div>
               <div style="margin:8px 0"><textarea id="sendAlertMessage" placeholder="Message" rows="6" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"></textarea></div>
@@ -883,6 +892,12 @@
             }catch(e){ histEl.innerHTML = '<div style="color:#c33">Failed to load sent alerts.</div>'; }
           })();
 
+          // wire the filter select inside the send view
+          try{
+            const sel = document.getElementById('notifViewSelect');
+            if(sel){ sel.value = 'send'; sel.addEventListener('change', function(){ const v = this.value || 'all'; setActiveNotifTab(v); renderNotificationsView(v); }); }
+          }catch(e){}
+
           return;
         }
 
@@ -928,11 +943,20 @@
         if(!items.length){ out.innerHTML = '<div style="padding:12px;color:#666">No notifications.</div>'; return; }
         // sort by time desc
         items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
-        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+items.map(it=>{
+        // add a small filter select at the top (helps mobile users switch views)
+        const headerSelect = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>';
+
+        out.innerHTML = headerSelect + '<ul style="list-style:none;margin:0;padding:0">'+items.map(it=>{
           const dtype = escapeHtml(it._type||'');
           const did = escapeHtml(it.id||it._id||'');
           return `<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a></li>`;
         }).join('')+'</ul>';
+
+        // wire the filter select after rendering
+        try{
+          const sel = document.getElementById('notifViewSelect');
+          if(sel){ sel.value = view || 'all'; sel.addEventListener('change', function(){ const v = this.value || 'all'; setActiveNotifTab(v); renderNotificationsView(v); }); }
+        }catch(e){}
       }catch(e){ console.error('renderNotificationsView failed', e); out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load notifications.</div>'; }
     }
 
