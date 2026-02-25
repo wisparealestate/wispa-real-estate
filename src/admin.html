@@ -540,8 +540,23 @@
         notifDropdownContent.innerHTML = rows.slice(0,12).map(n=>`<div style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="font-weight:700">${escapeHtml(n.title||n.message||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:4px">${escapeHtml((n.message||'').slice(0,240))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(n.sentAt||n.createdAt||'')}</div></div>`).join('');
       }catch(e){ notifDropdownContent.innerHTML = '<div style="padding:12px;color:#c33">Failed to load</div>' }
     }
-    // Open full notifications view (All) when bell icon is clicked
-    notificationsBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50); });
+    // Open/toggle notifications when bell icon is clicked.
+    // On small screens the notifications tab may be hidden via CSS, so prefer the quick dropdown there.
+    notificationsBtn.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      try{
+        const notifTabBtn = document.querySelector('.tab-btn[data-tab="notifications"]');
+        const tabHidden = notifTabBtn && getComputedStyle(notifTabBtn).display === 'none';
+        if(tabHidden && notifDropdown){
+          // toggle quick dropdown and render its content when opening
+          notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
+          if(notifDropdown.style.display === 'block') renderNotifDropdown();
+          return;
+        }
+      }catch(_){ /* ignore and fall back to full tab */ }
+      // Default: open full notifications tab
+      switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50);
+    });
     // clicking outside should close dropdown
     window.addEventListener('click', (e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#notificationsBtn')) notifDropdown.style.display='none'; });
     notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); renderNotificationsView('all'); });
