@@ -144,11 +144,7 @@
     overflow: auto; /* allow both x and y scrolling */
     overflow-x: auto; /* ensure horizontal scroll for wide tables */
     -webkit-overflow-scrolling: touch;
-    /* Prefer horizontal pan gestures inside the card so swipes move the table
-       instead of scrolling the whole page. Also contain overscroll so the
-       page doesn't steal the gesture on edge swipes. */
-    touch-action: pan-x;
-    overscroll-behavior: contain;
+    touch-action: auto; /* allow touch-driven scrolling in both directions */
     -ms-overflow-style: -ms-autohiding-scrollbar;
   }
   /* Tables inside the recent cards should size to their contents and allow
@@ -167,8 +163,7 @@
       overflow-y: auto; /* allow vertical scroll if content is tall */
       overflow-x: auto; /* ensure horizontal scroll on small screens */
       -webkit-overflow-scrolling: touch;
-      touch-action: pan-x; /* prefer horizontal panning inside the card */
-      overscroll-behavior: contain;
+      touch-action: auto; /* allow touch-driven scrolling in both directions */
       -ms-overflow-style: -ms-autohiding-scrollbar;
       padding-bottom: 6px;
     }
