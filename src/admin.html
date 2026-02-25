@@ -378,11 +378,11 @@
     <section id="notifications" class="tab-panel">
       <h2>Notifications</h2>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <button class="tab-btn notif-tab" data-view="all">All</button>
-        <button class="tab-btn notif-tab" data-view="messages">Messages</button>
-        <button class="tab-btn notif-tab" data-view="alerts">Alerts</button>
-        <button class="tab-btn notif-tab" data-view="activities">Activities</button>
-        <button class="tab-btn" id="sendAlertBtn" style="margin-left:auto">Send Alert</button>
+        <button class="notif-tab" data-view="all">All</button>
+        <button class="notif-tab" data-view="messages">Messages</button>
+        <button class="notif-tab" data-view="alerts">Alerts</button>
+        <button class="notif-tab" data-view="activities">Activities</button>
+        <button id="sendAlertBtn" style="margin-left:auto">Send Alert</button>
         <button id="refreshNotifications">Refresh</button>
       </div>
       <div id="notificationsContent">Loading notifications…</div>
@@ -528,6 +528,10 @@
     const notifDropdown = document.getElementById('notifDropdown');
     const notifDropdownContent = document.getElementById('notifDropdownContent');
     const notifOpenFull = document.getElementById('notifOpenFull');
+    // helper: set active notif sub-tab
+    function setActiveNotifTab(view){
+      try{ document.querySelectorAll('.notif-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view)); }catch(e){}
+    }
     async function renderNotifDropdown(){
       notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
       try{
@@ -552,11 +556,11 @@
         }
       }catch(_){ /* ignore and fall back to full tab */ }
       // Default: open full notifications tab
-      switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50);
+        switchTab('notifications'); setActiveNotifTab('all'); setTimeout(()=>renderNotificationsView('all'),50);
     });
     // clicking outside should close dropdown
     window.addEventListener('click', (e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#notificationsBtn')) notifDropdown.style.display='none'; });
-    notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); renderNotificationsView('all'); });
+    notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setActiveNotifTab('all'); renderNotificationsView('all'); });
 
     // Chats: open property chats (admin conversations)
     chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('chat'); renderAdminChatList(); });
@@ -924,8 +928,8 @@
       const notifOpenFullEl = document.getElementById('notifOpenFull'); if(notifOpenFullEl) notifOpenFullEl.addEventListener('click', function(e){ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50); });
       // notif-tab buttons inside notifications panel
       document.querySelectorAll('.notif-tab').forEach(b=>b.addEventListener('click', function(){ document.querySelectorAll('.notif-tab').forEach(x=>x.classList.toggle('active', x===b)); const v = b.dataset.view || 'all'; renderNotificationsView(v); }));
-      // set default active notif tab
-      const defaultNotifTab = document.querySelector('.notif-tab[data-view="all"]'); if(defaultNotifTab) defaultNotifTab.classList.add('active');
+      // set default active notif tab to All
+      setActiveNotifTab('all');
       // clicks on notification items: open corresponding tab or chat
       const notifContent = document.getElementById('notificationsContent');
       if(notifContent){
