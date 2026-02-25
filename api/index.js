@@ -1229,6 +1229,46 @@ app.get("/api/properties", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Debug: fetch a single property by id (helps confirm read visibility)
+app.get('/api/properties/:id', async (req, res) => {
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+  try {
+    const pRes = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+    if (!pRes.rows || pRes.rows.length === 0) return res.status(404).json({ error: 'Property not found' });
+    const prop = pRes.rows[0];
+    try {
+      const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [id]);
+      prop.images = photosRes.rows.map(r => r.photo_url).filter(Boolean);
+    } catch (e) { /* ignore photo fetch errors */ }
+    if (!prop.location && prop.address) prop.location = prop.address;
+    return res.json({ property: prop });
+  } catch (err) {
+    return res.status(500).json({ error: 'Database error fetching property', details: err.message });
+  }
+});
+
+// Debug: recent properties summary (limited) to help inspect DB visibility
+app.get('/api/debug/properties-recent', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT id, title, address, price, created_at FROM properties ORDER BY created_at DESC LIMIT 200');
+    return res.json({ recent: r.rows || [] });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to fetch recent properties', details: e.message });
+  }
+});
+
+// Debug: basic DB info and existence check
+app.get('/api/debug/db-info', async (req, res) => {
+  try {
+    const now = await pool.query("SELECT NOW() as now");
+    const exists = await pool.query("SELECT to_regclass('public.properties') as exists");
+    return res.json({ now: now.rows && now.rows[0] && now.rows[0].now, properties_table: exists.rows && exists.rows[0] && exists.rows[0].exists });
+  } catch (e) {
+    return res.status(500).json({ error: 'DB info failed', details: e.message });
+  }
+});
  
 
 // Delete a property by id (DB-first, fallback to file)
