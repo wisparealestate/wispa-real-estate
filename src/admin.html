@@ -163,6 +163,24 @@
       display: table;
     }
   }
+  /* Subtle left/right gradient hints for horizontally-scrollable recent cards */
+  .overview-recents-flex > div { position: relative }
+  .overview-recents-flex > div::before,
+  .overview-recents-flex > div::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 6px;
+    width: 44px;
+    pointer-events: none;
+    transition: opacity .22s ease;
+    opacity: 0;
+    z-index: 4;
+  }
+  .overview-recents-flex > div::after { right: 0; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(0,0,0,0.06)); }
+  .overview-recents-flex > div::before { left: 0; background: linear-gradient(270deg, rgba(255,255,255,0), rgba(0,0,0,0.06)); }
+  .overview-recents-flex > div.can-scroll-right::after { opacity: 1 }
+  .overview-recents-flex > div.can-scroll-left::before { opacity: 1 }
   </style>
   <style>
     /* Minimal overrides to ensure header/hamburger visible */
@@ -1830,6 +1848,36 @@
     }
 
     function closeNotifDetail(){ try{ const modal = document.getElementById('notifDetailModal'); if(!modal) return; modal.style.display='none'; modal.setAttribute('aria-hidden','true'); modal.dataset.currentId=''; modal.dataset.currentType=''; }catch(e){} }
+  </script>
+  <script>
+    (function(){
+      const selectors = '.overview-recents-flex .recent-props > div, .overview-recents-flex .recent-users > div, .overview-recents-flex .recent-notifs > div';
+      function setup(){
+        const els = document.querySelectorAll(selectors);
+        if(!els || !els.length) return false;
+        els.forEach(el => {
+          const parent = el.parentElement;
+          function update(){
+            try{
+              const canRight = el.scrollWidth > el.clientWidth + 1 && (el.scrollLeft + el.clientWidth) < el.scrollWidth - 1;
+              const canLeft = el.scrollLeft > 1;
+              if(parent){
+                parent.classList.toggle('can-scroll-right', !!canRight);
+                parent.classList.toggle('can-scroll-left', !!canLeft);
+              }
+            }catch(e){}
+          }
+          el.addEventListener('scroll', update, { passive: true });
+          el.addEventListener('keydown', function(e){ if(e.key === 'ArrowRight') el.scrollBy({ left: 200, behavior: 'smooth' }); if(e.key === 'ArrowLeft') el.scrollBy({ left: -200, behavior: 'smooth' }); });
+          // initial check
+          setTimeout(update, 60);
+          window.addEventListener('resize', update);
+        });
+        return true;
+      }
+      function trySetup(attempts){ if(setup()) return; if((attempts||0) < 8) setTimeout(()=>trySetup((attempts||0)+1), 250); }
+      document.addEventListener('DOMContentLoaded', ()=>trySetup(0));
+    })();
   </script>
 </body>
 </html>
