@@ -248,24 +248,24 @@
       <div class="admin-title">Wispa Admin</div>
       <div style="font-size:0.9rem; opacity:0.9" id="logged-as"></div>
     </div>
-    <div class="header-icons" aria-hidden="false">
-      <button id="quickSearchBtn" class="icon-btn" title="Quick search" aria-label="Search">🔍</button>
-      <button id="notificationsBtn" class="icon-btn icon-badge" title="Notifications" aria-label="Notifications">🔔<span class="badge" id="notifBadge" style="display:none">0</span></button>
-      <div id="notifDropdown" class="menu-dropdown" style="position:fixed;right:16px;top:56px;min-width:280px;max-width:520px;display:none;z-index:2400;border-radius:10px;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,0.06);box-shadow:0 10px 30px rgba(0,0,0,0.08)">
-        <div id="notifDropdownContent" style="max-height:360px;overflow:auto;padding:8px;background:transparent"></div>
-          <div style="padding:8px;border-top:1px solid #f1f5fb;display:flex;gap:8px;justify-content:space-between;align-items:center;background:#fbfdff">
-            <div style="display:flex;gap:6px">
-              <a href="#notifications" data-notif-view="all" class="notifQuickLink" style="text-decoration:none">All</a>
-              <a href="#notifications" data-notif-view="messages" class="notifQuickLink" style="text-decoration:none">Messages</a>
-              <a href="#notifications" data-notif-view="alerts" class="notifQuickLink" style="text-decoration:none">Alerts</a>
-              <a href="#notifications" data-notif-view="activities" class="notifQuickLink" style="text-decoration:none">Activities</a>
+    <div style="position:relative; display:flex; align-items:center; gap:10px">
+      <div class="header-icons" aria-hidden="false" style="display:flex;align-items:center;gap:8px">
+        <button id="quickSearchBtn" class="icon-btn" title="Quick search" aria-label="Search">🔍</button>
+        <button id="notificationsBtn" class="icon-btn icon-badge" title="Notifications" aria-label="Notifications">🔔<span class="badge" id="notifBadge" style="display:none">0</span></button>
+        <div id="notifDropdown" class="menu-dropdown" style="position:fixed;right:16px;top:56px;min-width:280px;max-width:520px;display:none;z-index:2400;border-radius:10px;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,0.06);box-shadow:0 10px 30px rgba(0,0,0,0.08)">
+          <div id="notifDropdownContent" style="max-height:360px;overflow:auto;padding:8px;background:transparent"></div>
+            <div style="padding:8px;border-top:1px solid #f1f5fb;display:flex;gap:8px;justify-content:space-between;align-items:center;background:#fbfdff">
+              <div style="display:flex;gap:6px">
+                <a href="#notifications" data-notif-view="all" class="notifQuickLink" style="text-decoration:none">All</a>
+                <a href="#notifications" data-notif-view="messages" class="notifQuickLink" style="text-decoration:none">Messages</a>
+                <a href="#notifications" data-notif-view="alerts" class="notifQuickLink" style="text-decoration:none">Alerts</a>
+                <a href="#notifications" data-notif-view="activities" class="notifQuickLink" style="text-decoration:none">Activities</a>
+              </div>
+              <div style="text-align:right"><a href="#notifications" id="notifOpenFull" style="text-decoration:none">Open all</a></div>
             </div>
-            <div style="text-align:right"><a href="#notifications" id="notifOpenFull" style="text-decoration:none">Open all</a></div>
-          </div>
+        </div>
+        <button id="chatsBtn" class="icon-btn" title="Chats" aria-label="Chats">💬</button>
       </div>
-      <button id="chatsBtn" class="icon-btn" title="Chats" aria-label="Chats">💬</button>
-    </div>
-    <div style="position:relative">
       <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
       <nav class="menu-dropdown" id="menuDropdown">
         <div id="hamburgerProfile" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f2f6fb;background:#fff">
