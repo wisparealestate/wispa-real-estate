@@ -1252,7 +1252,24 @@
         if(role){ if(!u.role || String(u.role).toLowerCase() !== role) return false; }
         return true;
       });
-      out.innerHTML = filtered.length ? '<ul>'+filtered.map(u=>`<li><strong>${escapeHtml(u.full_name||u.username||'User')}</strong> — ${escapeHtml(u.email||'')} (role:${escapeHtml(u.role||'')})</li>`).join('')+'</ul>' : 'No users.';
+      if(!filtered || !filtered.length){ out.innerHTML = 'No users.'; return; }
+      // Build a responsive horizontally-scrollable table
+      const rowsHtml = filtered.map(u => {
+        const id = escapeHtml(u.id || u.user_id || '');
+        const name = escapeHtml(u.full_name || u.name || u.username || '');
+        const email = escapeHtml(u.email || u.user_email || '');
+        const location = escapeHtml(u.location || u.city || u.address || u.region || '');
+        const phone = escapeHtml(u.phone || u.phone_number || u.mobile || u.phoneNumber || '');
+        return `<tr><td>${id}</td><td>${name}</td><td>${email}</td><td>${location}</td><td>${phone}</td></tr>`;
+      }).join('');
+      out.innerHTML = `
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;min-width:720px">
+            <thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:8px">ID</th><th style="padding:8px">Name</th><th style="padding:8px">Email</th><th style="padding:8px">Location</th><th style="padding:8px">Phone</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
     }
 
     // Overview
