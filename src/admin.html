@@ -385,7 +385,6 @@
       <h2>Notifications</h2>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
         <!-- Tabs removed: use the filter dropdown rendered inside the view instead -->
-        <button id="sendAlertBtn" style="margin-left:auto">Send Alert</button>
         <button id="refreshNotifications">Refresh</button>
       </div>
       <div id="notificationsContent">Loading notifications…</div>
@@ -1177,8 +1176,7 @@
       }
       // refresh button
       const refreshNot = document.getElementById('refreshNotifications'); if(refreshNot) refreshNot.addEventListener('click', ()=>renderNotificationsView('all'));
-      // send alert main button
-      const sendAlertBtn = document.getElementById('sendAlertBtn'); if(sendAlertBtn) sendAlertBtn.addEventListener('click', ()=>{ switchTab('notifications'); setTimeout(()=>renderNotificationsView('send'),50); });
+      // send alert main button removed (use filter/send view inside notifications)
     });
 
     // Properties
