@@ -663,19 +663,21 @@
         // Prefer the admin profile API to ensure we read authoritative DB values
         try{
           const res = window.apiFetch ? await window.apiFetch('/api/admin/profile') : await fetch('/api/admin/profile', { credentials: 'include' });
-          if(res && res.ok){ const j = await res.json().catch(()=>null); u = (j && (j.user||j.profile||j.admin)) || j || null; }
+          if(res && res.ok){ const j = await res.json().catch(()=>null); u = j || null; }
         }catch(e){}
         // Fallback to getCurrentUser or /api/me
-        if(!u){ try{ if(window.getCurrentUser) u = await window.getCurrentUser(); else { const r = await fetch('/api/me',{credentials:'include'}); if(r && r.ok){ const jm = await r.json().catch(()=>null); u = (jm && (jm.user||jm.profile)) || jm || null; } } }catch(e){} }
+        if(!u){ try{ if(window.getCurrentUser) u = await window.getCurrentUser(); else { const r = await fetch('/api/me',{credentials:'include'}); if(r && r.ok){ const jm = await r.json().catch(()=>null); u = jm || null; } } }catch(e){} }
+        // Normalize common wrapper shapes: { profile }, { user }, or admin-specific keys
+        try{ if(u && (u.profile || u.user)) u = u.profile || u.user; }catch(e){}
         if(!u){ if(status) status.textContent = 'Not signed in.'; return; }
         // Populate fields
-        try{ document.getElementById('editFullName').value = u.full_name || u.name || u.username || ''; }catch(e){}
-        try{ document.getElementById('editEmail').value = u.email || ''; }catch(e){}
-        try{ document.getElementById('editPhone').value = u.phone || u.phone_number || u.mobile || ''; }catch(e){}
-        try{ document.getElementById('editGender').value = (u.gender || '').toString().toLowerCase() || ''; }catch(e){}
+        try{ document.getElementById('editFullName').value = u.full_name || u.fullName || u.name || u.username || u.adminName || ''; }catch(e){}
+        try{ document.getElementById('editEmail').value = u.email || u.adminEmail || ''; }catch(e){}
+        try{ document.getElementById('editPhone').value = u.phone || u.phone_number || u.mobile || u.contact || u.adminPhone || ''; }catch(e){}
+        try{ document.getElementById('editGender').value = (u.gender || u.sex || u.adminGender || '').toString().toLowerCase() || ''; }catch(e){}
         try{ document.getElementById('editLocation').value = u.location || u.city || ''; }catch(e){}
-        try{ document.getElementById('editBio').value = u.bio || u.about || ''; }catch(e){}
-        try{ const pv = document.getElementById('editAvatarPreview'); if(pv) pv.innerHTML = u.avatar ? '<img src="'+u.avatar+'" style="width:100%;height:100%;object-fit:cover">' : ''; }catch(e){}
+        try{ document.getElementById('editBio').value = u.bio || u.about || u.description || u.adminBio || ''; }catch(e){}
+        try{ const pv = document.getElementById('editAvatarPreview'); if(pv){ const av = u.avatar || u.avatar_url || u.adminAvatar || null; pv.innerHTML = av ? '<img src="'+av+'" style="width:100%;height:100%;object-fit:cover">' : ''; } }catch(e){}
         if(status) status.textContent = '';
       }catch(e){ try{ if(document.getElementById('editStatus')) document.getElementById('editStatus').textContent = 'Failed to load profile.'; }catch(_){} }
     }
