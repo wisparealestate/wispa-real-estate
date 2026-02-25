@@ -1023,13 +1023,13 @@ app.post("/api/properties", async (req, res) => {
 
 // User signup
 app.post("/api/signup", async (req, res) => {
-  const { username, email, password, full_name } = req.body;
+  const { username, email, password, full_name, location } = req.body || {};
   if (!username || !email || !password) return res.status(400).json({ error: "Missing fields" });
   try {
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      "INSERT INTO users (username, email, password_hash, full_name) VALUES ($1, $2, $3, $4) RETURNING id, username, email, full_name, role, created_at",
-      [username, email, hash, full_name || null]
+      "INSERT INTO users (username, email, password_hash, full_name, location) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, full_name, role, created_at, location",
+      [username, email, hash, full_name || null, location || null]
     );
     res.json({ user: result.rows[0] });
   } catch (err) {
@@ -1214,7 +1214,7 @@ app.get('/set-session', async (req, res) => {
 // Get all users
 app.get("/api/users", async (req, res) => {
   try {
-    const result = await pool.query("SELECT id, username, email, full_name, role, created_at, avatar_url FROM users ORDER BY created_at DESC");
+    const result = await pool.query("SELECT id, username, email, full_name, role, created_at, avatar_url, location FROM users ORDER BY created_at DESC");
     res.json({ users: result.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
