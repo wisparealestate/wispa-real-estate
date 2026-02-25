@@ -529,6 +529,43 @@ app.post('/api/system-alerts', async (req, res) => {
   }
 });
 
+// Activities: recent user/activity feed (DB first, fallback to file)
+app.get('/api/activities', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM activities ORDER BY created_at DESC');
+    return res.json({ activities: result.rows });
+  } catch (err) {
+    try {
+      const rows = await readJson('activities.json');
+      return res.json({ activities: rows });
+    } catch (e) {
+      return res.status(500).json({ error: 'Activities not available', details: err.message });
+    }
+  }
+});
+
+app.post('/api/activities', async (req, res) => {
+  const { title, action, summary, meta } = req.body || {};
+  const createdAt = new Date().toISOString();
+  try {
+    const insert = await pool.query(
+      'INSERT INTO activities (title, action, summary, meta, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [title || null, action || null, summary || null, JSON.stringify(meta || {}), createdAt]
+    );
+    return res.json({ activity: insert.rows[0] });
+  } catch (err) {
+    try {
+      const arr = await readJson('activities.json');
+      const entry = { id: Date.now(), title, action, summary, meta, createdAt };
+      arr.unshift(entry);
+      await writeJson('activities.json', arr);
+      return res.json({ activity: entry, fallback: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'Failed to record activity', details: err.message });
+    }
+  }
+});
+
 // Generic admin sync endpoint removed: file-backed sync is not allowed in DB-only mode
 app.post('/api/admin/sync', async (req, res) => {
   res.status(501).json({ error: 'admin/sync disabled: file-backed admin sync is not allowed. Implement DB-backed admin sync.' });
