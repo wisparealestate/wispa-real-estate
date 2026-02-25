@@ -1370,11 +1370,12 @@
         // Recents: show up to 3 recent properties and users
         const recentProps = props && Array.isArray(props.properties) ? props.properties.slice(0,3) : [];
         const recentUsers = users && Array.isArray(users.users) ? users.users.slice(0,3) : [];
-        // Recent properties: render as compact table with image/video counts
-        let rpHtml = '<div class="recent-props" style="min-width:320px"><h3>Recent Properties</h3>';
+
+        // Recent properties card
+        let propsCard = '<div class="recent-props" style="min-width:320px"><h3>Recent Properties</h3>';
         if (recentProps.length) {
-          rpHtml += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Price</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th><th style="padding:6px">Images</th><th style="padding:6px">Videos</th></tr></thead><tbody>';
-          rpHtml += recentProps.map(p => {
+          propsCard += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Price</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th><th style="padding:6px">Images</th><th style="padding:6px">Videos</th></tr></thead><tbody>';
+          propsCard += recentProps.map(p => {
             const title = escapeHtml(p.title || p.address || ('Property #'+(p.id||'')));
             const price = escapeHtml(p.price ? ('$' + Number(p.price).toLocaleString()) : (p.price_display || 'N/A'));
             const location = escapeHtml(p.location || p.address || '');
@@ -1383,38 +1384,37 @@
             const videosCount = (Array.isArray(p.videos) ? p.videos.length : (p.video_count || 0)) || 0;
             return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${price}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td><td style="padding:6px;text-align:center">${imagesCount}</td><td style="padding:6px;text-align:center">${videosCount}</td></tr>`;
           }).join('');
-          rpHtml += '</tbody></table></div>';
+          propsCard += '</tbody></table></div>';
         } else {
-          rpHtml += '<div>No properties.</div>';
+          propsCard += '<div>No properties.</div>';
         }
+        propsCard += '</div>';
 
-        // Recent notifications: show up to 5 from sentNotifs (fallback to empty)
+        // Recent notifications card (separate)
+        let notifsCard = '<div class="recent-notifs" style="min-width:320px"><h3>Recent Notifications</h3>';
         try {
           const recentNotifs = (sentNotifs && (Array.isArray(sentNotifs.notifications) ? sentNotifs.notifications : (Array.isArray(sentNotifs) ? sentNotifs : []))).slice(0,5);
-          let notifHtml = '<div class="recent-notifs" style="margin-top:10px"><h4>Recent Notifications</h4>';
           if (recentNotifs && recentNotifs.length) {
-            notifHtml += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:680px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Preview</th><th style="padding:6px">Time</th></tr></thead><tbody>';
-            notifHtml += recentNotifs.map(n => {
+            notifsCard += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:680px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Preview</th><th style="padding:6px">Time</th></tr></thead><tbody>';
+            notifsCard += recentNotifs.map(n => {
               const title = escapeHtml(n.title || (n.message||'').slice(0,60) || 'Notification');
               const body = escapeHtml((n.message || n.body || (n.data && (n.data.body||n.data.message)) || '').slice(0,140));
               const time = escapeHtml(n.sentAt || n.createdAt || n.time || n.ts || '');
               return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${body}</td><td style="padding:6px">${time}</td></tr>`;
             }).join('');
-            notifHtml += '</tbody></table></div>';
+            notifsCard += '</tbody></table></div>';
           } else {
-            notifHtml += '<div>No notifications.</div>';
+            notifsCard += '<div>No notifications.</div>';
           }
-          notifHtml += '<div style="text-align:right;margin-top:8px"><button id="overviewNotifAllBtn" class="tab-btn">All</button></div>';
-          notifHtml += '</div>';
-          rpHtml += notifHtml;
-        } catch(e) { /* ignore notification rendering errors */ }
+        } catch(e) { notifsCard += '<div>No notifications.</div>'; }
+        notifsCard += '<div style="text-align:right;margin-top:8px"><button id="overviewNotifAllBtn" class="tab-btn">All</button></div>';
+        notifsCard += '</div>';
 
-        rpHtml += '</div>';
-        // Render recent users as a compact table (include phone) and enable scrolling
-        let ruHtml = '<div class="recent-users" style="min-width:320px"><h3>Recent Users</h3>';
+        // Recent users card
+        let usersCard = '<div class="recent-users" style="min-width:320px"><h3>Recent Users</h3>';
         if (recentUsers.length) {
-          ruHtml += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Name</th><th style="padding:6px">Email</th><th style="padding:6px">Phone</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th></tr></thead><tbody>';
-          ruHtml += recentUsers.map(u => {
+          usersCard += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Name</th><th style="padding:6px">Email</th><th style="padding:6px">Phone</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th></tr></thead><tbody>';
+          usersCard += recentUsers.map(u => {
             const name = escapeHtml(u.full_name || u.username || '');
             const email = escapeHtml(u.email || '');
             const phone = escapeHtml(u.phone || u.phone_number || u.mobile || '');
@@ -1422,14 +1422,14 @@
             const created = escapeHtml(u.created_at ? new Date(u.created_at).toLocaleDateString() : (u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''));
             return `<tr><td style="padding:6px">${name}</td><td style="padding:6px">${email}</td><td style="padding:6px">${phone}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td></tr>`;
           }).join('');
-          ruHtml += '</tbody></table></div>';
+          usersCard += '</tbody></table></div>';
         } else {
-          ruHtml += '<div>No users.</div>';
+          usersCard += '<div>No users.</div>';
         }
-        ruHtml += '</div>';
+        usersCard += '</div>';
 
-        // Wrap recent cards in a scrollable container for mobile so full data is reachable
-        recentsEl.innerHTML = `<div class="overview-recents-flex">${rpHtml}${ruHtml}</div>`;
+        // Render three separate cards as siblings so each can scroll independently
+        recentsEl.innerHTML = `<div class="overview-recents-flex">${propsCard}${notifsCard}${usersCard}</div>`;
 
         // Wire the 'All' button inside the Recent Notifications card to open the notifications tab
         try{
