@@ -128,6 +128,7 @@
     #notificationsContent ul{ list-style:none;margin:0;padding:0 }
     #notificationsContent li{ padding:12px;border-bottom:1px solid #eef6fb }
     #notificationsContent li:hover{ background:#fbfdff }
+    #notificationsContent li.notif-read{ opacity:0.6; background:#fafafa }
     #notificationsContent li div:first-child{ font-weight:700 }
     .admin-main{ padding:18px }
     .tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center }
@@ -954,7 +955,6 @@
         items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
         // add a small filter select at the top (helps mobile users switch views)
         const headerSelect = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>';
-
         out.innerHTML = headerSelect + '<ul style="list-style:none;margin:0;padding:0">'+items.map(it=>{
           const dtype = escapeHtml(it._type||'');
           const rawId = (it.id||it._id||'');
@@ -962,7 +962,8 @@
           const isRead = (it.is_read===true || it.isRead===true || it.read===true) ? true : false;
           const numericId = String(rawId).match(/^\d+$/) ? String(rawId) : '';
           const markBtn = numericId ? `<button class="notif-mark-btn" data-id="${escapeHtml(numericId)}" style="margin-left:8px;padding:6px 8px;border-radius:6px;border:1px solid #e6eef7;background:#fff;cursor:pointer;font-size:12px">${isRead? 'Mark Unread':'Mark Read'}</button>` : '';
-          return `<li style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="display:flex;justify-content:space-between;align-items:flex-start"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block;flex:1"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a>${markBtn}</div></li>`;
+          const readClass = isRead ? 'notif-read' : '';
+          return `<li class="${readClass}" style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="display:flex;justify-content:space-between;align-items:flex-start"><a href="#" class="notif-link" data-type="${dtype}" data-id="${did}" style="text-decoration:none;color:inherit;display:block;flex:1"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:6px">${escapeHtml((it.body||'').slice(0,260))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></a>${markBtn}</div></li>`;
         }).join('')+'</ul>';
 
         // wire the filter select after rendering
@@ -970,6 +971,21 @@
           const sel = document.getElementById('notifViewSelect');
           if(sel){ sel.value = view || 'all'; sel.addEventListener('change', function(){ const v = this.value || 'all'; setActiveNotifTab(v); renderNotificationsView(v); }); }
         }catch(e){}
+        // update header badge with unread count (try DB first, fallback to localStorage)
+        (async function(){
+          try{
+            let unread = 0;
+            try{
+              const all = await safeApi('/api/notifications');
+              const rows = (all && all.notifications) || all || [];
+              if(Array.isArray(rows)) unread = rows.filter(r=>!(r.is_read===true || r.read===true || r.isRead===true)).length;
+            }catch(e){
+              try{ const local = JSON.parse(localStorage.getItem('notifications')||'[]'); unread = (local||[]).filter(r=>!r.is_read).length; }catch(e){}
+            }
+            const badge = document.getElementById('notifBadge');
+            if(badge){ if(unread>0){ badge.style.display='inline-block'; badge.textContent = String(unread); } else { badge.style.display='none'; } }
+          }catch(e){ /* ignore badge update failures */ }
+        })();
       }catch(e){ console.error('renderNotificationsView failed', e); out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load notifications.</div>'; }
     }
 
