@@ -5,6 +5,11 @@ import { pool } from "./index.js";
 export async function addPropertyWithPhotos(property, photoUrls) {
   const client = await pool.connect();
   try {
+    // Diagnostic: log this session's current database and schema
+    try{
+      const info = await client.query("SELECT current_database() AS db, current_schema() AS schema");
+      if(info && info.rows && info.rows[0]) console.log('[addPropertyWithPhotos] session DB info:', info.rows[0]);
+    }catch(e){ console.warn('[addPropertyWithPhotos] failed to read session DB info', e && e.message ? e.message : e); }
     // Normalize incoming property to tolerate many client shapes
     const p = Object.assign({}, property || {});
     // Accept explicit server id for updates when provided by client, but only if numeric
@@ -144,6 +149,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         );
         propertyRow = propRes.rows[0];
         propertyId = propertyRow.id;
+        console.log('[addPropertyWithPhotos] inserted property id:', propertyId, 'title:', propertyRow.title);
         didInsertNew = true;
       }
     }
@@ -188,6 +194,10 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       } catch(e){ /* ignore notification failures */ }
     }
     await client.query('COMMIT');
+    try{
+      const infoAfter = await client.query("SELECT current_database() AS db, current_schema() AS schema");
+      if(infoAfter && infoAfter.rows && infoAfter.rows[0]) console.log('[addPropertyWithPhotos] session DB info after commit:', infoAfter.rows[0]);
+    }catch(e){ console.warn('[addPropertyWithPhotos] failed to read session DB info after commit', e && e.message ? e.message : e); }
     // Merge provided property fields (e.g. type, bedrooms, bathrooms, location) into returned row
     const merged = Object.assign({}, propertyRow, p || {}, { images: photos });
     return { property: merged, propertyId };

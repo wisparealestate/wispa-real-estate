@@ -964,7 +964,19 @@ app.post("/api/properties", async (req, res) => {
   // Note: idempotency file mapping has been removed — rely on DB uniqueness and advisory locks.
 
   try {
+    // Diagnostic: log DB and schema information before creating property
+    try{
+      const info = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+      if(info && info.rows && info.rows[0]) console.log('[api-prop-dbg] DB before insert:', info.rows[0]);
+    }catch(e){ console.warn('[api-prop-dbg] failed to query DB info before insert', e && e.message ? e.message : e); }
+    console.log('[api-prop-dbg] creating property title:', (property && property.title) ? property.title : '(no title)');
     const resObj = await addPropertyWithPhotos(property, photoUrls);
+    // Diagnostic: log DB info after insert and the returned object
+    try{
+      const info2 = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+      if(info2 && info2.rows && info2.rows[0]) console.log('[api-prop-dbg] DB after insert:', info2.rows[0]);
+    }catch(e){ console.warn('[api-prop-dbg] failed to query DB info after insert', e && e.message ? e.message : e); }
+    console.log('[api-prop-dbg] insert result:', (resObj && (resObj.propertyId || (resObj.property && resObj.property.id))) ? (resObj.propertyId || (resObj.property && resObj.property.id)) : resObj );
     // resObj contains { property, propertyId }
     // No file-backed idempotency persistence; rely on DB-side protections.
     // Trigger async document generation for the created/updated property (fire-and-forget)
