@@ -1334,7 +1334,7 @@
         // Recent properties: render as compact table with image/video counts
         let rpHtml = '<div style="min-width:320px"><h3>Recent Properties</h3>';
         if (recentProps.length) {
-          rpHtml += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Price</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th><th style="padding:6px">Images</th><th style="padding:6px">Videos</th></tr></thead><tbody>';
+          rpHtml += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Title</th><th style="padding:6px">Price</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th><th style="padding:6px">Images</th><th style="padding:6px">Videos</th></tr></thead><tbody>';
           rpHtml += recentProps.map(p => {
             const title = escapeHtml(p.title || p.address || ('Property #'+(p.id||'')));
             const price = escapeHtml(p.price ? ('$' + Number(p.price).toLocaleString()) : (p.price_display || 'N/A'));
@@ -1349,23 +1349,26 @@
           rpHtml += '<div>No properties.</div>';
         }
         rpHtml += '</div>';
-        // Render recent users as a compact table (same columns as Users tab, limited rows)
-        let ruHtml = '<div style="min-width:260px"><h3>Recent Users</h3>';
+        // Render recent users as a compact table (include phone) and enable scrolling
+        let ruHtml = '<div style="min-width:320px"><h3>Recent Users</h3>';
         if (recentUsers.length) {
-          ruHtml += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Name</th><th style="padding:6px">Email</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th></tr></thead><tbody>';
+          ruHtml += '<div style="overflow:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Name</th><th style="padding:6px">Email</th><th style="padding:6px">Phone</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th></tr></thead><tbody>';
           ruHtml += recentUsers.map(u => {
             const name = escapeHtml(u.full_name || u.username || '');
             const email = escapeHtml(u.email || '');
+            const phone = escapeHtml(u.phone || u.phone_number || u.mobile || '');
             const location = escapeHtml(u.location || u.city || u.address || '');
             const created = escapeHtml(u.created_at ? new Date(u.created_at).toLocaleDateString() : (u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''));
-            return `<tr><td style="padding:6px">${name}</td><td style="padding:6px">${email}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td></tr>`;
+            return `<tr><td style="padding:6px">${name}</td><td style="padding:6px">${email}</td><td style="padding:6px">${phone}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td></tr>`;
           }).join('');
           ruHtml += '</tbody></table></div>';
         } else {
           ruHtml += '<div>No users.</div>';
         }
         ruHtml += '</div>';
-        recentsEl.innerHTML = rpHtml + ruHtml;
+
+        // Wrap recent cards in a scrollable container for mobile so full data is reachable
+        recentsEl.innerHTML = `<div style="display:flex;gap:12px;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px">${rpHtml}${ruHtml}</div>`;
 
         intro.textContent = `Overview — showing ${pCount} properties and ${uCount} users.`;
         // Company dashboard metrics
