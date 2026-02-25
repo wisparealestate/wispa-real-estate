@@ -384,10 +384,7 @@
     <section id="notifications" class="tab-panel">
       <h2>Notifications</h2>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <button class="notif-tab" data-view="all">All</button>
-        <button class="notif-tab" data-view="messages">Messages</button>
-        <button class="notif-tab" data-view="alerts">Alerts</button>
-        <button class="notif-tab" data-view="activities">Activities</button>
+        <!-- Tabs removed: use the filter dropdown rendered inside the view instead -->
         <button id="sendAlertBtn" style="margin-left:auto">Send Alert</button>
         <button id="refreshNotifications">Refresh</button>
       </div>
@@ -562,7 +559,11 @@
     const notifOpenFull = document.getElementById('notifOpenFull');
     // helper: set active notif sub-tab
     function setActiveNotifTab(view){
-      try{ document.querySelectorAll('.notif-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view)); }catch(e){}
+      try{
+        document.querySelectorAll('.notif-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+        // If the filter select exists in the notifications view, keep it in sync
+        const sel = document.getElementById('notifViewSelect'); if(sel) sel.value = view || 'all';
+      }catch(e){}
     }
     async function renderNotifDropdown(){
       notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
@@ -1076,8 +1077,7 @@
       document.querySelectorAll('.notifQuickLink').forEach(a=>a.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); const v = this.dataset.notifView || 'all'; notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView(v),50); }));
       // notifOpenFull opens full notifications (all)
       const notifOpenFullEl = document.getElementById('notifOpenFull'); if(notifOpenFullEl) notifOpenFullEl.addEventListener('click', function(e){ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50); });
-      // notif-tab buttons inside notifications panel
-      document.querySelectorAll('.notif-tab').forEach(b=>b.addEventListener('click', function(){ document.querySelectorAll('.notif-tab').forEach(x=>x.classList.toggle('active', x===b)); const v = b.dataset.view || 'all'; renderNotificationsView(v); }));
+      // notif-tab buttons removed; filter dropdown is used instead
       // set default active notif tab to All
       setActiveNotifTab('all');
       // clicks on notification items: open corresponding tab or chat
