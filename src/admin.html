@@ -718,8 +718,15 @@
               if(avatarUrl){ payload.avatar_url = avatarUrl; payload.avatar = avatarUrl; }
               // Use global saveAdminProfile helper
               try{
-                await window.saveAdminProfile(payload);
+                const resp = await window.saveAdminProfile(payload);
+                // prefer returned avatar_url, fall back to uploaded avatarUrl
+                const newAvatar = (resp && (resp.avatar_url || resp.avatar)) || avatarUrl || null;
                 if(status) status.textContent = 'Saved.';
+                // Immediately update UI using the known avatar (avoid relying on re-fetch when session/cookies may block)
+                try{ if(newAvatar){ const headAvatar = document.getElementById('adminHeaderAvatar'); if(headAvatar) headAvatar.innerHTML = '<img src="'+newAvatar+'" style="width:100%;height:100%;object-fit:cover">'; } }catch(e){}
+                try{ if(newAvatar){ const bigAvatar = document.getElementById('admin-avatar'); if(bigAvatar) bigAvatar.innerHTML = '<img src="'+newAvatar+'" style="width:100%;height:100%;object-fit:cover">'; } }catch(e){}
+                try{ if(newAvatar){ const hp = document.getElementById('hamburgerProfileAvatar'); if(hp) hp.innerHTML = '<img src="'+newAvatar+'" style="width:100%;height:100%;object-fit:cover">'; } }catch(e){}
+                try{ const pv = document.getElementById('editAvatarPreview'); if(pv){ pv.innerHTML = newAvatar ? '<img src="'+newAvatar+'" style="width:100%;height:100%;object-fit:cover">' : pv.innerHTML; } }catch(e){}
                 try{ if(typeof loadProfile === 'function') await loadProfile(); }catch(e){}
                 try{ if(typeof loadHamburgerProfile === 'function') await loadHamburgerProfile(); }catch(e){}
                 setTimeout(()=>{ try{ switchTab('profile'); }catch(e){} }, 400);
