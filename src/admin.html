@@ -1260,16 +1260,41 @@
         const email = escapeHtml(u.email || u.user_email || '');
         const location = escapeHtml(u.location || u.city || u.address || u.region || '');
         const phone = escapeHtml(u.phone || u.phone_number || u.mobile || u.phoneNumber || '');
-        return `<tr><td>${id}</td><td>${name}</td><td>${email}</td><td>${location}</td><td>${phone}</td></tr>`;
+        const created = escapeHtml(u.created_at || u.createdAt || u.created || '');
+        return `<tr data-user-id="${id}"><td style="padding:8px">${id}</td><td style="padding:8px">${name}</td><td style="padding:8px">${email}</td><td style="padding:8px">${location}</td><td style="padding:8px">${phone}</td><td style="padding:8px">${created}</td><td style="padding:8px"><button class="user-view-btn tab-btn" data-id="${id}" style="margin-right:8px">View</button><button class="user-delete-btn tab-btn" data-id="${id}" style="background:#ff4d4f;color:#fff">Delete</button></td></tr>`;
       }).join('');
       out.innerHTML = `
         <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;min-width:720px">
-            <thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:8px">ID</th><th style="padding:8px">Name</th><th style="padding:8px">Email</th><th style="padding:8px">Location</th><th style="padding:8px">Phone</th></tr></thead>
+          <table style="width:100%;border-collapse:collapse;min-width:900px">
+            <thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:8px">ID</th><th style="padding:8px">Name</th><th style="padding:8px">Email</th><th style="padding:8px">Location</th><th style="padding:8px">Phone</th><th style="padding:8px">Created At</th><th style="padding:8px">Actions</th></tr></thead>
             <tbody>${rowsHtml}</tbody>
           </table>
         </div>
       `;
+
+      // wire row action buttons
+      try{
+        const viewBtns = out.querySelectorAll('.user-view-btn');
+        viewBtns.forEach(b=>b.addEventListener('click', (e)=>{
+          const id = b.dataset.id; if(!id) return; const url = '/profile.html?id=' + encodeURIComponent(id); window.open(url, '_blank');
+        }));
+      }catch(e){}
+      try{
+        const delBtns = out.querySelectorAll('.user-delete-btn');
+        delBtns.forEach(b=>b.addEventListener('click', async (e)=>{
+          const id = b.dataset.id; if(!id) return; if(!confirm('Delete user '+id+'?')) return;
+          try{
+            const resp = await fetch('/api/users/'+encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+            if(resp && resp.ok){
+              // remove row from table
+              try{ const tr = b.closest('tr'); if(tr) tr.remove(); }catch(e){}
+              return;
+            }
+            const text = await (resp && resp.text ? resp.text() : Promise.resolve(''));
+            alert('Delete failed: ' + (resp && resp.status ? resp.status : '') + ' ' + text);
+          }catch(err){ alert('Delete request failed'); }
+        }));
+      }catch(e){}
     }
 
     // Overview
