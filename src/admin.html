@@ -700,7 +700,8 @@
               if(avatarFile){
                 try{
                   const fd = new FormData(); fd.append('avatar', avatarFile);
-                  const upResp = await fetch('/api/upload-avatar', { method: 'POST', body: fd, credentials: 'include' });
+                  const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
+                  const upResp = await poster('/api/upload-avatar', { method: 'POST', body: fd });
                   if(upResp && upResp.ok){ const upj = await upResp.json(); avatarUrl = upj.imageUrl || upj.url || upj.image || null; }
                 }catch(e){ console.warn('avatar upload failed', e); }
               }

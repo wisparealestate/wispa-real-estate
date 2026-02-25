@@ -408,7 +408,59 @@ app.get('/api/admin/profile', async (req, res) => {
   }
 });
 app.post('/api/admin/profile', async (req, res) => {
-  res.status(501).json({ error: 'Admin profile endpoint not implemented on server. Configure a DB-backed store.' });
+  try {
+    // Accept either { user: { ... } } or direct body
+    const body = req.body && req.body.user ? req.body.user : (req.body || {});
+    const sessAdmin = await getAdminSessionUser(req);
+    const sess = sessAdmin || await getSessionUser(req);
+    if (!sess) return res.status(401).json({ error: 'Admin authentication required' });
+
+    // Try to update users row if exists (prefer authoritative users table)
+    try{
+      const urow = await pool.query('SELECT id FROM users WHERE id = $1 OR email = $2 LIMIT 1', [sess.id, sess.email]);
+      if(urow && urow.rows && urow.rows[0]){
+        const userId = urow.rows[0].id;
+        const allowed = ['full_name','username','email','location','avatar_url','phone','bio','gender'];
+        const provided = Object.keys(body || {}).filter(k => allowed.indexOf(k) !== -1);
+        if(provided.length===0) return res.status(400).json({ error: 'No updatable fields provided' });
+        // check existing columns
+        const colsRes = await pool.query(
+          `SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = ANY($1::text[])`,
+          [allowed]
+        );
+        const existing = (colsRes.rows || []).map(r => r.column_name);
+        const toUpdate = provided.filter(p => existing.indexOf(p) !== -1);
+        if(toUpdate.length===0) return res.status(400).json({ error: 'No writable columns exist on DB' });
+        const sets = toUpdate.map((c, idx) => `${c} = $${idx+1}`);
+        const values = toUpdate.map(c => body[c] === undefined ? null : body[c]);
+        const sql = `UPDATE users SET ${sets.join(', ')} WHERE id = $${toUpdate.length + 1} RETURNING id, username, email, full_name, role, created_at, location, avatar_url, phone, bio, gender`;
+        const result = await pool.query(sql, [...values, userId]);
+        if(result && result.rows && result.rows[0]) return res.json(result.rows[0]);
+        return res.status(500).json({ error: 'Failed to update user' });
+      }
+    }catch(e){ console.warn('users update failed', e); }
+
+    // If no users row, update admin_logins where possible (limited fields)
+    try{
+      const arow = await pool.query('SELECT id FROM admin_logins WHERE id = $1 OR email = $2 LIMIT 1', [sess.id, sess.email]);
+      if(arow && arow.rows && arow.rows[0]){
+        const adminId = arow.rows[0].id;
+        const allowedAdmin = ['username','email','full_name'];
+        const provided = Object.keys(body || {}).filter(k => allowedAdmin.indexOf(k) !== -1);
+        if(provided.length===0) return res.status(400).json({ error: 'No updatable admin fields provided' });
+        const sets = provided.map((c, idx) => `${c} = $${idx+1}`);
+        const values = provided.map(c => body[c] === undefined ? null : body[c]);
+        const sql = `UPDATE admin_logins SET ${sets.join(', ')} WHERE id = $${provided.length + 1} RETURNING id, username, email, created_at, full_name`;
+        const result = await pool.query(sql, [...values, adminId]);
+        if(result && result.rows && result.rows[0]) return res.json(result.rows[0]);
+        return res.status(500).json({ error: 'Failed to update admin_logins' });
+      }
+    }catch(e){ console.warn('admin_logins update failed', e); }
+
+    return res.status(400).json({ error: 'No matching account to update' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update admin profile', details: err.message });
+  }
 });
 
 app.get('/api/property-requests', async (req, res) => {
