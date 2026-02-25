@@ -589,13 +589,13 @@
           // Stronger fallback: ensure panel is active and visible (helps when CSS hides panels on mobile)
           try{
             const panel = document.getElementById('notifications');
-            if(panel){
+            if (panel){
               panel.classList.add('active');
-              try{ document.body.dataset.currentTab = 'notifications'; }catch(_){}
-              try{ location.hash = '#notifications'; }catch(_){}
-              try{ if(typeof menu !== 'undefined' && menu) menu.style.display = 'none'; }catch(_){}
-              try{ if(panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth'}); }catch(_){}
-              try{ panel.style.display = panel.style.display === 'none' ? '' : panel.style.display; }catch(_){}
+              try{ document.body.dataset.currentTab = 'notifications'; }catch(_){ }
+              try{ location.hash = '#notifications'; }catch(_){ }
+              try{ if(typeof menu !== 'undefined' && menu) menu.style.display = 'none'; }catch(_){ }
+              try{ if(panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth'}); }catch(_){ }
+              try{ /* Force visible on mobile even if stylesheet hides panels via !important */ panel.style.setProperty('display','block','important'); }catch(_){ }
             }
             const sel = document.getElementById('notifViewSelect'); if(sel) sel.focus();
           }catch(_){ }
