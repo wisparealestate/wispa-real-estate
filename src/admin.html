@@ -322,7 +322,9 @@
             <label style="display:block">Full name<input id="editFullName" style="width:100%;padding:8px;margin-top:6px"/></label>
             <label style="display:block;margin-top:8px">Email<input id="editEmail" style="width:100%;padding:8px;margin-top:6px"/></label>
             <label style="display:block;margin-top:8px">Phone<input id="editPhone" style="width:100%;padding:8px;margin-top:6px"/></label>
+            <label style="display:block;margin-top:8px">Gender<select id="editGender" style="width:100%;padding:8px;margin-top:6px"><option value="">Prefer not to say</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></label>
             <label style="display:block;margin-top:8px">Location<input id="editLocation" style="width:100%;padding:8px;margin-top:6px"/></label>
+            <label style="display:block;margin-top:8px">Bio<textarea id="editBio" rows="4" style="width:100%;padding:8px;margin-top:6px"></textarea></label>
           </div>
         </div>
         <div style="margin-top:12px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
@@ -670,7 +672,9 @@
         try{ document.getElementById('editFullName').value = u.full_name || u.name || u.username || ''; }catch(e){}
         try{ document.getElementById('editEmail').value = u.email || ''; }catch(e){}
         try{ document.getElementById('editPhone').value = u.phone || u.phone_number || u.mobile || ''; }catch(e){}
+        try{ document.getElementById('editGender').value = (u.gender || '').toString().toLowerCase() || ''; }catch(e){}
         try{ document.getElementById('editLocation').value = u.location || u.city || ''; }catch(e){}
+        try{ document.getElementById('editBio').value = u.bio || u.about || ''; }catch(e){}
         try{ const pv = document.getElementById('editAvatarPreview'); if(pv) pv.innerHTML = u.avatar ? '<img src="'+u.avatar+'" style="width:100%;height:100%;object-fit:cover">' : ''; }catch(e){}
         if(status) status.textContent = '';
       }catch(e){ try{ if(document.getElementById('editStatus')) document.getElementById('editStatus').textContent = 'Failed to load profile.'; }catch(_){} }
@@ -701,6 +705,8 @@
                 }catch(e){ console.warn('avatar upload failed', e); }
               }
               const payload = { full_name, email, phone, location };
+              try{ const bioEl = document.getElementById('editBio'); if(bioEl) payload.bio = bioEl.value || ''; }catch(e){}
+              try{ const gEl = document.getElementById('editGender'); if(gEl) payload.gender = gEl.value || ''; }catch(e){}
               if(avatarUrl) payload.avatar = avatarUrl;
               // Use global saveAdminProfile helper
               try{
@@ -1037,6 +1043,8 @@
         document.getElementById('profileName').textContent = data.name || data.username || 'Admin';
         document.getElementById('profileEmail').textContent = data.email || '—';
         document.getElementById('profileRole').textContent = data.role || 'admin';
+        try{ const pg = document.getElementById('profileGender'); if(pg) pg.textContent = data.gender ? (String(data.gender).charAt(0).toUpperCase() + String(data.gender).slice(1)) : '—'; }catch(e){}
+        try{ const pb = document.getElementById('profileBio'); if(pb) pb.textContent = data.bio || data.about || ''; }catch(e){}
         // update header profile display
         try{ const headName = document.getElementById('adminHeaderName'); if(headName) headName.textContent = data.name || data.username || data.email || 'Admin'; }catch(e){}
         try{ const headAvatar = document.getElementById('adminHeaderAvatar'); if(headAvatar){ if(data.avatar) headAvatar.innerHTML = '<img src="'+data.avatar+'" style="width:100%;height:100%;object-fit:cover">'; else headAvatar.innerHTML = ''; } }catch(e){}
