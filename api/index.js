@@ -606,37 +606,23 @@ app.post('/api/system-alerts', async (req, res) => {
 });
 
 // Activities: recent user/activity feed (DB first, fallback to file)
-app.get('/api/activities', async (req, res) => {
+app.get('/api/admin/profile', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM activities ORDER BY created_at DESC');
-    return res.json({ activities: result.rows });
+    const admin = await getAdminSessionUser(req);
+    if (!admin) return res.status(401).json({ error: 'not authenticated' });
+
+    // Return the admin_logins row as the single source of truth for admin profiles
+    const q = await pool.query(
+      `SELECT id, username, email, full_name, role, created_at, avatar_url, phone, bio, gender FROM admin_logins WHERE id = $1 LIMIT 1`,
+      [admin.id]
+    );
+    if (q.rows && q.rows.length > 0) return res.json(q.rows[0]);
+    return res.status(404).json({ error: 'not found' });
   } catch (err) {
-    try {
-      const rows = await readJson('activities.json');
-      return res.json({ activities: rows });
-    } catch (e) {
-      return res.status(500).json({ error: 'Activities not available', details: err.message });
-    }
+    console.error('GET /api/admin/profile', err);
+    return res.status(500).json({ error: 'server error' });
   }
 });
-
-app.post('/api/activities', async (req, res) => {
-  const { title, action, summary, meta } = req.body || {};
-  const createdAt = new Date().toISOString();
-  try {
-    const insert = await pool.query(
-      'INSERT INTO activities (title, action, summary, meta, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-      [title || null, action || null, summary || null, JSON.stringify(meta || {}), createdAt]
-    );
-    return res.json({ activity: insert.rows[0] });
-  } catch (err) {
-    try {
-      const arr = await readJson('activities.json');
-      const entry = { id: Date.now(), title, action, summary, meta, createdAt };
-      arr.unshift(entry);
-      await writeJson('activities.json', arr);
-      return res.json({ activity: entry, fallback: true });
-    } catch (e) {
       return res.status(500).json({ error: 'Failed to record activity', details: err.message });
     }
   }
@@ -842,51 +828,34 @@ app.post('/api/conversations/messages', async (req, res) => {
 });
 
 // Update user's avatar_url after image upload
-app.post('/api/update-avatar-url', async (req, res) => {
-  const { userId, avatarUrl } = req.body;
-  if (!userId || !avatarUrl) return res.status(400).json({ error: 'Missing userId or avatarUrl' });
+app.post('/api/admin/profile', async (req, res) => {
   try {
-    await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, userId]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const admin = await getAdminSessionUser(req);
+    if (!admin) return res.status(401).json({ error: 'not authenticated' });
 
-// CORS test endpoint (must be after app and CORS middleware)
-app.get('/cors-test', (req, res) => {
-  res.json({ message: 'CORS is working!', origin: req.headers.origin || null });
-});
-
-// Get all user messages for admin chat
-app.get("/api/admin/messages", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM messages ORDER BY sent_at DESC");
-    res.json({ messages: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get messages for a specific conversation
-app.get('/api/conversations/:id/messages', async (req, res) => {
-  const convId = req.params.id;
-  if (!convId) return res.status(400).json({ error: 'Missing conversation id' });
-  try {
-    // Prefer conversation_id column
-    const result = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 OR (conversation_id IS NULL AND (meta IS NOT NULL AND (meta->>\'conversationId\') = $1)) ORDER BY sent_at ASC', [convId]);
-    let rows = (result.rows || []);
-    if (!rows || rows.length === 0) {
-      try {
-        const fallback = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 OR (meta->>\'legacy_sender_id\' = $2) OR (meta->>\'legacy_receiver_id\' = $2) ORDER BY sent_at ASC', [convId, convId.replace(/^user-/, '')]);
-        rows = fallback.rows || [];
-      } catch (e) {
-        rows = [];
+    // Update admin_logins as the single source of truth for admin profiles
+    const allowed = ['full_name', 'username', 'email', 'avatar_url', 'phone', 'bio', 'gender'];
+    const updates = [];
+    const vals = [];
+    let i = 1;
+    for (const k of allowed) {
+      if (req.body[k] !== undefined) {
+        updates.push(`${k} = $${i}`);
+        vals.push(req.body[k]);
+        i++;
       }
     }
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields' });
 
-    // Normalize rows into a consistent JSON shape for clients
-    let convUserId = null;
+    vals.push(admin.id);
+    const sql = `UPDATE admin_logins SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, username, email, full_name, avatar_url, phone, bio, gender`;
+    const r = await pool.query(sql, vals);
+    return res.json(r.rows[0]);
+  } catch (err) {
+    console.error('POST /api/admin/profile', err);
+    return res.status(500).json({ error: 'server error' });
+  }
+});
     try{
       const cres = await pool.query('SELECT user_id FROM conversations WHERE id = $1 LIMIT 1', [convId]);
       if(cres && cres.rows && cres.rows[0]) convUserId = cres.rows[0].user_id;
