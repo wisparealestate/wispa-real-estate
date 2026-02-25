@@ -144,7 +144,7 @@
     overflow: auto; /* allow both x and y scrolling */
     overflow-x: auto; /* ensure horizontal scroll for wide tables */
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y; /* allow vertical page pans while enabling horizontal swipes inside */
+    touch-action: auto; /* allow touch-driven scrolling in both directions */
     -ms-overflow-style: -ms-autohiding-scrollbar;
   }
   /* Tables inside the recent cards should size to their contents and allow
@@ -163,7 +163,7 @@
       overflow-y: auto; /* allow vertical scroll if content is tall */
       overflow-x: auto; /* ensure horizontal scroll on small screens */
       -webkit-overflow-scrolling: touch;
-      touch-action: pan-y; /* allow vertical page pans while enabling horizontal swipes inside */
+      touch-action: auto; /* allow touch-driven scrolling in both directions */
       -ms-overflow-style: -ms-autohiding-scrollbar;
       padding-bottom: 6px;
     }
