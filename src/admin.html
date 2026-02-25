@@ -558,7 +558,14 @@
         if(!u){ try{ const res = await fetch('/api/admin/profile', { credentials: 'include' }); if(res && res.ok){ const j = await res.json().catch(()=>null); u = (j && (j.user||j.profile||j.admin)) || j || null; } }catch(e){} }
         if(u){
           try{ if(avatarEl) avatarEl.innerHTML = u.avatar ? '<img src="'+u.avatar+'" style="width:100%;height:100%;object-fit:cover">' : ''; }catch(e){}
-          try{ if(nameEl) nameEl.textContent = u.full_name || u.name || u.username || u.email || 'Admin'; }catch(e){}
+          try{
+            if(nameEl){
+              const displayName = (u.full_name || u.name || u.username || u.email || 'Admin');
+              const roleRaw = (u.role || u.adminRole || (u.isAdmin? 'admin' : '')) || '';
+              const roleLabel = roleRaw ? (String(roleRaw).charAt(0).toUpperCase() + String(roleRaw).slice(1)) : '';
+              nameEl.textContent = roleLabel ? (displayName + ' - ' + roleLabel) : displayName;
+            }
+          }catch(e){}
           try{ if(emailEl) emailEl.textContent = u.email || ''; }catch(e){}
         }
       }catch(e){ /* ignore */ }
