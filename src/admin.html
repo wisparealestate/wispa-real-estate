@@ -559,17 +559,17 @@
     notificationsBtn.addEventListener('click', (e)=>{
       e.preventDefault(); e.stopPropagation();
       try{
-        const notifTabBtn = document.querySelector('.tab-btn[data-tab="notifications"]');
-        const tabHidden = notifTabBtn && getComputedStyle(notifTabBtn).display === 'none';
-        if(tabHidden && notifDropdown){
+        // Detect small screens reliably using matchMedia instead of relying on header tab presence
+        const isSmall = (window.matchMedia && window.matchMedia('(max-width:800px)').matches) || (window.innerWidth && window.innerWidth < 800);
+        if(isSmall && notifDropdown){
           // toggle quick dropdown and render its content when opening
           notifDropdown.style.display = (notifDropdown.style.display === 'block') ? 'none' : 'block';
           if(notifDropdown.style.display === 'block') renderNotifDropdown();
           return;
         }
       }catch(_){ /* ignore and fall back to full tab */ }
-      // Default: open full notifications tab
-        switchTab('notifications'); setActiveNotifTab('all'); setTimeout(()=>renderNotificationsView('all'),50);
+      // Default: open full notifications tab on larger screens
+      switchTab('notifications'); setActiveNotifTab('all'); setTimeout(()=>renderNotificationsView('all'),50);
     });
     // clicking outside should close dropdown
     window.addEventListener('click', (e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#notificationsBtn')) notifDropdown.style.display='none'; });
