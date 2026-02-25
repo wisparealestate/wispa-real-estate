@@ -143,6 +143,18 @@
     .overview-recents-flex .recent-props > div,
     .overview-recents-flex .recent-users > div {
       max-height: 320px;
+      overflow-y: auto; /* allow vertical scroll if content is tall */
+      overflow-x: auto; /* ensure horizontal scroll on small screens */
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
+    }
+    /* Make inner tables not shrink so horizontal scrolling is available */
+    .overview-recents-flex .recent-props > div table,
+    .overview-recents-flex .recent-users > div table,
+    .overview-recents-flex .recent-notifs > div table {
+      min-width: 640px;
+      width: auto;
+      display: table;
     }
   }
   </style>
@@ -1385,6 +1397,8 @@
             return `<tr><td style="padding:6px">${title}</td><td style="padding:6px">${price}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td><td style="padding:6px;text-align:center">${imagesCount}</td><td style="padding:6px;text-align:center">${videosCount}</td></tr>`;
           }).join('');
           propsCard += '</tbody></table></div>';
+          // Add a small action row with 'All' button to open the full Properties tab
+          propsCard += '<div style="text-align:right;margin-top:8px"><button id="overviewPropsAllBtn" class="tab-btn">All</button></div>';
         } else {
           propsCard += '<div>No properties.</div>';
         }
@@ -1423,6 +1437,7 @@
             return `<tr><td style="padding:6px">${name}</td><td style="padding:6px">${email}</td><td style="padding:6px">${phone}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td></tr>`;
           }).join('');
           usersCard += '</tbody></table></div>';
+          usersCard += '<div style="text-align:right;margin-top:8px"><button id="overviewUsersAllBtn" class="tab-btn">All</button></div>';
         } else {
           usersCard += '<div>No users.</div>';
         }
@@ -1431,12 +1446,18 @@
         // Render three separate cards as siblings so each can scroll independently
         recentsEl.innerHTML = `<div class="overview-recents-flex">${propsCard}${notifsCard}${usersCard}</div>`;
 
-        // Wire the 'All' button inside the Recent Notifications card to open the notifications tab
+        // Wire the 'All' buttons inside the Recent cards to open their respective tabs
         try{
-          const allBtn = document.getElementById('overviewNotifAllBtn');
-          if(allBtn){
-            allBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('notifications'); setTimeout(()=>{ try{ renderNotificationsView('all'); }catch(_){ } }, 50); });
-          }
+          const notifAllBtn = document.getElementById('overviewNotifAllBtn');
+          if(notifAllBtn){ notifAllBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('notifications'); setTimeout(()=>{ try{ renderNotificationsView('all'); }catch(_){ } }, 50); }); }
+        }catch(e){}
+        try{
+          const propsAllBtn = document.getElementById('overviewPropsAllBtn');
+          if(propsAllBtn){ propsAllBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('properties'); setTimeout(()=>{ try{ loadProperties(); }catch(_){ try{ renderPropertiesList(_propertiesCache); }catch(__){} } }, 50); }); }
+        }catch(e){}
+        try{
+          const usersAllBtn = document.getElementById('overviewUsersAllBtn');
+          if(usersAllBtn){ usersAllBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('users'); setTimeout(()=>{ try{ loadUsers(); }catch(_){ try{ renderUsersList(_usersCache); }catch(__){} } }, 50); }); }
         }catch(e){}
 
         intro.textContent = `Overview — showing ${pCount} properties and ${uCount} users.`;
