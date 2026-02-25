@@ -1139,19 +1139,33 @@
         });
 
         // ========== Account Tab Actions ==========
-        if (saveBtn) saveBtn.addEventListener('click', function() {
+        if (saveBtn) saveBtn.addEventListener('click', async function() {
             user.username = displayNameInput.value.trim() || user.username;
             user.email = displayEmailInput.value.trim() || user.email;
             user.bio = bioInput.value.trim() || '';
             user.phone = phoneInput.value.trim() || '';
             user.location = locationInput.value.trim() || '';
-            
+
+            // Attempt to persist to server (best-effort). Use credentials so session cookie is sent.
+            try {
+                const payload = { username: user.username, full_name: user.username, email: user.email, bio: user.bio, phone: user.phone, location: user.location };
+                const resp = await fetch('/api/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+                if (resp && resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.user) user = Object.assign({}, user, data.user);
+                } else {
+                    // silently ignore server update failure and fall back to localStorage
+                }
+            } catch (e) {
+                // network or server error; keep local changes
+            }
+
             localStorage.setItem('wispaUser', JSON.stringify(user));
-            
+
             // Update header
             headerName.textContent = user.username;
             headerEmail.textContent = user.email || 'your@email.com';
-            
+
             // Show success message
             alert('Profile saved successfully! ✓');
         });

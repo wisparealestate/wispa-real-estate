@@ -99,7 +99,7 @@ async function getSessionUser(req){
   const payload = parseSessionToken(token);
   if(!payload || !payload.uid || payload.exp < Math.floor(Date.now()/1000)) return null;
   try{
-    const r = await pool.query('SELECT id, username, email, full_name, role, created_at FROM users WHERE id = $1', [payload.uid]);
+    const r = await pool.query('SELECT id, username, email, full_name, role, created_at, location, avatar_url, phone, bio FROM users WHERE id = $1', [payload.uid]);
     if (r.rows && r.rows[0]) return r.rows[0];
     // If not found in users table, check admin_logins table (admins stored separately)
     try{
@@ -1076,6 +1076,36 @@ app.get('/api/me', async (req, res) => {
     if(!user) return res.status(401).json({ error: 'Not authenticated' });
     return res.json({ user });
   }catch(e){ res.status(500).json({ error: 'Error checking session' }); }
+});
+
+// Update current user's profile (safely update only existing columns)
+app.post('/api/me', async (req, res) => {
+  try {
+    const sess = await getSessionUser(req);
+    if (!sess || !sess.id) return res.status(401).json({ error: 'Not authenticated' });
+    const userId = sess.id;
+    const allowed = ['full_name','username','email','location','avatar_url','phone','bio'];
+    const provided = Object.keys(req.body || {}).filter(k => allowed.indexOf(k) !== -1);
+    if (provided.length === 0) return res.status(400).json({ error: 'No updatable fields provided' });
+
+    // Determine which columns actually exist in the `users` table
+    const colsRes = await pool.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = ANY($1::text[])`,
+      [allowed]
+    );
+    const existing = (colsRes.rows || []).map(r => r.column_name);
+    const toUpdate = provided.filter(p => existing.indexOf(p) !== -1);
+    if (toUpdate.length === 0) return res.status(400).json({ error: 'No writable columns exist on DB' });
+
+    const sets = toUpdate.map((c, idx) => `${c} = $${idx+1}`);
+    const values = toUpdate.map(c => req.body[c] === undefined ? null : req.body[c]);
+    const sql = `UPDATE users SET ${sets.join(', ')} WHERE id = $${toUpdate.length + 1} RETURNING id, username, email, full_name, role, created_at, location, avatar_url, phone, bio`;
+    const result = await pool.query(sql, [...values, userId]);
+    if (result.rows && result.rows[0]) return res.json({ user: result.rows[0] });
+    return res.status(500).json({ error: 'Failed to update user' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Logout: clear session cookie
