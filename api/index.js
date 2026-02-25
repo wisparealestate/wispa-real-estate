@@ -623,10 +623,6 @@ app.get('/api/admin/profile', async (req, res) => {
     return res.status(500).json({ error: 'server error' });
   }
 });
-      return res.status(500).json({ error: 'Failed to record activity', details: err.message });
-    }
-  }
-});
 
 // Generic admin sync endpoint removed: file-backed sync is not allowed in DB-only mode
 app.post('/api/admin/sync', async (req, res) => {
@@ -856,10 +852,15 @@ app.post('/api/admin/profile', async (req, res) => {
     return res.status(500).json({ error: 'server error' });
   }
 });
-    try{
-      const cres = await pool.query('SELECT user_id FROM conversations WHERE id = $1 LIMIT 1', [convId]);
-      if(cres && cres.rows && cres.rows[0]) convUserId = cres.rows[0].user_id;
-    }catch(e){}
+// Fetch messages for a conversation (DB-backed)
+app.get('/api/conversations/:id/messages', async (req, res) => {
+  const convId = req.params.id;
+  try {
+    const rowsRes = await pool.query('SELECT * FROM messages WHERE conversation_id = $1 ORDER BY sent_at DESC', [convId]);
+    const rows = (rowsRes && rowsRes.rows) ? rowsRes.rows : [];
+
+    let convUserId = null;
+    try{ const cres = await pool.query('SELECT user_id FROM conversations WHERE id = $1 LIMIT 1', [convId]); if(cres && cres.rows && cres.rows[0]) convUserId = cres.rows[0].user_id; }catch(e){}
 
     // If there is a conversation-level user id, try to load the user record for nicer display
     let convUser = null;
@@ -868,19 +869,13 @@ app.post('/api/admin/profile', async (req, res) => {
     }
 
     const mapped = rows.map(r => {
-      // attempt parse meta (modern column) and fall back to parsing legacy `content` JSON where present
       let meta = null;
       try{ meta = (typeof r.meta === 'string') ? JSON.parse(r.meta) : r.meta; }catch(e){ meta = r.meta || null }
-      // If no meta but a legacy `content` column exists and looks like JSON, try to parse it
       if(!meta && r.content && typeof r.content === 'string'){
-        try{
-          const parsed = JSON.parse(r.content);
-          if(parsed && typeof parsed === 'object') meta = parsed;
-        }catch(e){ /* not JSON, leave meta null */ }
+        try{ const parsed = JSON.parse(r.content); if(parsed && typeof parsed === 'object') meta = parsed; }catch(e){}
       }
       const text = r.body || r.content || r.message || (meta && (meta.text || meta.body)) || null;
       const ts = r.sent_at || r.sentAt || r.created_at || null;
-      // determine sender: prefer explicit r.sender, else compare sender_id to conversation user_id; else fall back to admin/user heuristics
       let sender = null;
       try{
         if(r.sender && (String(r.sender).toLowerCase() === 'admin' || String(r.sender).toLowerCase() === 'user')) sender = String(r.sender).toLowerCase();
@@ -889,13 +884,10 @@ app.post('/api/admin/profile', async (req, res) => {
         else if(meta && meta.sender) sender = String(meta.sender).toLowerCase();
         else sender = (r.sender || null);
       }catch(e){ sender = (r.sender || null); }
-
-      // If meta is present but still a string, try ensure it's an object
       try{ if(meta && typeof meta === 'string') meta = JSON.parse(meta); }catch(e){}
-
       return {
         id: r.id,
-        sender: sender || (r.sender_id ? 'user' : 'user'), // default to 'user' when unknown (safer UX)
+        sender: sender || (r.sender_id ? 'user' : 'user'),
         text: text,
         timestamp: ts,
         userId: r.sender_id || (meta && (meta.userId || meta.user_id)) || null,
@@ -905,10 +897,8 @@ app.post('/api/admin/profile', async (req, res) => {
       };
     });
 
-    // If conversation id references a property (property-<id>), attempt to attach property row for frontend preview
     let convProperty = null;
     try{
-      // Allow conversation ids that start with property-<id> and may include suffixes (e.g. property-524-WISPA...)
       const m = String(convId).match(/^property-(\d+)/i);
       if(m){
         const pid = parseInt(m[1],10);
