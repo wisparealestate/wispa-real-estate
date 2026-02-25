@@ -57,8 +57,9 @@
   }
 
   @media (max-width: 480px){
-    #overviewStats{ flex-direction:column }
-    #overviewStats > div{ flex:1 1 100%; min-width:100% }
+    /* Arrange overview stat cards into two rows of three on small screens */
+    #overviewStats{ display:flex; gap:8px; flex-wrap:wrap }
+    #overviewStats > div{ flex:1 1 calc(33.333% - 12px); min-width:0 }
     #companyMetrics{ flex-direction:column }
     #overviewRecents > div, #companyBreakdown > div{ min-width:100% }
     #overviewContent{ padding:6px }
