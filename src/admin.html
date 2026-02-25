@@ -1332,7 +1332,22 @@
         const recentProps = props && Array.isArray(props.properties) ? props.properties.slice(0,3) : [];
         const recentUsers = users && Array.isArray(users.users) ? users.users.slice(0,3) : [];
         let rpHtml = '<div style="min-width:260px"><h3>Recent Properties</h3>'+(recentProps.length?'<ul>'+recentProps.map(p=>`<li>${escapeHtml(p.title||p.address||('Property #'+(p.id||'')))}</li>`).join('')+'</ul>':'<div>No properties.</div>')+'</div>';
-        let ruHtml = '<div style="min-width:260px"><h3>Recent Users</h3>'+(recentUsers.length?'<ul>'+recentUsers.map(u=>`<li>${escapeHtml(u.full_name||u.username||u.email||'User')}</li>`).join('')+'</ul>':'<div>No users.</div>')+'</div>';
+        // Render recent users as a compact table (same columns as Users tab, limited rows)
+        let ruHtml = '<div style="min-width:260px"><h3>Recent Users</h3>';
+        if (recentUsers.length) {
+          ruHtml += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr style="text-align:left;border-bottom:1px solid #eef6fb"><th style="padding:6px">Name</th><th style="padding:6px">Email</th><th style="padding:6px">Location</th><th style="padding:6px">Created</th></tr></thead><tbody>';
+          ruHtml += recentUsers.map(u => {
+            const name = escapeHtml(u.full_name || u.username || '');
+            const email = escapeHtml(u.email || '');
+            const location = escapeHtml(u.location || u.city || u.address || '');
+            const created = escapeHtml(u.created_at ? new Date(u.created_at).toLocaleDateString() : (u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''));
+            return `<tr><td style="padding:6px">${name}</td><td style="padding:6px">${email}</td><td style="padding:6px">${location}</td><td style="padding:6px">${created}</td></tr>`;
+          }).join('');
+          ruHtml += '</tbody></table></div>';
+        } else {
+          ruHtml += '<div>No users.</div>';
+        }
+        ruHtml += '</div>';
         recentsEl.innerHTML = rpHtml + ruHtml;
 
         intro.textContent = `Overview — showing ${pCount} properties and ${uCount} users.`;
