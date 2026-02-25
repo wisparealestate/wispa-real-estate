@@ -293,7 +293,9 @@
     <section id="overview" class="tab-panel">
       <h2>Overview</h2>
       <p id="overviewIntro">Loading admin overview…</p>
-      <p><button id="refreshOverview">Refresh Overview</button></p>
+      <p style="display:flex;gap:8px;align-items:center"><button id="refreshOverview">Refresh Overview</button><button id="overviewCreatePostBtn" class="tab-btn">Create Post</button><button id="overviewSendAlertBtn" class="tab-btn">Send Alert</button></p>
+      const overviewCreateBtn = document.getElementById('overviewCreatePostBtn'); if(overviewCreateBtn) overviewCreateBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('create-post'); try{ document.getElementById('postTitle') && document.getElementById('postTitle').focus(); }catch(e){} });
+      const overviewSendAlertBtn = document.getElementById('overviewSendAlertBtn'); if(overviewSendAlertBtn) overviewSendAlertBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('alerts'); setTimeout(()=>{ try{ loadAlerts(); }catch(e){} },50); });
       <div id="overviewContent">
         <div id="overviewStats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px"></div>
         <div id="overviewRecents" style="display:flex;gap:18px;flex-wrap:wrap"></div>
