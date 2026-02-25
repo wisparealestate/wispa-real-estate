@@ -447,8 +447,21 @@
     function switchTab(name){
       document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
       document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id===name));
+      // expose current tab on body for easy querying
+      try{ document.body.dataset.currentTab = name; }catch(e){}
       location.hash = '#'+name;
     }
+
+    // Helper: return currently opened tab id (or null)
+    function getCurrentTab(){
+      try{
+        if(document.body && document.body.dataset && document.body.dataset.currentTab) return document.body.dataset.currentTab;
+        const el = document.querySelector('.tab-panel.active');
+        return el ? el.id : null;
+      }catch(e){ return null; }
+    }
+    // expose for debugging/other scripts
+    window.getCurrentTab = getCurrentTab;
 
     document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
     document.querySelectorAll('#menuDropdown a[data-tab]').forEach(a=>a.addEventListener('click', (e)=>{ e.preventDefault(); switchTab(a.dataset.tab); menu.style.display='none' }));
