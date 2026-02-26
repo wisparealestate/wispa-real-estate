@@ -1485,6 +1485,17 @@ app.get('/api/debug/properties-inspect', async (req, res) => {
   }
 });
 
+// Debug: list triggers on properties table and related rules
+app.get('/api/debug/properties-triggers', async (req, res) => {
+  try {
+    const triggers = await pool.query("SELECT tgname, pg_get_triggerdef(t.oid) AS def FROM pg_trigger t JOIN pg_class c ON t.tgrelid = c.oid WHERE c.relname = 'properties' AND NOT t.tgisinternal");
+    const rules = await pool.query("SELECT * FROM pg_rules WHERE tablename = 'properties'");
+    return res.json({ triggers: triggers.rows || [], rules: rules.rows || [] });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to list triggers', details: e && e.message ? e.message : e });
+  }
+});
+
 // Debug: basic DB info and existence check
 app.get('/api/debug/db-info', async (req, res) => {
   try {
