@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin — Wispa Real Estate</title>
+  <meta name="app-version" content="0.1.0">
   <link rel="stylesheet" href="styles.css">
   <style id="admin-overview-styles">
   /* Admin Overview - responsive, clean dashboard styles */
@@ -834,41 +835,22 @@
           const safEl = document.getElementById('footerSafety');
           const copyEl = document.getElementById('footerYear');
           if(copyEl) copyEl.textContent = (new Date()).getFullYear();
-          // attempt to read package.json for version
+          // Read version from meta tag first (no network fetch)
           try{
-            const r = await fetch('/package.json');
-            if(r && r.ok){ const pj = await r.json().catch(()=>null); if(pj && pj.version && verEl) verEl.textContent = 'Version: ' + pj.version; else if(verEl) verEl.textContent = 'Version: unknown'; }
+            const meta = document.querySelector('meta[name="app-version"]');
+            if(meta && meta.content && verEl) verEl.textContent = 'Version: ' + meta.content;
             else if(verEl) verEl.textContent = 'Version: unknown';
           }catch(e){ if(verEl) verEl.textContent = 'Version: unknown'; }
 
-          // Compute safety ratings from local data files when available
+          // Read safety rate from window.safetyRate if provided (no network fetch)
           try{
-            // user-side errors: look for error keywords in contact messages
-            let userErrors = 0, userTotal = 0;
-            try{
-              const r = await fetch('/data/contact_messages.json');
-              if(r && r.ok){ const arr = await r.json().catch(()=>null); if(Array.isArray(arr)){ userTotal = arr.length; for(const it of arr){ const txt = (it && (it.subject||'') + ' ' + (it.message||'')).toLowerCase(); if(/error|failed|exception|traceback|stack|err/i.test(txt)) userErrors++; } } }
-            }catch(e){}
-
-            // project-side errors: look for system alerts with severity error/critical or server.err content
-            let projErrors = 0, projTotal = 1;
-            try{
-              const r2 = await fetch('/data/system_alerts.json');
-              if(r2 && r2.ok){ const arr2 = await r2.json().catch(()=>null); if(Array.isArray(arr2)){ projTotal = arr2.length || 1; for(const a of arr2){ if(a && (a.severity==='error' || a.severity==='critical')) projErrors++; } }
-              }
-            }catch(e){}
-            try{
-              const rerr = await fetch('/server.err');
-              if(rerr && rerr.ok){ const txt = await rerr.text().catch(()=>null); if(txt && String(txt).trim().length>0) projErrors += 1; }
-            }catch(e){}
-
-            // compute percentages (error-free %) — if no items, treat as 100%
-            const userRate = (userTotal>0) ? Math.max(0, Math.round(100*(1 - (userErrors/userTotal)))) : 100;
-            const projRate = (projTotal>0) ? Math.max(0, Math.round(100*(1 - (projErrors/projTotal)))) : 100;
-            const combined = Math.round((userRate + projRate) / 2);
-            window.safetyRate = combined + '%';
-            if(safEl) safEl.textContent = `Safety (user/project): ${userRate}% / ${projRate}% (avg ${combined}%)`;
-          }catch(e){ if(safEl) safEl.textContent = (typeof window.safetyRate !== 'undefined') ? ('Safety rate: ' + String(window.safetyRate)) : 'Safety rate: N/A'; }
+            if(typeof window.safetyRate !== 'undefined'){
+              const s = String(window.safetyRate);
+              if(safEl) safEl.textContent = (s.indexOf('%')!==-1) ? ('Safety rate: ' + s) : ('Safety rate: ' + s + '%');
+            } else {
+              if(safEl) safEl.textContent = 'Safety rate: N/A';
+            }
+          }catch(e){ if(safEl) safEl.textContent = 'Safety rate: N/A'; }
         }catch(e){}
       }
       updateDateTime(); setInterval(updateDateTime, 1000);
