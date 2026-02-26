@@ -8,6 +8,7 @@
     --admin-accent: #ffb400;
     --admin-bg: #f7fbff;
     --admin-text: #0b2236;
+    --page-gap: 12px;
 }
 
 /* Apply admin theme to dashboard header */
@@ -19,7 +20,7 @@
 .admin-layout {
     display: flex;
     flex-direction: row;
-    gap: 32px;
+    gap: var(--page-gap);
     width: 100%;
     min-height: 100vh;
     margin: 0;
@@ -44,7 +45,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--page-gap);
     min-height: 100vh;
     width: 100%;
     box-sizing: border-box;
@@ -53,7 +54,7 @@
 .admin-tabs {
     display: flex;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: var(--page-gap);
 }
 
 .admin-tab {
@@ -80,7 +81,7 @@
     border-radius: 8px;
     padding: 24px 18px;
     box-shadow: var(--shadow);
-    margin-bottom: 18px;
+    margin-bottom: var(--page-gap);
 }
 
 .stat-cards {
