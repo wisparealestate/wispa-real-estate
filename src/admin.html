@@ -890,9 +890,10 @@
           }
 
           // Inspect data files if exposed (contribute to checks)
-          // To avoid noisy 404s on hosts that don't expose these files, only
-          // attempt these fetches when `window.WISPA_DATA_AVAILABLE` is true.
-          if(window.WISPA_DATA_AVAILABLE){
+          // Only attempt these fetches when `window.WISPA_DATA_AVAILABLE` is true
+          // AND when the API base is same-origin (avoids noisy 404s against remote hosts).
+          const canFetchDataFiles = Boolean(window.WISPA_DATA_AVAILABLE) && (!API_BASE || API_BASE === window.location.origin);
+          if(canFetchDataFiles){
             try{
               const contactTarget = API_BASE ? (API_BASE + '/data/contact_messages.json') : '/data/contact_messages.json';
               const rc = await fetchWithTimeout(contactTarget, {}, 3000);
