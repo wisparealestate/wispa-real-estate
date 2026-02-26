@@ -1,5 +1,19 @@
 // The pool will be imported from index.js
 import { pool } from "./index.js";
+import fs from 'fs/promises';
+import path from 'path';
+
+const __diagDir = path.join(process.cwd(), 'logs');
+async function writeDiag(msg){
+  try{
+    await fs.mkdir(__diagDir, { recursive: true });
+    const file = path.join(__diagDir, 'property-debug.log');
+    const line = new Date().toISOString() + ' ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)) + '\n';
+    await fs.appendFile(file, line, 'utf8');
+  }catch(e){
+    try{ console.warn('[diag] write failed', e && e.message ? e.message : e); }catch(_){}
+  }
+}
 
 // Add property with photos
 export async function addPropertyWithPhotos(property, photoUrls) {
@@ -8,7 +22,10 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     // Diagnostic: log this session's current database and schema
     try{
       const info = await client.query("SELECT current_database() AS db, current_schema() AS schema");
-      if(info && info.rows && info.rows[0]) console.log('[addPropertyWithPhotos] session DB info:', info.rows[0]);
+      if(info && info.rows && info.rows[0]){
+        console.log('[addPropertyWithPhotos] session DB info:', info.rows[0]);
+        await writeDiag({ where: 'before', info: info.rows[0] });
+      }
     }catch(e){ console.warn('[addPropertyWithPhotos] failed to read session DB info', e && e.message ? e.message : e); }
     // Normalize incoming property to tolerate many client shapes
     const p = Object.assign({}, property || {});
@@ -150,6 +167,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         propertyRow = propRes.rows[0];
         propertyId = propertyRow.id;
         console.log('[addPropertyWithPhotos] inserted property id:', propertyId, 'title:', propertyRow.title);
+        try{ await writeDiag({ event: 'inserted', propertyId, title: propertyRow.title }); }catch(e){}
         didInsertNew = true;
       }
     }
@@ -196,13 +214,17 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     await client.query('COMMIT');
     try{
       const infoAfter = await client.query("SELECT current_database() AS db, current_schema() AS schema");
-      if(infoAfter && infoAfter.rows && infoAfter.rows[0]) console.log('[addPropertyWithPhotos] session DB info after commit:', infoAfter.rows[0]);
+      if(infoAfter && infoAfter.rows && infoAfter.rows[0]){
+        console.log('[addPropertyWithPhotos] session DB info after commit:', infoAfter.rows[0]);
+        await writeDiag({ where: 'after', info: infoAfter.rows[0], propertyId, didInsertNew: !!didInsertNew });
+      }
     }catch(e){ console.warn('[addPropertyWithPhotos] failed to read session DB info after commit', e && e.message ? e.message : e); }
     // Merge provided property fields (e.g. type, bedrooms, bathrooms, location) into returned row
     const merged = Object.assign({}, propertyRow, p || {}, { images: photos });
     return { property: merged, propertyId };
   } catch (err) {
-    await client.query('ROLLBACK');
+    try{ await client.query('ROLLBACK'); }catch(e){}
+    try{ await writeDiag({ event: 'error', error: err && err.stack ? err.stack : err }); }catch(e){}
     throw err;
   } finally {
     client.release();
