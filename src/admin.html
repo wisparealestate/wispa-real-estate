@@ -503,9 +503,10 @@
 
     <section id="chat" class="tab-panel">
       <h2>Property Chats</h2>
-      <p id="chatActions" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <span><button id="refreshChats" type="button">Refresh</button></span>
-        <span style="flex:1;margin:0 12px"><input id="chatSearchInput" placeholder="Search conversations by name, email or id" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"/></span>
+      <p id="chatActions" style="display:flex;gap:8px;align-items:center;justify-content:flex-start;margin-bottom:8px">
+        <span style="flex:0 0 auto"><input id="chatSearchInput" placeholder="Search conversations by name, email or id" style="width:320px;max-width:60vw;padding:8px;border:1px solid var(--border);border-radius:6px"/></span>
+        <span style="flex:0 0 auto"><button id="refreshChats" type="button" style="margin-left:4px">Refresh</button></span>
+        <span style="flex:1 1 auto"></span>
       </p>
       <div id="admin-chats-list">Loading chats…</div>
       <div id="chat-fullview" style="display:none;margin-top:12px">
