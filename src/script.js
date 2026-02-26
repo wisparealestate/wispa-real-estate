@@ -33,8 +33,9 @@ if (!window.apiFetch) {
                                     if (localRes && localRes.status === 401 && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = true;
                                     if (localRes && localRes.ok && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = false;
                                 } catch(e){}
-                                // return local response even if not ok (so callers can handle 4xx/5xx)
-                                return localRes;
+                                // If local origin returns 404, try the configured API host as fallback
+                                if (localRes.status !== 404) return localRes;
+                                // else fall through to try API_BASE
                             }
                         }catch(e){}
                         // Fallback to configured API base

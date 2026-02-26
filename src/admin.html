@@ -570,9 +570,9 @@
           // Clear any stale admin-unauthorized backoff when we detect a valid admin session
           try { if (isAdmin) { if (typeof window.clearAdminUnauthorized === 'function') window.clearAdminUnauthorized(); else try{ window._wispaAdminUnauthorized = false; }catch(e){} } } catch(e){}
           if(!u){ if(msgs) msgs.textContent = 'Not signed in.'; }
-          const displayName = u.full_name || u.name || u.displayName || u.username || '';
-          const displayEmail = u.email || u.user_email || '';
-          const roleText = (u.role || u.roles || u.isAdmin) ? (u.role || (u.isAdmin? 'Administrator':'Admin')) : 'Admin';
+          const displayName = u ? (u.full_name || u.name || u.displayName || u.username || '') : '';
+          const displayEmail = u ? (u.email || u.user_email || '') : '';
+          const roleText = u ? ((u.role || u.roles || u.isAdmin) ? (u.role || (u.isAdmin? 'Administrator':'Admin')) : 'Admin') : 'Admin';
 
           if(nameInput) nameInput.value = displayName; if(nameDisplay) nameDisplay.textContent = displayName;
           if(emailInput) emailInput.value = displayEmail; if(emailDisplay) emailDisplay.textContent = displayEmail;
