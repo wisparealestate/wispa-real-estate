@@ -855,6 +855,46 @@
       }
       updateDateTime(); setInterval(updateDateTime, 1000);
       loadVersionAndSafety();
+      // Auto-debug routine: run every 5 minutes to compute safety rate
+      async function autoDebugSafety(){
+        try{
+          const footerEl = document.getElementById('footerSafety');
+          // helper: fetch with timeout
+          const fetchWithTimeout = (url, opts={}, ms=5000)=>{
+            return new Promise(async (resolve)=>{
+              try{
+                const ac = new AbortController(); const id = setTimeout(()=>ac.abort(), ms);
+                const r = await fetch(url, Object.assign({ signal: ac.signal, credentials: 'include' }, opts)).catch(e=>null);
+                clearTimeout(id); resolve(r);
+              }catch(e){ resolve(null); }
+            });
+          };
+
+          const endpoints = ['/api/admin/profile','/api/properties','/api/users'];
+          let checks = 0, errors = 0;
+          for(const ep of endpoints){ checks++; try{ const r = await fetchWithTimeout(ep, {}, 4000); if(!r || !r.ok) errors++; }catch(e){ errors++; } }
+
+          // Inspect data files if exposed (contribute to checks)
+          try{
+            const rc = await fetchWithTimeout('/data/contact_messages.json', {}, 3000);
+            if(rc && rc.ok){ const arr = await rc.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const it of arr){ const txt = ((it.subject||'')+' '+(it.message||'')).toLowerCase(); if(/error|failed|exception|traceback|stack|err/i.test(txt)) errors++; } } }
+          }catch(e){}
+          try{
+            const rs = await fetchWithTimeout('/data/system_alerts.json', {}, 3000);
+            if(rs && rs.ok){ const arr = await rs.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const a of arr){ if(a && (a.severity==='error' || a.severity==='critical')) errors++; } } }
+          }catch(e){}
+
+          // server.err presence counts as an error check
+          try{ const rerr = await fetchWithTimeout('/server.err', {}, 2000); if(rerr && rerr.ok){ const txt = await rerr.text().catch(()=>null); checks++; if(txt && String(txt).trim().length>0) errors++; } }catch(e){}
+
+          const safePercent = (checks>0) ? Math.max(0, Math.round(100*(1 - (errors/checks)))) : 100;
+          window.safetyRate = safePercent + '%';
+          if(footerEl) footerEl.textContent = 'Safety rate: ' + window.safetyRate;
+          console.info('[autoDebugSafety] checks=', checks, 'errors=', errors, 'safety=', window.safetyRate);
+        }catch(e){ console.warn('autoDebugSafety failed', e); }
+      }
+      // run immediately and every 5 minutes
+      try{ autoDebugSafety().catch(()=>{}); setInterval(()=>{ autoDebugSafety().catch(()=>{}); }, 5 * 60 * 1000); }catch(e){}
     })();
 
     // Notifications: open dropdown showing full notifications (quick view)
