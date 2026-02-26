@@ -1151,10 +1151,67 @@
     async function renderNotifDropdown(){
       notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
       try{
-        const data = await safeApi('/api/admin/sent-notifications');
-        let rows = Array.isArray(data) ? data : (data && data.notifications) ? data.notifications : (data && data.items) ? data.items : [];
-        if(!rows || !rows.length) { notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">No notifications.</div>'; return }
-        notifDropdownContent.innerHTML = rows.slice(0,12).map(n=>`<div style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="font-weight:700">${escapeHtml(n.title||n.message||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:4px">${escapeHtml((n.message||'').slice(0,240))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(n.sentAt||n.createdAt||'')}</div></div>`).join('');
+        // Provide a compact filter + action header inside the dropdown so admins can
+        // choose the view and mark items read from the bell menu.
+        const header = `<div style="padding:8px 10px;border-bottom:1px solid #eef6fb;display:flex;align-items:center;gap:8px;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px"><label style="font-size:13px;color:#666">Filter:</label><select id="notifDropdownViewSelect" style="padding:6px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option></select></div>
+            <div><button id="notifDropdownMarkAllBtn" class="tab-btn" style="white-space:nowrap">Mark All Read</button></div>
+          </div>`;
+
+        // Load sources similar to renderNotificationsView so filtering is consistent
+        const [notifications, sent, contacts, reqs, alerts, activities, propsData, convs] = await Promise.all([
+          safeApi('/api/notifications').catch(()=>null),
+          safeApi('/api/admin/sent-notifications').catch(()=>null),
+          safeApi('/api/contact-messages').catch(()=>null),
+          safeApi('/api/property-requests').catch(()=>null),
+          safeApi('/api/system-alerts').catch(()=>null),
+          safeApi('/api/activities').catch(()=>null),
+          safeApi('/api/properties').catch(()=>null),
+          safeApi('/api/conversations').catch(()=>null)
+        ]);
+
+        const norm = (d)=>{ if(!d) return []; if(Array.isArray(d)) return d; if(Array.isArray(d.items)) return d.items; if(Array.isArray(d.notifications)) return d.notifications; return [] };
+
+        let items = [];
+        // combine sources like the full view but keep results limited for dropdown
+        const c = norm(contacts).map(m=>Object.assign({ _type:'message', title: m.subject||m.email||m.from||'Message', body: m.message||m.body||'', time: m.createdAt||m.sentAt||m.ts||m.time||m.date || m.created || (m.ts?new Date(m.ts).toISOString():null) }, m));
+        const r = norm(reqs).map(m=>Object.assign({ _type:'request', title: m.name||m.email||'Request', body: m.message||m.note||'', time: m.createdAt||m.sentAt||m.ts||m.date }, m));
+        const cv = norm(convs).map(cn=>Object.assign({ _type:'conversation', title: cn.participantName||cn.title||('Conversation '+(cn.id||'')), body: cn.last || cn.lastMessage || cn.preview || '', time: cn.updated || cn.lastUpdated || cn.updatedAt || cn.updated_at || cn.updatedAt || cn.updated }, cn));
+        items.push(...c, ...r, ...cv);
+        const a = norm(alerts).map(x=>Object.assign({ _type:'alert', title: x.title||x.message||'Alert', body: x.message||'', time: x.sentAt||x.createdAt||x.time }, x));
+        items.push(...a);
+        const act = norm(activities).map(x=>Object.assign({ _type:'activity', title: x.title||x.action||'Activity', body: x.summary||'', time: x.ts||x.createdAt||x.time }, x));
+        items.push(...act);
+        const dbNotifs = norm(notifications).map(n=>{ const cat = (n.category || (n.data && n.data.category) || '').toString().toLowerCase(); let t = 'notification'; if(cat==='messages' || cat==='message') t = 'message'; else if(cat==='alerts' || cat==='alert') t = 'alert'; else if(cat==='activities' || cat==='activity') t = 'activity'; else if(cat==='sent_alert' || cat==='sent') t = 'sent'; if(n.data && n.data.type) t = n.data.type; return Object.assign({ _type: t, title: n.title|| (n.data && n.data.title) || '', body: n.body|| (n.data && n.data.body) || '', time: n.created_at||n.createdAt||n.time, id: n.id, is_read: n.is_read||n.read||false }, n); });
+        items.push(...dbNotifs);
+        const s = norm(sent).map(x=>Object.assign({ _type:'sent', title: x.title||x.message||'Notification', body: x.message||x.body||'', time: x.sentAt||x.createdAt||x.time }, x));
+        items.push(...s);
+
+        if(!items.length){ notifDropdownContent.innerHTML = '<div style="padding:12px;color:#666">No notifications.</div>'; return }
+        // dedupe and sort
+        try{ const seen = new Set(); const uniq = []; items.forEach(it=>{ const key = it && (it.id ? ('id:'+it.id) : ('type:'+ (it._type||'') + '|' + (it.title||'') + '|' + (it.time||''))); if(!key) return; if(!seen.has(key)){ seen.add(key); uniq.push(it); } }); items = uniq; }catch(e){}
+        items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
+
+        // render compact list
+        const listHtml = '<div style="max-height:360px;overflow:auto;padding:8px">' + items.slice(0,12).map(it=>`<div style="padding:10px;border-bottom:1px solid #f6f9fc"><div style="font-weight:700">${escapeHtml(it.title||it._type||'Notification')}</div><div style="color:#666;font-size:13px;margin-top:4px">${escapeHtml((it.body||'').slice(0,140))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(it.time||it.sentAt||it.createdAt||'')}</div></div>`).join('') + '</div>';
+
+        notifDropdownContent.innerHTML = header + listHtml;
+
+        // wire select + mark all inside dropdown
+        try{
+          const sel = document.getElementById('notifDropdownViewSelect');
+          if(sel){ sel.addEventListener('change', function(){ const v = this.value || 'all'; renderNotifDropdown(v); }); }
+        }catch(e){}
+        try{
+          const markBtn = document.getElementById('notifDropdownMarkAllBtn');
+          if(markBtn){ markBtn.addEventListener('click', async function(){ try{ markBtn.disabled = true; markBtn.textContent = 'Marking...';
+                // Best-effort: ask backend to mark all notifications read. Some deployments
+                // may not expose a single endpoint; attempt the admin convenience endpoint
+                // and then refresh both dropdown and full notifications view.
+                try{ await safeApi('/api/admin/notifications/mark-all-read', { method: 'POST' }).catch(()=>null); }catch(e){}
+                setTimeout(()=>{ try{ renderNotifDropdown(); renderNotificationsView('all'); }catch(e){} }, 400);
+              }catch(e){ console.warn('notifDropdown markAll failed', e); } finally { try{ markBtn.disabled = false; markBtn.textContent = 'Mark All Read'; }catch(e){} } }); }
+        }catch(e){}
       }catch(e){ notifDropdownContent.innerHTML = '<div style="padding:12px;color:#c33">Failed to load</div>' }
     }
     // Open notifications when bell icon is clicked.
