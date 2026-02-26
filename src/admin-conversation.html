@@ -259,9 +259,19 @@
             function render(){
                 const msgs = loadMessages();
                 let html = '';
-                // Insert property preview as first bubble if property chat
+                // Insert property preview as a pinned card above the scrollable messages area
                 const propertyCard = getPropertyPreviewCard();
-                if (propertyCard) html += propertyCard;
+                // remove any existing pinned card
+                try{ const existing = document.getElementById('messages-property-card'); if(existing && existing.parentNode) existing.parentNode.removeChild(existing); }catch(e){}
+                if (propertyCard) {
+                    try{
+                        const wrapper = document.createElement('div'); wrapper.innerHTML = propertyCard;
+                        const node = wrapper.firstElementChild;
+                        if(node){ node.id = 'messages-property-card'; node.style.position = 'relative'; node.style.zIndex = '2'; }
+                        // insert as sibling before messagesEl so it stays visible above the scroll area
+                        if(node && messagesEl && messagesEl.parentNode) messagesEl.parentNode.insertBefore(node, messagesEl);
+                    }catch(e){ console.warn('Failed to insert pinned property card', e); }
+                }
                 if (!msgs || msgs.length === 0) {
                     html += '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);">No messages yet. Start the conversation below!</p>';
                     messagesEl.innerHTML = html;
