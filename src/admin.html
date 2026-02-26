@@ -97,9 +97,9 @@
     .tabs { gap:6px }
     .tab-btn { padding:6px 8px; font-size:0.85rem }
 
-    /* hide non-essential panels and their tabs to reduce clutter on phones */
+    /* hide non-essential tab buttons on phones; keep panels accessible */
     .tab-btn[data-tab="alerts"], .tab-btn[data-tab="notifications"], .tab-btn[data-tab="requests"], .tab-btn[data-tab="messages"] { display:none !important }
-    #alerts, #notifications, #requests, #messages { display:none !important }
+    /* Panels are kept visible when selected; do not forcibly hide panels here so hash navigation works on small screens */
 
     /* compact property & user lists */
     #propertiesList li, #usersList li { padding:6px 0; font-size:0.9rem }
