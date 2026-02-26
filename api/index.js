@@ -1128,13 +1128,31 @@ app.post("/api/properties", async (req, res) => {
     }catch(e){ console.warn('[api-prop-dbg] failed to query DB info before insert', e && e.message ? e.message : e); }
     console.log('[api-prop-dbg] creating property title:', (property && property.title) ? property.title : '(no title)');
     // If session user exists and no explicit user_id provided, set it so the property appears on the user's page
+    let sessUser = null;
     try{
-      const sessUser = await getSessionUser(req).catch ? await getSessionUser(req) : null;
+      sessUser = await getSessionUser(req).catch ? await getSessionUser(req) : null;
       if(sessUser && sessUser.id && (!property.user_id && property.user_id !== 0)){
         property.user_id = sessUser.id;
         console.log('[api-prop-dbg] assigned property.user_id from session:', sessUser.id);
       }
     }catch(e){ /* ignore session read errors */ }
+
+    // Prevent non-admin clients from supplying an explicit id (incomingId) to overwrite rows
+    try{
+      const hasClientId = property && (property.id || property.propertyId || property._serverId || property.serverId);
+      const isAdmin = sessUser && (sessUser.role === 'admin' || sessUser.role === 'superadmin');
+      if (hasClientId && !isAdmin) {
+        // strip identity fields so they are ignored by addPropertyWithPhotos
+        delete property.id; delete property.propertyId; delete property._serverId; delete property.serverId;
+        console.warn('[api-prop-dbg] client-supplied id stripped for non-admin user');
+      }
+    }catch(e){ }
+
+    // Validate required fields and provide clear 400 errors
+    if (!property.title || typeof property.title !== 'string' || !property.title.trim()) {
+      console.warn('/api/properties missing title in payload:', body);
+      return res.status(400).json({ error: 'Missing required field: title' });
+    }
     const resObj = await addPropertyWithPhotos(property, photoUrls);
     // Diagnostic: log DB info after insert and the returned object
     try{
