@@ -740,11 +740,13 @@
       document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id===name));
       // expose current tab on body for easy querying
       try{ document.body.dataset.currentTab = name; }catch(e){}
+      // Show header chat quick-search only when chat tab is active
+      try{ const wrap = document.getElementById('chatHeaderSearchWrap'); if(wrap) wrap.style.display = (name==='chat') ? 'block' : 'none'; }catch(e){}
       location.hash = '#'+name;
       try{ if(typeof updateBackButton === 'function') updateBackButton(); }catch(e){}
       // Call panel-specific loaders when switching
       try{ if(name === 'edit-profile' && typeof loadEditProfile === 'function') { setTimeout(()=>{ try{ loadEditProfile(); }catch(e){} }, 40); } }catch(e){}
-      try{ if(name === 'chat'){ setTimeout(()=>{ try{ const si = document.getElementById('chatSearchInput'); if(si){ si.focus(); si.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },60); } }catch(e){}
+      try{ if(name === 'chat'){ setTimeout(()=>{ try{ const si = document.getElementById('chatSearchInput'); if(si){ si.focus(); si.scrollIntoView({behavior:'smooth', block:'center'}); } const hs = document.getElementById('chatHeaderSearch'); if(hs){ hs.focus(); } }catch(e){} },60); } }catch(e){}
     }
 
     // Helper: return currently opened tab id (or null)
@@ -1649,6 +1651,14 @@
     document.addEventListener('DOMContentLoaded', function(){
       // header dropdown quick links
       document.querySelectorAll('.notifQuickLink').forEach(a=>a.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); const v = this.dataset.notifView || 'all'; notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView(v),50); }));
+
+      // Wire header chat quick-search to chat list search input
+      try{
+        const hs = document.getElementById('chatHeaderSearch');
+        if(hs){
+          hs.addEventListener('input', function(e){ try{ const val = hs.value || ''; const si = document.getElementById('chatSearchInput'); if(si){ si.value = val; si.dispatchEvent(new Event('input')); } }catch(e){} });
+        }
+      }catch(e){}
       // notifOpenFull opens full notifications (all)
       const notifOpenFullEl = document.getElementById('notifOpenFull'); if(notifOpenFullEl) notifOpenFullEl.addEventListener('click', function(e){ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setTimeout(()=>renderNotificationsView('all'),50); });
       // notif-tab buttons removed; filter dropdown is used instead
