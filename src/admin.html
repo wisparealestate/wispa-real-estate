@@ -757,7 +757,19 @@
 
     function switchTab(name){
       document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id===name));
+      document.querySelectorAll('.tab-panel').forEach(p=>{
+        const isActive = p.id===name;
+        p.classList.toggle('active', isActive);
+        try{
+          if(isActive){
+            // Ensure panels hidden by responsive CSS become visible when selected
+            p.style.setProperty('display','block','important');
+          } else {
+            // remove inline override for non-active panels so CSS can manage visibility
+            p.style.removeProperty('display');
+          }
+        }catch(e){}
+      });
       // expose current tab on body for easy querying
       try{ document.body.dataset.currentTab = name; }catch(e){}
       // Show header chat quick-search only when chat tab is active
