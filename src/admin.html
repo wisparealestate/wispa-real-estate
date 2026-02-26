@@ -1947,7 +1947,7 @@
         const nCount = sentNotifs && Array.isArray(sentNotifs.notifications) ? sentNotifs.notifications.length : 0;
 
         function statCard(label, value){
-          return `<div style="min-width:140px;padding:12px;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06)"><div style="font-size:1.25rem;font-weight:700">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#666;margin-top:6px">${escapeHtml(label)}</div></div>`;
+          return `<div style="min-width:140px;padding:12px;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06);text-align:center"><div style="font-size:1.25rem;font-weight:700">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#666;margin-top:6px">${escapeHtml(label)}</div></div>`;
         }
 
         statsEl.innerHTML = statCard('Properties', pCount)+statCard('Users', uCount)+statCard('Requests', rCount)+statCard('Alerts', aCount)+statCard('Admin messages', mCount)+statCard('Sent notifications', nCount);
@@ -2064,7 +2064,7 @@
             // avg price
             let avgPrice = 0;
             try{ const prices = propRows.map(p=>Number((p.price||0))); const valid = prices.filter(n=>!isNaN(n) && n>0); avgPrice = valid.length ? (valid.reduce((s,v)=>s+v,0)/valid.length) : 0; }catch(e){ avgPrice = 0 }
-            function metricCard(label, value){ return `<div style="min-width:160px;padding:10px;border-radius:8px;background:#f8fafc"><div style="font-weight:700;font-size:1.15rem">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#555">${escapeHtml(label)}</div></div>` }
+            function metricCard(label, value){ return `<div style="min-width:160px;padding:10px;border-radius:8px;background:#f8fafc;text-align:center"><div style="font-weight:700;font-size:1.15rem">${escapeHtml(String(value))}</div><div style="font-size:0.85rem;color:#555">${escapeHtml(label)}</div></div>` }
               // sold / pending
               const soldCount = propRows.filter(p => (p.post_to && String(p.post_to).toLowerCase()==='sold') || (p.status && String(p.status).toLowerCase()==='sold') || (p.sold===true)).length;
               const pendingCount = Math.max(0, pCount - soldCount);
