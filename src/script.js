@@ -20,21 +20,30 @@ if (!window.apiFetch) {
             if (!API_BASE) {
                 return await fetch(url, opts);
             }
-            // prefer calling configured backend directly for /api/ paths
+            // prefer same-origin calls for /api/ paths, then fall back to configured backend
                     if (typeof url === 'string' && url.startsWith('/api/')) {
                         const finalOpts = Object.assign({}, opts || {}, { credentials: 'include' });
+                        // Try same-origin first to avoid calling a remote API host that may not have
+                        // the latest routes (helps local/dev flows and when frontend and API
+                        // are served from the same origin).
+                        try{
+                            const localRes = await fetch(url, finalOpts);
+                            if (localRes) {
+                                try {
+                                    if (localRes && localRes.status === 401 && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = true;
+                                    if (localRes && localRes.ok && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = false;
+                                } catch(e){}
+                                // return local response even if not ok (so callers can handle 4xx/5xx)
+                                return localRes;
+                            }
+                        }catch(e){}
+                        // Fallback to configured API base
                         try{
                             const r = await fetch(API_BASE + url, finalOpts);
-                            // Only mark the global admin-401 flag for admin routes to avoid
-                            // globally silencing retries for non-admin endpoints.
                             try {
-                                if (r && r.status === 401 && String(url).startsWith('/api/admin')) {
-                                    window._wispaAdminUnauthorized = true;
-                                }
-                                if (r && r.ok && String(url).startsWith('/api/admin')) {
-                                    window._wispaAdminUnauthorized = false;
-                                }
-                            } catch (e) {}
+                                if (r && r.status === 401 && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = true;
+                                if (r && r.ok && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = false;
+                            } catch(e){}
                             return r;
                         }catch(e){ return null; }
                     }
