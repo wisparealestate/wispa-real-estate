@@ -1502,18 +1502,14 @@
       }catch(e){ out.textContent = 'Failed to load alerts.' }
     }
 
-    // Render notifications across multiple views: all, messages, alerts, activities, send
+    // Render notifications across multiple views: all, messages, alerts, activities
     async function renderNotificationsView(view){
       view = view || 'all';
       const out = document.getElementById('notificationsContent');
       if(!out) return;
       out.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
       try{
-        if(view === 'send'){
-          try{ switchTab('send-alert'); }catch(e){}
-          setTimeout(()=>{ try{ const t = document.getElementById('sendAlertTitle'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },200);
-          return;
-        }
+        // 'send' view removed; Send Alert now lives in its own panel (#send-alert)
         
         // rest of renderNotificationsView continues...
 
