@@ -15,6 +15,21 @@ async function writeDiag(msg){
   }
 }
 
+async function generateUnique8DigitId(client) {
+  // Try multiple times to avoid rare collisions
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const id = Math.floor(10000000 + Math.random() * 90000000); // 8-digit
+    try {
+      const res = await client.query('SELECT 1 FROM public.properties WHERE id = $1 LIMIT 1', [id]);
+      if (!res.rows || res.rows.length === 0) return id;
+    } catch (e) {
+      // If table doesn't exist or query fails, rethrow so caller can handle
+      throw e;
+    }
+  }
+  throw new Error('Failed to generate unique 8-digit property id after multiple attempts');
+}
+
 // Add property with photos
 export async function addPropertyWithPhotos(property, photoUrls) {
   const client = await pool.connect();
@@ -144,12 +159,15 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       }
 
       if (!propertyRow) {
+        // generate an 8-digit unique id to use as the property primary key
+        const generatedId = await generateUnique8DigitId(client);
         const propRes = await client.query(
           `INSERT INTO public.properties
-          (user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+          (id, user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          RETURNING *`,
           [
+            generatedId,
             p.user_id || null,
             p.title || null,
             p.description || null,
@@ -234,9 +252,9 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       if (globalCount === 0 && propertyRow) {
         try{
           const rein = await pool.query(
-            `INSERT INTO properties (user_id,title,description,price,address,image_url,bedrooms,bathrooms,type,area,sale_rent,post_to,created_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING id`,
-            [propertyRow.user_id || null, propertyRow.title || p.title || null, propertyRow.description || p.description || null, propertyRow.price != null ? propertyRow.price : null, propertyRow.address || p.address || p.location || null, propertyRow.image_url || p.image || null, propertyRow.bedrooms != null ? propertyRow.bedrooms : null, propertyRow.bathrooms != null ? propertyRow.bathrooms : null, propertyRow.type || null, propertyRow.area != null ? propertyRow.area : null, propertyRow.sale_rent || null, propertyRow.post_to || null]
+            `INSERT INTO properties (id,user_id,title,description,price,address,image_url,bedrooms,bathrooms,type,area,sale_rent,post_to,created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) RETURNING id`,
+            [propertyRow.id || null, propertyRow.user_id || null, propertyRow.title || p.title || null, propertyRow.description || p.description || null, propertyRow.price != null ? propertyRow.price : null, propertyRow.address || p.address || p.location || null, propertyRow.image_url || p.image || null, propertyRow.bedrooms != null ? propertyRow.bedrooms : null, propertyRow.bathrooms != null ? propertyRow.bathrooms : null, propertyRow.type || null, propertyRow.area != null ? propertyRow.area : null, propertyRow.sale_rent || null, propertyRow.post_to || null]
           );
           await writeDiag({ where: 'reinsertion', originalPropertyId: propertyId, newId: (rein && rein.rows && rein.rows[0] && rein.rows[0].id) || null });
         }catch(e){ await writeDiag({ where: 'reinsertion-error', error: e && e.message ? e.message : String(e) }); }
