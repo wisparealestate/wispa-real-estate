@@ -9,6 +9,16 @@ import cors from "cors";
 import upload from "./upload.js";
 import path from "path";
 import fs from 'fs/promises';
+// Simple diagnostics writer used by debug endpoints
+const __diagDir = path.join(process.cwd(), 'logs');
+async function writeDiagLog(obj){
+  try{
+    await fs.mkdir(__diagDir, { recursive: true });
+    const file = path.join(__diagDir, 'property-debug.log');
+    const line = new Date().toISOString() + ' ' + (typeof obj === 'string' ? obj : JSON.stringify(obj)) + '\n';
+    await fs.appendFile(file, line, 'utf8');
+  }catch(e){ try{ console.warn('[diag] write failed', e && e.message ? e.message : e); }catch(_){} }
+}
 import crypto from 'crypto';
 
 const { Pool } = pkg;
@@ -1425,6 +1435,7 @@ app.get('/api/properties/:id', async (req, res) => {
   if (!id) return res.status(400).json({ error: 'Missing id' });
   try {
     const pRes = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+    try{ await writeDiagLog({ handler: 'get-by-id', id, rowCount: (pRes && pRes.rowCount) || 0 }); }catch(e){}
     if (!pRes.rows || pRes.rows.length === 0) return res.status(404).json({ error: 'Property not found' });
     const prop = pRes.rows[0];
     try {
