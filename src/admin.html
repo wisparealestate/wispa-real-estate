@@ -1132,7 +1132,7 @@
     notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setActiveNotifTab('all'); renderNotificationsView('all'); });
 
     // Chats: open property chats (admin conversations)
-    chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); switchTab('chat'); renderAdminChatList(); });
+    chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); try{ location.hash = 'chat'; }catch(_){}; switchTab('chat'); renderAdminChatList(); });
 
     // Render admin chat list: prefer server-backed conversations, fall back to localStorage
     async function renderAdminChatList(){
