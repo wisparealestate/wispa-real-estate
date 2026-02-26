@@ -1409,7 +1409,18 @@
     const refreshProfileBtn = document.getElementById('refreshProfile');
     if (refreshProfileBtn) refreshProfileBtn.addEventListener('click', loadProfile);
     const refreshOverviewBtn = document.getElementById('refreshOverview');
-    if (refreshOverviewBtn) refreshOverviewBtn.addEventListener('click', function(e){ e.preventDefault(); try{ loadOverview(); }catch(err){ console.warn('loadOverview failed', err); } });
+    if (refreshOverviewBtn) refreshOverviewBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      try{
+        // Ensure the Overview tab is selected and visible
+        try{ switchTab('overview'); }catch(_){}
+        const panel = document.getElementById('overview');
+        if(panel){ try{ panel.classList.add('active'); panel.style.setProperty('display','block','important'); }catch(_){} }
+        const intro = document.getElementById('overviewIntro'); if(intro) intro.textContent = 'Loading admin overview…';
+        // Call loader and surface failures instantly
+        try{ loadOverview().catch(err=>{ console.warn('loadOverview failed', err); if(intro) intro.textContent = 'Failed to load overview.'; }); }catch(err){ console.warn('loadOverview invocation failed', err); if(intro) intro.textContent = 'Failed to load overview.'; }
+      }catch(err){ console.warn('refreshOverview handler failed', err); }
+    });
     // Wire Overview quick actions
     try{
       const overviewCreateBtn = document.getElementById('overviewCreatePostBtn');
