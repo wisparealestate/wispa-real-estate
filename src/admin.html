@@ -1407,9 +1407,7 @@
       const overviewSendAlertBtn = document.getElementById('overviewSendAlertBtn');
       if(overviewSendAlertBtn) overviewSendAlertBtn.addEventListener('click', function(e){
         e.preventDefault();
-        try{ switchTab('send-alert'); }catch(e){}
-        // after render, focus the title input for quick compose
-        setTimeout(()=>{ try{ const t = document.getElementById('sendAlertTitle'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },300);
+        try{ window.location.href = 'send-alert.html'; }catch(err){ console.warn('navigate to send-alert failed', err); }
       });
     }catch(e){}
 
