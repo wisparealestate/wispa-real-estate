@@ -889,31 +889,35 @@
           }
 
           // Inspect data files if exposed (contribute to checks)
-          try{
-            const contactTarget = API_BASE ? (API_BASE + '/data/contact_messages.json') : '/data/contact_messages.json';
-            const rc = await fetchWithTimeout(contactTarget, {}, 3000);
-            // ignore missing or blocked files (401/403/404)
-            if(rc && ![401,403,404].includes(rc.status)){
-              if(rc.ok){ const arr = await rc.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const it of arr){ const txt = ((it.subject||'')+' '+(it.message||'')).toLowerCase(); if(/error|failed|exception|traceback|stack|err/i.test(txt)) errors++; } } }
-            }
-          }catch(e){}
-          try{
-            const alertsTarget = API_BASE ? (API_BASE + '/data/system_alerts.json') : '/data/system_alerts.json';
-            const rs = await fetchWithTimeout(alertsTarget, {}, 3000);
-            if(rs && ![401,403,404].includes(rs.status)){
-              if(rs.ok){ const arr = await rs.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const a of arr){ if(a && (a.severity==='error' || a.severity==='critical')) errors++; } } }
-            }
-          }catch(e){}
+          // To avoid noisy 404s on hosts that don't expose these files, only
+          // attempt these fetches when `window.WISPA_DATA_AVAILABLE` is true.
+          if(window.WISPA_DATA_AVAILABLE){
+            try{
+              const contactTarget = API_BASE ? (API_BASE + '/data/contact_messages.json') : '/data/contact_messages.json';
+              const rc = await fetchWithTimeout(contactTarget, {}, 3000);
+              // ignore missing or blocked files (401/403/404)
+              if(rc && ![401,403,404].includes(rc.status)){
+                if(rc.ok){ const arr = await rc.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const it of arr){ const txt = ((it.subject||'')+' '+(it.message||'')).toLowerCase(); if(/error|failed|exception|traceback|stack|err/i.test(txt)) errors++; } } }
+              }
+            }catch(e){}
+            try{
+              const alertsTarget = API_BASE ? (API_BASE + '/data/system_alerts.json') : '/data/system_alerts.json';
+              const rs = await fetchWithTimeout(alertsTarget, {}, 3000);
+              if(rs && ![401,403,404].includes(rs.status)){
+                if(rs.ok){ const arr = await rs.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const a of arr){ if(a && (a.severity==='error' || a.severity==='critical')) errors++; } } }
+              }
+            }catch(e){}
 
-          // server.err presence counts as an error only if the file exists and is non-empty
-          try{
-            const serverErrTarget = API_BASE ? (API_BASE + '/server.err') : '/server.err';
-            const rerr = await fetchWithTimeout(serverErrTarget, {}, 2000);
-            if(rerr && ![401,403,404].includes(rerr.status)){
-              const txt = await rerr.text().catch(()=>null);
-              if(typeof txt === 'string'){ checks++; if(txt.trim().length>0) errors++; }
-            }
-          }catch(e){}
+            // server.err presence counts as an error only if the file exists and is non-empty
+            try{
+              const serverErrTarget = API_BASE ? (API_BASE + '/server.err') : '/server.err';
+              const rerr = await fetchWithTimeout(serverErrTarget, {}, 2000);
+              if(rerr && ![401,403,404].includes(rerr.status)){
+                const txt = await rerr.text().catch(()=>null);
+                if(typeof txt === 'string'){ checks++; if(txt.trim().length>0) errors++; }
+              }
+            }catch(e){}
+          }
 
           // Run debug auth checks (admin + user) if available
           let authChecks = 0, authErrors = 0, adminOk = false, userOk = false;
