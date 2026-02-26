@@ -1327,7 +1327,11 @@
     }catch(e){}
     try{
       const overviewSendAlertBtn = document.getElementById('overviewSendAlertBtn');
-      if(overviewSendAlertBtn) overviewSendAlertBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('alerts'); setTimeout(()=>{ try{ loadAlerts(); }catch(e){} },50); });
+      if(overviewSendAlertBtn) overviewSendAlertBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        try{ switchTab('notifications'); }catch(e){}
+        setTimeout(()=>{ try{ setActiveNotifTab && setActiveNotifTab('send'); renderNotificationsView && renderNotificationsView('send'); }catch(e){} },50);
+      });
     }catch(e){}
 
     // Data loaders for new panels
