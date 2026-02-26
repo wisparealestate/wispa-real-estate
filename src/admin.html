@@ -314,6 +314,7 @@
             <div id="footerVersion">Version: -</div>
             <div id="footerSafety">Safety rate: N/A</div>
             <div id="footerCopy">© <span id="footerYear"></span> Wispa</div>
+            <div id="footerDebug" style="font-size:12px;color:#999;width:100%;text-align:center;margin-top:6px">Last check: —</div>
           </div>
         </div>
       </div>
@@ -901,6 +902,7 @@
           window.safetyRate = safePercent + '%';
           if(footerEl) footerEl.textContent = 'Safety rate: ' + window.safetyRate;
           console.info('[autoDebugSafety] checks=', checks, 'errors=', errors, 'safety=', window.safetyRate);
+          try{ const dbg = document.getElementById('footerDebug'); if(dbg) dbg.textContent = `Last check: ${new Date().toLocaleString()} — checks=${checks}, errors=${errors}, safety=${window.safetyRate}`; }catch(e){}
         }catch(e){ console.warn('autoDebugSafety failed', e); }
       }
       // run immediately and every 5 minutes
