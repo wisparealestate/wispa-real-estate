@@ -955,6 +955,33 @@ function backToChatList() {
     try{ const actions = document.getElementById('chatActions'); if(actions) actions.style.display = ''; }catch(e){}
 }
 
+// Ensure chatActions visibility follows the visibility of chat-fullview even
+// when other widgets or scripts manipulate the view directly.
+function syncChatActionsWithFullview(){
+    try{
+        const full = document.getElementById('chat-fullview');
+        const actions = document.getElementById('chatActions');
+        if(!actions || !full) return;
+        const visible = window.getComputedStyle(full).display !== 'none';
+        actions.style.display = visible ? 'none' : '';
+    }catch(e){}
+}
+
+// Observe attribute changes on chat-fullview so we can react when other code
+// shows/hides the conversation view (AdminChatWidget, etc.).
+(function(){
+    try{
+        const full = document.getElementById('chat-fullview');
+        if(!full) return;
+        const mo = new MutationObserver(()=>{ syncChatActionsWithFullview(); });
+        mo.observe(full, { attributes: true, attributeFilter: ['style', 'class'] });
+        // also run initially
+        document.addEventListener('DOMContentLoaded', syncChatActionsWithFullview);
+        // fallback: run on hashchange and clicks that may affect view
+        window.addEventListener('hashchange', syncChatActionsWithFullview);
+    }catch(e){ }
+})();
+
 // Render chat list when switching to chat tab
 document.addEventListener('DOMContentLoaded', function() {
     const chatTab = document.getElementById('chat');
