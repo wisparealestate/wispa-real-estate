@@ -1135,7 +1135,15 @@
     notifOpenFull.addEventListener('click', (e)=>{ e.preventDefault(); notifDropdown.style.display='none'; switchTab('notifications'); setActiveNotifTab('all'); renderNotificationsView('all'); });
 
     // Chats: open property chats (admin conversations)
-    chatsBtn.addEventListener('click', (e)=>{ e.preventDefault(); try{ location.hash = 'chat'; }catch(_){}; switchTab('chat'); renderAdminChatList(); });
+    chatsBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      // Prevent any existing conversation hash from causing an immediate open
+      try{ window._suppressNextConversationOpen = true; }catch(_){}
+      try{ if(location.hash && location.hash.startsWith('#conversation')) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){}
+      switchTab('chat'); renderAdminChatList();
+      // clear suppression after a short delay so future hash links still work
+      try{ setTimeout(()=>{ window._suppressNextConversationOpen = false; }, 1200); }catch(_){}
+    });
 
     // Render admin chat list: prefer server-backed conversations, fall back to localStorage
     async function renderAdminChatList(){
@@ -2206,7 +2214,9 @@
       // Support legacy #conversation links by mapping them to the chat tab
       if (hashPath === 'conversation') {
         const params = new URLSearchParams(hashQuery);
-        const convId = params.get('id') || params.get('conv') || null;
+        let convId = params.get('id') || params.get('conv') || null;
+        // If a user just clicked the Chat button we should not auto-open a conversation
+        try{ if (window._suppressNextConversationOpen) { convId = null; window._suppressNextConversationOpen = false; } }catch(_){}
         switchTab('chat');
         // Load data then open the requested conversation (small delay ensures DOM panels are ready)
         loadProfile();
@@ -2228,6 +2238,8 @@
               const params = new URLSearchParams(qs);
               const convId = params.get('id') || params.get('conv') || null;
               console.log('hashchange detected, conversation id=', convId);
+              // honor suppression flag to avoid immediate opens triggered by UI actions
+              try{ if (window._suppressNextConversationOpen) { console.log('suppressing hash-driven auto-open for', convId); window._suppressNextConversationOpen = false; return; } }catch(_){}
               if (convId && typeof openAdminChat === 'function') openAdminChat(convId);
             }
           }catch(e){ console.error('hashchange handler error', e); }
