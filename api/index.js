@@ -1127,6 +1127,14 @@ app.post("/api/properties", async (req, res) => {
       if(info && info.rows && info.rows[0]) console.log('[api-prop-dbg] DB before insert:', info.rows[0]);
     }catch(e){ console.warn('[api-prop-dbg] failed to query DB info before insert', e && e.message ? e.message : e); }
     console.log('[api-prop-dbg] creating property title:', (property && property.title) ? property.title : '(no title)');
+    // If session user exists and no explicit user_id provided, set it so the property appears on the user's page
+    try{
+      const sessUser = await getSessionUser(req).catch ? await getSessionUser(req) : null;
+      if(sessUser && sessUser.id && (!property.user_id && property.user_id !== 0)){
+        property.user_id = sessUser.id;
+        console.log('[api-prop-dbg] assigned property.user_id from session:', sessUser.id);
+      }
+    }catch(e){ /* ignore session read errors */ }
     const resObj = await addPropertyWithPhotos(property, photoUrls);
     // Diagnostic: log DB info after insert and the returned object
     try{
