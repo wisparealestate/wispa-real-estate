@@ -8,7 +8,7 @@
     --admin-accent: #ffb400;
     --admin-bg: #f7fbff;
     --admin-text: #0b2236;
-    --page-gap: 4px;
+    --page-gap: 0px;
 }
 
 /* Apply admin theme to dashboard header */
