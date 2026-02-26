@@ -62,6 +62,10 @@ app.use(cors({
 app.use(bodyParser.json({ limit: '10mb' }));
 const port = process.env.PORT || 3001;
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve the admin/static site from the `src` directory so pages like admin.html
+// can be opened via http://localhost:PORT/admin.html and API calls to `/api/...`
+// resolve correctly when the server is running.
+app.use(express.static(path.join(process.cwd(), 'src')));
 
 const dataDir = path.join(process.cwd(), 'data');
 async function ensureDataDir(){
