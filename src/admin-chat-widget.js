@@ -10,6 +10,7 @@
       this.currentConv = null;
       this.pollTimer = null;
       this.sending = false;
+      this.searchEl = document.getElementById(opts.searchId || 'chatSearchInput');
       this.init();
     }
 
@@ -43,21 +44,42 @@
         this.listEl.innerHTML = 'Loading...';
         const j = await this.apiGet('/api/conversations');
         const convs = Array.isArray(j && j.conversations ? j.conversations : j) ? (j.conversations || j) : [];
-        if(!convs || !convs.length) { this.listEl.innerHTML = 'No conversations.'; return; }
-        const ul = document.createElement('div');
-        ul.style.display = 'flex'; ul.style.flexDirection = 'column'; ul.style.gap='8px';
-        convs.forEach(c => {
-          const id = c.id || c.conversation_id || c.key || '';
-          const title = c.participantName || c.userName || (c.property && (c.property.title || c.property.name)) || id;
-          const last = c.last || c.updated || '';
-          const row = document.createElement('div');
-          row.style.padding='8px'; row.style.border='1px solid var(--border)'; row.style.borderRadius='8px'; row.style.cursor='pointer';
-          row.innerHTML = `<div style="font-weight:700">${this.escape(title)}</div><div style="color:#666;font-size:13px">${this.escape(String(last))}</div>`;
-          row.addEventListener('click', ()=> this.openConversation(id));
-          ul.appendChild(row);
-        });
-        this.listEl.innerHTML=''; this.listEl.appendChild(ul);
+        this.convs = convs || [];
+        if(!this.convs || !this.convs.length) { this.listEl.innerHTML = 'No conversations.'; return; }
+        this.renderConversations();
+        // wire search input if present
+        try{
+          if(this.searchEl){
+            this.searchEl.addEventListener('input', ()=> this.renderConversations());
+            this.searchEl.addEventListener('change', ()=> this.renderConversations());
+          }
+        }catch(e){}
       }catch(e){ this.listEl.innerHTML = 'Failed to load conversations.'; }
+    }
+
+    renderConversations(){
+      const q = (this.searchEl && this.searchEl.value) ? String(this.searchEl.value).toLowerCase().trim() : '';
+      const rows = this.convs.filter(c=>{
+        if(!q) return true;
+        const id = String(c.id || c.conversation_id || c.key || '').toLowerCase();
+        const name = String(c.participantName || c.userName || c.userNameDisplay || '').toLowerCase();
+        const email = String(c.userEmail || c.participantEmail || '').toLowerCase();
+        const combined = id + ' ' + name + ' ' + email + ' ' + JSON.stringify(c).toLowerCase();
+        return combined.indexOf(q) !== -1;
+      });
+      if(!rows.length){ this.listEl.innerHTML = '<div style="color:#666;padding:8px">No conversations found.</div>'; return; }
+      const ul = document.createElement('div'); ul.style.display = 'flex'; ul.style.flexDirection = 'column'; ul.style.gap='8px';
+      rows.forEach(c => {
+        const id = c.id || c.conversation_id || c.key || '';
+        const title = c.participantName || c.userName || (c.property && (c.property.title || c.property.name)) || id;
+        const last = c.last || c.updated || '';
+        const row = document.createElement('div');
+        row.style.padding='8px'; row.style.border='1px solid var(--border)'; row.style.borderRadius='8px'; row.style.cursor='pointer';
+        row.innerHTML = `<div style="font-weight:700">${this.escape(title)}</div><div style="color:#666;font-size:13px">${this.escape(String(last))}</div>`;
+        row.addEventListener('click', ()=> this.openConversation(id));
+        ul.appendChild(row);
+      });
+      this.listEl.innerHTML=''; this.listEl.appendChild(ul);
     }
 
     escape(s){ try{ return String(s||''); }catch(e){ return ''; } }
