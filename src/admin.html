@@ -873,10 +873,12 @@
           };
 
           const endpoints = ['/api/admin/profile','/api/properties','/api/users'];
+          const API_BASE = (window.WISPA_API_BASE || '').replace(/\/+$/,'');
           let checks = 0, errors = 0;
           for(const ep of endpoints){
             try{
-              const r = await fetchWithTimeout(ep, {}, 4000);
+              const target = API_BASE ? (API_BASE + ep) : ep;
+              const r = await fetchWithTimeout(target, {}, 4000);
               // skip if not reachable or intentionally blocked (401/403/404)
               if(!r) continue;
               if([401,403,404].includes(r.status)) continue;
@@ -888,16 +890,18 @@
 
           // Inspect data files if exposed (contribute to checks)
           try{
-            const rc = await fetchWithTimeout('/data/contact_messages.json', {}, 3000);
+            const contactTarget = API_BASE ? (API_BASE + '/data/contact_messages.json') : '/data/contact_messages.json';
+            const rc = await fetchWithTimeout(contactTarget, {}, 3000);
             if(rc && rc.ok){ const arr = await rc.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const it of arr){ const txt = ((it.subject||'')+' '+(it.message||'')).toLowerCase(); if(/error|failed|exception|traceback|stack|err/i.test(txt)) errors++; } } }
           }catch(e){}
           try{
-            const rs = await fetchWithTimeout('/data/system_alerts.json', {}, 3000);
+            const alertsTarget = API_BASE ? (API_BASE + '/data/system_alerts.json') : '/data/system_alerts.json';
+            const rs = await fetchWithTimeout(alertsTarget, {}, 3000);
             if(rs && rs.ok){ const arr = await rs.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const a of arr){ if(a && (a.severity==='error' || a.severity==='critical')) errors++; } } }
           }catch(e){}
 
           // server.err presence counts as an error only if the file exists and is non-empty
-          try{ const rerr = await fetchWithTimeout('/server.err', {}, 2000); if(rerr && rerr.ok){ const txt = await rerr.text().catch(()=>null); if(typeof txt === 'string'){ checks++; if(txt.trim().length>0) errors++; } } }catch(e){}
+          try{ const serverErrTarget = API_BASE ? (API_BASE + '/server.err') : '/server.err'; const rerr = await fetchWithTimeout(serverErrTarget, {}, 2000); if(rerr && rerr.ok){ const txt = await rerr.text().catch(()=>null); if(typeof txt === 'string'){ checks++; if(txt.trim().length>0) errors++; } } }catch(e){}
 
           // Run debug auth checks (admin + user) if available
           let authChecks = 0, authErrors = 0, adminOk = false, userOk = false;
