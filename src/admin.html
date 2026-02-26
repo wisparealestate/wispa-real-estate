@@ -777,6 +777,7 @@
       try{ if(typeof updateBackButton === 'function') updateBackButton(); }catch(e){}
       // Call panel-specific loaders when switching
       try{ if(name === 'edit-profile' && typeof loadEditProfile === 'function') { setTimeout(()=>{ try{ loadEditProfile(); }catch(e){} }, 40); } }catch(e){}
+      try{ if(name === 'send-alert' && typeof loadSendAlertHistory === 'function') { setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} }, 40); } }catch(e){}
       try{ if(name === 'chat'){ setTimeout(()=>{ try{ const si = document.getElementById('chatSearchInput'); if(si){ si.focus(); si.scrollIntoView({behavior:'smooth', block:'center'}); } const hs = document.getElementById('chatHeaderSearch'); if(hs){ hs.focus(); } }catch(e){} },60); } }catch(e){}
     }
 
