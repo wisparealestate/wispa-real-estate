@@ -306,10 +306,14 @@
       <div id="overviewContent">
         <div id="overviewStats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px"></div>
         <div id="overviewRecents" style="display:flex;gap:18px;flex-wrap:wrap"></div>
-        <div id="companyDashboard" style="margin-top:18px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.04)">
-          <h3>Company Dashboard</h3>
-          <div id="companyMetrics" style="display:flex;gap:12px;flex-wrap:wrap"></div>
-          <div id="companyBreakdown" style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap"></div>
+        <!-- Footer replaces additional overview content (kept minimal per request) -->
+        <div id="overviewFooter" style="margin-top:18px;padding:12px;border-radius:8px;display:flex;justify-content:center;">
+          <div style="max-width:980px;width:100%;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;color:#666;font-size:0.95rem">
+            <div id="footerDateTime">Loading date…</div>
+            <div id="footerVersion">Version: -</div>
+            <div id="footerSafety">Safety rate: N/A</div>
+            <div id="footerCopy">© <span id="footerYear"></span> Wispa</div>
+          </div>
         </div>
       </div>
     </section>
@@ -820,6 +824,28 @@
     }
 
     quickSearchInput.addEventListener('input', (e)=>{ const v=e.target.value; doQuickSearch(v); });
+
+    // Overview footer helpers: date/time, version, safety rate, copyright
+    (function(){
+      function updateDateTime(){ try{ const el = document.getElementById('footerDateTime'); if(!el) return; const d = new Date(); el.textContent = d.toLocaleString(); }catch(e){} }
+      async function loadVersionAndSafety(){
+        try{
+          const verEl = document.getElementById('footerVersion');
+          const safEl = document.getElementById('footerSafety');
+          const copyEl = document.getElementById('footerYear');
+          if(copyEl) copyEl.textContent = (new Date()).getFullYear();
+          // attempt to read package.json for version (may not be served in all setups)
+          try{
+            const r = await fetch('/package.json'); if(r && r.ok){ const pj = await r.json().catch(()=>null); if(pj && pj.version && verEl) verEl.textContent = 'Version: ' + pj.version; else if(verEl) verEl.textContent = 'Version: unknown'; }
+            else if(verEl) verEl.textContent = 'Version: unknown';
+          }catch(e){ if(verEl) verEl.textContent = 'Version: unknown'; }
+          // safety rate: use window.safetyRate if available, otherwise N/A
+          try{ const s = (typeof window.safetyRate !== 'undefined') ? String(window.safetyRate) : 'N/A'; if(safEl) safEl.textContent = 'Safety rate: ' + s; }catch(e){ }
+        }catch(e){}
+      }
+      updateDateTime(); setInterval(updateDateTime, 1000);
+      loadVersionAndSafety();
+    })();
 
     // Notifications: open dropdown showing full notifications (quick view)
     const notifDropdown = document.getElementById('notifDropdown');
