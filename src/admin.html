@@ -2258,8 +2258,11 @@
       let hashPath = parts[0] || 'overview';
       // If the hash refers to an unknown panel (e.g. #undefined), fallback to overview
       try{
-        if(!document.getElementById(hashPath)) hashPath = 'overview';
-      }catch(e){ hashPath = 'overview'; }
+        if(!document.getElementById(hashPath)){
+          hashPath = 'overview';
+          try{ location.hash = '#overview'; }catch(e){}
+        }
+      }catch(e){ hashPath = 'overview'; try{ location.hash = '#overview'; }catch(_){} }
       const hashQuery = parts[1] || '';
       // Support legacy #conversation links by mapping them to the chat tab
       if (hashPath === 'conversation') {
