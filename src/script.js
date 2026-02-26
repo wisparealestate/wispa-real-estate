@@ -23,9 +23,22 @@ if (!window.apiFetch) {
             // prefer same-origin calls for /api/ paths, then fall back to configured backend
                     if (typeof url === 'string' && url.startsWith('/api/')) {
                         const finalOpts = Object.assign({}, opts || {}, { credentials: 'include' });
-                        // Try same-origin first to avoid calling a remote API host that may not have
-                        // the latest routes (helps local/dev flows and when frontend and API
-                        // are served from the same origin).
+                        const orig = (location && location.origin) ? String(location.origin).replace(/\/+$/,'') : '';
+                        const apiBaseIsRemote = Boolean(API_BASE) && (API_BASE !== '' ) && (API_BASE !== orig);
+                        // If a configured API base exists and is different from the frontend origin,
+                        // prefer calling the API base directly (this avoids 404s when frontend
+                        // is hosted as static site without API routes).
+                        if(apiBaseIsRemote){
+                            try{
+                                const r = await fetch(API_BASE + url, finalOpts);
+                                try {
+                                    if (r && r.status === 401 && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = true;
+                                    if (r && r.ok && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = false;
+                                } catch(e){}
+                                return r;
+                            }catch(e){ /* fallthrough to try same-origin as last resort */ }
+                        }
+                        // Otherwise (same-origin or no API_BASE), try same-origin first, then fallback to API_BASE
                         try{
                             const localRes = await fetch(url, finalOpts);
                             if (localRes) {
@@ -33,12 +46,9 @@ if (!window.apiFetch) {
                                     if (localRes && localRes.status === 401 && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = true;
                                     if (localRes && localRes.ok && String(url).startsWith('/api/admin')) window._wispaAdminUnauthorized = false;
                                 } catch(e){}
-                                // If local origin returns 404, try the configured API host as fallback
                                 if (localRes.status !== 404) return localRes;
-                                // else fall through to try API_BASE
                             }
                         }catch(e){}
-                        // Fallback to configured API base
                         try{
                             const r = await fetch(API_BASE + url, finalOpts);
                             try {
