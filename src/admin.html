@@ -225,7 +225,8 @@
     #notificationsContent li:hover{ background:#fbfdff }
     #notificationsContent li.notif-read{ opacity:0.6; background:#fafafa }
     #notificationsContent li div:first-child{ font-weight:700 }
-    .admin-main{ padding:var(--page-gap) }
+    /* Keep consistent left/right spacing across admin panels; top padding is handled separately */
+    .admin-main{ box-sizing:border-box; padding-left:20px; padding-right:20px }
 
     /* keep page content below the sticky header so it doesn't jump; 10px gap after header */
     .admin-main { padding-top: calc(var(--admin-header-height) + 10px) }
