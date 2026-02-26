@@ -57,6 +57,8 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     p.bedrooms = p.bedrooms != null ? (Number(p.bedrooms) || 0) : (p.beds != null ? Number(p.beds) || 0 : null);
     p.bathrooms = p.bathrooms != null ? (Number(p.bathrooms) || 0) : (p.baths != null ? Number(p.baths) || 0 : null);
     p.area = p.area != null ? (Number(p.area) || 0) : (p.size != null ? Number(p.size) || 0 : null);
+    // Ensure required DB columns are satisfied: `price` is NOT NULL in schema — default to 0 when missing
+    if (p.price == null) p.price = 0;
     // Normalize type / sale_rent / post_to
     p.type = p.type || p.property_type || null;
     p.sale_rent = p.sale_rent || p.saleRent || p.for || null;
@@ -230,6 +232,12 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       } catch(e){ /* ignore notification failures */ }
     }
     await client.query('COMMIT');
+    // Ensure SERIAL sequence stays in sync after explicit id inserts
+    try {
+      await pool.query(`SELECT setval(pg_get_serial_sequence('properties','id'), (SELECT COALESCE(MAX(id), 1) FROM properties))`);
+    } catch (e) {
+      try { await writeDiag({ where: 'setval-error', error: e && e.message ? e.message : String(e) }); } catch(_){}
+    }
     try{
       const infoAfter = await client.query("SELECT current_database() AS db, current_schema() AS schema");
       if(infoAfter && infoAfter.rows && infoAfter.rows[0]){
