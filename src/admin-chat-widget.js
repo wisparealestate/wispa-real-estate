@@ -71,11 +71,24 @@
       const ul = document.createElement('div'); ul.style.display = 'flex'; ul.style.flexDirection = 'column'; ul.style.gap='8px';
       rows.forEach(c => {
         const id = c.id || c.conversation_id || c.key || '';
+        const participant = c.participantName || c.userName || c.userNameDisplay || c.participantEmail || '';
         const title = c.participantName || c.userName || (c.property && (c.property.title || c.property.name)) || id;
         const last = c.last || c.updated || '';
+        const propId = (c.property && (c.property.id || c.property.propertyId)) || c.propertyId || '';
         const row = document.createElement('div');
         row.style.padding='8px'; row.style.border='1px solid var(--border)'; row.style.borderRadius='8px'; row.style.cursor='pointer';
-        row.innerHTML = `<div style="font-weight:700">${this.escape(title)}</div><div style="color:#666;font-size:13px">${this.escape(String(last))}</div>`;
+        row.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700">${this.escape(title)}</div>
+              <div style="color:#666;font-size:13px">${this.escape(String(last))}</div>
+            </div>
+            <div style="margin-left:12px;text-align:right;min-width:120px">
+              <div style="font-size:13px;color:#444">${this.escape(participant)}</div>
+              ${propId ? `<div style="margin-top:6px;font-size:12px;color:#0e76a8">Property: <strong>#${this.escape(String(propId))}</strong></div>` : ''}
+            </div>
+          </div>
+        `;
         row.addEventListener('click', ()=> this.openConversation(id));
         ul.appendChild(row);
       });
