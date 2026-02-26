@@ -640,6 +640,23 @@
       <div id="notificationsContent">Loading notifications…</div>
     </section>
 
+    <section id="send-alert" class="tab-panel">
+      <h2>Send Alert</h2>
+      <div style="max-width:720px">
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelectTop" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option></select></div>
+        <h3>Send Alert / Notification</h3>
+        <div style="margin:8px 0"><input id="sendAlertTitle" placeholder="Title" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"/></div>
+        <div style="margin:8px 0"><textarea id="sendAlertMessage" placeholder="Message" rows="6" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"></textarea></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="sendAlertTarget" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All users</option><option value="admins">All admins</option><option value="custom">Custom (enter user IDs/emails)</option></select>
+          <input id="sendAlertCustom" placeholder="comma-separated emails/ids" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;display:none" />
+          <button id="sendAlertSubmit" class="tab-btn">Send</button>
+        </div>
+        <div id="sendAlertStatus" style="margin-top:8px;color:#666"></div>
+        <div id="sendAlertHistory" style="margin-top:14px;color:#222"></div>
+      </div>
+    </section>
+
     <section id="create-post" class="tab-panel">
       <h2>Create Property Post</h2>
       <p>Use this form to create a new property post for users.</p>
@@ -1356,8 +1373,7 @@
       const overviewSendAlertBtn = document.getElementById('overviewSendAlertBtn');
       if(overviewSendAlertBtn) overviewSendAlertBtn.addEventListener('click', function(e){
         e.preventDefault();
-        try{ switchTab('notifications'); }catch(e){}
-        setTimeout(()=>{ try{ setActiveNotifTab && setActiveNotifTab('send'); renderNotificationsView && renderNotificationsView('send'); }catch(e){} },50);
+        try{ switchTab('send-alert'); }catch(e){}
         // after render, focus the title input for quick compose
         setTimeout(()=>{ try{ const t = document.getElementById('sendAlertTitle'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },300);
       });
@@ -1387,6 +1403,48 @@
         out.innerHTML = data.length ? '<ul>'+data.map(r=>`<li><strong>${escapeHtml(r.name||r.email||'Request')}</strong> — ${escapeHtml(r.message||r.comment||r.note||'')}</li>`).join('')+'</ul>' : 'No requests.';
       }catch(e){ out.textContent = 'Failed to load requests.' }
     }
+
+    // Send Alert page wiring: submit handler and history loader
+    async function loadSendAlertHistory(){
+      const histEl = document.getElementById('sendAlertHistory');
+      if(!histEl) return;
+      histEl.textContent = 'Loading…';
+      try{
+        // Try server-side history first
+        try{
+          const res = window.apiFetch ? await window.apiFetch('/api/admin/sent-notifications') : await fetch('/api/admin/sent-notifications');
+          if(res && res.ok){ const j = await res.json(); const arr = Array.isArray(j) ? j : (j.items || j.notifications || []); if(arr && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; } }
+        }catch(e){}
+        // Fallback to localStorage
+        try{ const arr = JSON.parse(localStorage.getItem('sentNotifications')||'[]'); if(arr && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; } }catch(e){}
+        histEl.textContent = 'No sent alerts yet.';
+      }catch(e){ histEl.textContent = 'Failed to load history.' }
+    }
+
+    try{
+      const sat = document.getElementById('sendAlertTarget');
+      if(sat) sat.addEventListener('change', function(){ try{ document.getElementById('sendAlertCustom').style.display = this.value==='custom' ? 'block' : 'none'; }catch(e){} });
+      const sbtn = document.getElementById('sendAlertSubmit');
+      if(sbtn) sbtn.addEventListener('click', async function(){
+        try{
+          const title = (document.getElementById('sendAlertTitle').value||'').trim();
+          const message = (document.getElementById('sendAlertMessage').value||'').trim();
+          const target = (document.getElementById('sendAlertTarget').value||'all');
+          const custom = (document.getElementById('sendAlertCustom').value||'').trim();
+          const status = document.getElementById('sendAlertStatus');
+          if(!title || !message){ if(status) status.textContent = 'Title and message are required.'; return; }
+          if(status) status.textContent = 'Sending…';
+          const payload = { title, message, target, custom: custom || null };
+          const poster = window.apiFetch ? window.apiFetch : (p,o)=>fetch(p,o);
+          let res = null;
+          try{ res = await poster('/api/admin/send-notification', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){}
+          if(!res || !res.ok){ try{ res = await poster('/api/admin/sent-notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){} }
+          if(res && res.ok){ if(status) status.textContent = 'Sent.'; setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} },600); return; }
+          // fallback to localStorage
+          try{ const key='sentNotifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift(Object.assign({ id: 'local-'+Date.now(), title, message, sentAt: new Date().toISOString(), target }, {})); localStorage.setItem(key, JSON.stringify(arr)); if(status) status.textContent='Saved locally (offline)'; setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} },600); return; }catch(e){ if(status) status.textContent='Send failed'; }
+        }catch(e){ try{ document.getElementById('sendAlertStatus').textContent='Send failed'; }catch(_){} }
+      });
+    }catch(e){}
 
     async function loadMessages(){
       const out = document.getElementById('messagesList');
@@ -1418,77 +1476,11 @@
       out.innerHTML = '<div style="padding:12px;color:#666">Loading…</div>';
       try{
         if(view === 'send'){
-          out.innerHTML = `
-            <div style="max-width:720px">
-              <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px"><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>
-              <h3>Send Alert / Notification</h3>
-              <div style="margin:8px 0"><input id="sendAlertTitle" placeholder="Title" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"/></div>
-              <div style="margin:8px 0"><textarea id="sendAlertMessage" placeholder="Message" rows="6" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px"></textarea></div>
-              <div style="display:flex;gap:8px;align-items:center">
-                <select id="sendAlertTarget" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All users</option><option value="admins">All admins</option><option value="custom">Custom (enter user IDs/emails)</option></select>
-                <input id="sendAlertCustom" placeholder="comma-separated emails/ids" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;display:none" />
-                <button id="sendAlertSubmit" class="tab-btn">Send</button>
-              </div>
-              <div id="sendAlertStatus" style="margin-top:8px;color:#666"></div>
-              <div id="sendAlertHistory" style="margin-top:14px;color:#222"></div>
-            </div>
-          `;
-          // wire controls
-          document.getElementById('sendAlertTarget').addEventListener('change', function(){ document.getElementById('sendAlertCustom').style.display = this.value==='custom' ? 'block' : 'none'; });
-          document.getElementById('sendAlertSubmit').addEventListener('click', async function(){
-            const title = (document.getElementById('sendAlertTitle').value||'').trim();
-            const message = (document.getElementById('sendAlertMessage').value||'').trim();
-            const target = (document.getElementById('sendAlertTarget').value||'all');
-            const custom = (document.getElementById('sendAlertCustom').value||'').trim();
-            const status = document.getElementById('sendAlertStatus');
-            if(!title || !message){ status.textContent = 'Title and message are required.'; return; }
-            status.textContent = 'Sending…';
-            try{
-              const payload = { title, message, target, custom: custom || null };
-              const poster = window.apiFetch ? window.apiFetch : (p,o)=>fetch(p,o);
-              // Try common admin endpoint first, fall back to sent-notifications collection
-              let res = null;
-              try{ res = await poster('/api/admin/send-notification', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){}
-              if(!res || !res.ok){ try{ res = await poster('/api/admin/sent-notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){} }
-              if(res && res.ok){ status.textContent = 'Sent.'; setTimeout(()=>renderNotificationsView('send'),600); return; }
-              // fallback to localStorage if server not available
-              try{ const key='sentNotifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift(Object.assign({ id: 'local-'+Date.now(), title, message, sentAt: new Date().toISOString(), target }, {})); localStorage.setItem(key, JSON.stringify(arr)); status.textContent='Saved locally (offline)'; setTimeout(()=>renderNotificationsView('send'),600); return; }catch(e){ status.textContent='Send failed'; }
-            }catch(e){ console.error(e); status.textContent='Send failed'; }
-          });
-
-          // Load sent notifications history (server + local fallback)
-          (async function(){
-            const histEl = document.getElementById('sendAlertHistory');
-            histEl.innerHTML = '<div style="color:#666">Loading sent alerts…</div>';
-            try{
-              let data = null;
-              try{ data = await safeApi('/api/admin/sent-notifications'); }catch(e){ data = null; }
-              const norm = (d)=>{ if(!d) return []; if(Array.isArray(d)) return d; if(Array.isArray(d.notifications)) return d.notifications; if(Array.isArray(d.items)) return d.items; return [] };
-              const rows = norm(data);
-              // localStorage fallback
-              let local = [];
-              try{ local = JSON.parse(localStorage.getItem('sentNotifications')||'[]'); }catch(e){ local = []; }
-              const merged = (rows || []).concat(local || []);
-              // Filter to only items that look like sent alerts (title/body/category contains 'alert')
-              const filtered = (merged || []).filter(n=>{
-                try{
-                  const txt = ((n.title||n.message||n.body||'') + ' ' + (n.category||n.type||n._type||'') + ' ' + (n.data && (n.data.type||n.data.category) || '')).toString().toLowerCase();
-                  return txt.indexOf('alert') !== -1 || txt.indexOf('sent_alert') !== -1 || txt.indexOf('send alert') !== -1;
-                }catch(e){ return false; }
-              });
-              if(!filtered.length){ histEl.innerHTML = '<div style="color:#666">No sent alerts.</div>'; return; }
-              histEl.innerHTML = '<h4>Sent Alerts</h4><ul style="list-style:none;margin:0;padding:0">'+filtered.slice(0,50).map(n=>`<li style="padding:8px;border-bottom:1px solid #f2f6fb"><div style="font-weight:700">${escapeHtml(n.title||n.message||'Alert')}</div><div style="color:#666;margin-top:4px">${escapeHtml((n.message||n.body||'').slice(0,240))}</div><div style="font-size:12px;color:#999;margin-top:6px">${escapeHtml(n.sentAt||n.createdAt||n.time||'')}</div></li>`).join('')+'</ul>';
-            }catch(e){ histEl.innerHTML = '<div style="color:#c33">Failed to load sent alerts.</div>'; }
-          })();
-
-          // wire the filter select inside the send view
-          try{
-            const sel = document.getElementById('notifViewSelect');
-            if(sel){ sel.value = 'send'; sel.addEventListener('change', function(){ const v = this.value || 'all'; setActiveNotifTab(v); renderNotificationsView(v); }); }
-          }catch(e){}
-
+          out.innerHTML = '<div style="padding:12px;color:#666">Send Alert has moved to its own page. <a href="#send-alert">Open Send Alert</a></div>';
           return;
         }
+        
+        // rest of renderNotificationsView continues...
 
         // helper to normalise arrays
         const norm = (d)=>{ if(!d) return []; if(Array.isArray(d)) return d; if(Array.isArray(d.items)) return d.items; if(Array.isArray(d.notifications)) return d.notifications; return [] };
@@ -1589,7 +1581,7 @@
         items.sort((a,b)=>{ const ta = new Date(a.time||a.sentAt||a.createdAt||0).getTime()||0; const tb = new Date(b.time||b.sentAt||b.createdAt||0).getTime()||0; return tb-ta; });
         // add a small filter select at the top (helps mobile users switch views)
         const headerSelect = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between">'
-               + '<div><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option><option value="send">Send Alert</option></select></div>'
+               + '<div><label style="color:#666;font-size:13px">Filter:</label><select id="notifViewSelect" style="padding:8px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option></select></div>'
                + '<div style="display:flex;gap:8px;align-items:center"><button id="notifMarkAllBtn" class="tab-btn" style="white-space:nowrap">Mark All Read</button></div>'
                + '</div>';
         out.innerHTML = headerSelect + '<ul style="list-style:none;margin:0;padding:0">'+items.map(it=>{
