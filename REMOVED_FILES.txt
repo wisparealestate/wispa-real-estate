@@ -1,4 +1,0 @@
-Removed files for workspace cleanup:
-- src/styles.css.bak
-- src/script.js.bak
-- src/add-test-property.js

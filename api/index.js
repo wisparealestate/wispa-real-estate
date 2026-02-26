@@ -761,6 +761,63 @@ app.post('/api/notifications', async (req, res) => {
         // Final fallback: persist to a file-backed JSON store so notifications aren't lost
         try {
           const arr = await readJson('notifications.json');
+
+    // Admin: save app settings (store in data/admin-settings.json)
+    app.post('/api/admin/settings', async (req, res) => {
+      try {
+        const admin = req.currentUser;
+        if (!admin) return res.status(401).json({ error: 'Admin authentication required' });
+        const payload = req.body || {};
+        // persist to disk so deployments without a settings table can still use this
+        await writeJson('admin-settings.json', Object.assign({}, payload, { updated_by: admin.id, updated_at: new Date().toISOString() }));
+        return res.json({ ok: true, settings: payload });
+      } catch (err) {
+        return res.status(500).json({ error: 'Failed to save settings', details: err.message });
+      }
+    });
+
+    // Admin: save admin defaults (merge into admin-settings.json under `adminDefaults`)
+    app.post('/api/admin/settings/admin-defaults', async (req, res) => {
+      try {
+        const admin = req.currentUser;
+        if (!admin) return res.status(401).json({ error: 'Admin authentication required' });
+        const defaults = req.body || {};
+        const existing = await readJson('admin-settings.json');
+        const merged = Object.assign({}, existing || {}, { adminDefaults: defaults, updated_by: admin.id, updated_at: new Date().toISOString() });
+        await writeJson('admin-settings.json', merged);
+        return res.json({ ok: true, adminDefaults: defaults });
+      } catch (err) {
+        return res.status(500).json({ error: 'Failed to save admin defaults', details: err.message });
+      }
+    });
+
+    // Admin: save privacy settings for users (data/admin-privacy.json)
+    app.post('/api/admin/privacy', async (req, res) => {
+      try {
+        const admin = req.currentUser;
+        if (!admin) return res.status(401).json({ error: 'Admin authentication required' });
+        const payload = req.body || {};
+        await writeJson('admin-privacy.json', Object.assign({}, payload, { updated_by: admin.id, updated_at: new Date().toISOString() }));
+        return res.json({ ok: true, privacy: payload });
+      } catch (err) {
+        return res.status(500).json({ error: 'Failed to save privacy settings', details: err.message });
+      }
+    });
+
+    // Admin: save admin-visibility/privacy options (merge into admin-privacy.json under `admin`)
+    app.post('/api/admin/privacy/admin', async (req, res) => {
+      try {
+        const admin = req.currentUser;
+        if (!admin) return res.status(401).json({ error: 'Admin authentication required' });
+        const body = req.body || {};
+        const existing = await readJson('admin-privacy.json');
+        const merged = Object.assign({}, existing || {}, { admin: body, updated_by: admin.id, updated_at: new Date().toISOString() });
+        await writeJson('admin-privacy.json', merged);
+        return res.json({ ok: true, adminPrivacy: body });
+      } catch (err) {
+        return res.status(500).json({ error: 'Failed to save admin privacy', details: err.message });
+      }
+    });
           const entry = { id: Date.now(), category, target, title: notification.title || null, body: notification.message || notification.fullMessage || null, data: notification || {}, is_read: notification.read ? true : false, created_at: createdAt };
           arr.unshift(entry);
           await writeJson('notifications.json', arr);
