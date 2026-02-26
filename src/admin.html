@@ -1153,9 +1153,11 @@
       try{
         // Provide a compact filter + action header inside the dropdown so admins can
         // choose the view and mark items read from the bell menu.
+        // Layout: Refresh | Filter (centered) | Mark All Read
         const header = `<div style="padding:8px 10px;border-bottom:1px solid #eef6fb;display:flex;align-items:center;gap:8px;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:8px"><label style="font-size:13px;color:#666">Filter:</label><select id="notifDropdownViewSelect" style="padding:6px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option></select></div>
-            <div><button id="notifDropdownMarkAllBtn" class="tab-btn" style="white-space:nowrap">Mark All Read</button></div>
+            <div style="flex:0 0 auto;display:flex;align-items:center;gap:8px"><button id="notifDropdownRefreshBtn" class="tab-btn">Refresh</button></div>
+            <div style="flex:1 1 auto;display:flex;align-items:center;justify-content:center"><label style="font-size:13px;color:#666;margin-right:6px">Filter:</label><select id="notifDropdownViewSelect" style="padding:6px;border:1px solid var(--border);border-radius:6px"><option value="all">All</option><option value="messages">Messages</option><option value="alerts">Alerts</option><option value="activities">Activities</option></select></div>
+            <div style="flex:0 0 auto"><button id="notifDropdownMarkAllBtn" class="tab-btn" style="white-space:nowrap">Mark All Read</button></div>
           </div>`;
 
         // Load sources similar to renderNotificationsView so filtering is consistent
@@ -1197,17 +1199,18 @@
 
         notifDropdownContent.innerHTML = header + listHtml;
 
-        // wire select + mark all inside dropdown
+        // wire refresh, select, and mark all inside dropdown
+        try{
+          const refreshBtn = document.getElementById('notifDropdownRefreshBtn');
+          if(refreshBtn){ refreshBtn.addEventListener('click', function(){ try{ renderNotifDropdown(); }catch(e){ console.warn('notifDropdown refresh failed', e); } }); }
+        }catch(e){}
         try{
           const sel = document.getElementById('notifDropdownViewSelect');
-          if(sel){ sel.addEventListener('change', function(){ const v = this.value || 'all'; renderNotifDropdown(v); }); }
+          if(sel){ sel.addEventListener('change', function(){ try{ renderNotifDropdown(); }catch(e){ console.warn('notifDropdown select change failed', e); } }); }
         }catch(e){}
         try{
           const markBtn = document.getElementById('notifDropdownMarkAllBtn');
           if(markBtn){ markBtn.addEventListener('click', async function(){ try{ markBtn.disabled = true; markBtn.textContent = 'Marking...';
-                // Best-effort: ask backend to mark all notifications read. Some deployments
-                // may not expose a single endpoint; attempt the admin convenience endpoint
-                // and then refresh both dropdown and full notifications view.
                 try{ await safeApi('/api/admin/notifications/mark-all-read', { method: 'POST' }).catch(()=>null); }catch(e){}
                 setTimeout(()=>{ try{ renderNotifDropdown(); renderNotificationsView('all'); }catch(e){} }, 400);
               }catch(e){ console.warn('notifDropdown markAll failed', e); } finally { try{ markBtn.disabled = false; markBtn.textContent = 'Mark All Read'; }catch(e){} } }); }
