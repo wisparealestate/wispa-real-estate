@@ -283,8 +283,8 @@
         <a href="#properties" data-tab="properties">Properties</a>
         <a href="#users" data-tab="users">Users</a>
         <a href="#" id="debugLink">Debug</a>
-        <a href="admin-edit-profile.html" id="settingsLink">Settings</a>
-        <a href="admin-edit-profile.html#privacy" id="privacyLink">Privacy</a>
+        <a href="#settings" data-tab="settings" id="settingsLink">Settings</a>
+        <a href="#privacy" data-tab="privacy" id="privacyLink">Privacy</a>
         <a href="#logout" id="logoutLink">Logout</a>
       </nav>
     </div>
@@ -371,6 +371,107 @@
       </div>
       <div style="height:8px"></div>
       <div id="profileMessages" style="color:#666">Loading profile…</div>
+    </section>
+
+    <!-- Embedded Settings tab (in-page) -->
+    <section id="settings" class="tab-panel" style="display:none">
+      <h2>App Settings (affects user & admin sites)</h2>
+      <div class="card">
+        <form id="appSettingsFormInline">
+          <label>Site title
+            <input id="siteTitleInline" name="siteTitle" type="text" placeholder="Site title">
+          </label>
+
+          <label>Default language
+            <select id="defaultLangInline" name="defaultLang">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+            </select>
+          </label>
+
+          <label>
+            <input id="maintenanceModeInline" name="maintenanceMode" type="checkbox"> Enable maintenance mode
+          </label>
+
+          <label>
+            <input id="allowRegistrationInline" name="allowRegistration" type="checkbox"> Allow user registration
+          </label>
+
+          <div style="margin-top:12px">
+            <button id="saveAppSettingsInline" class="btn">Save App Settings</button>
+          </div>
+        </form>
+      </div>
+
+      <h3 style="margin-top:18px">Admin Defaults</h3>
+      <div class="card">
+        <form id="adminDefaultsFormInline">
+          <label>Items per page
+            <input id="adminItemsPerPageInline" name="adminItemsPerPage" type="number" min="1" value="20">
+          </label>
+          <label>
+            <input id="adminEmailAlertsInline" name="adminEmailAlerts" type="checkbox" checked> Send email alerts to admins
+          </label>
+          <div style="margin-top:12px">
+            <button id="saveAdminDefaultsInline" class="btn">Save Admin Defaults</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Embedded Privacy tab (in-page) -->
+    <section id="privacy" class="tab-panel" style="display:none">
+      <h2>User-facing Privacy Controls</h2>
+      <div class="card">
+        <form id="privacyFormInline">
+          <label>
+            <input id="publicProfileInline" type="checkbox" checked>
+            Allow users to make their profile public
+          </label>
+
+          <label>
+            <input id="showContactInfoInline" type="checkbox" checked>
+            Show contact information on property detail to other users
+          </label>
+
+          <label>
+            <input id="showPhoneButtonInline" type="checkbox" checked>
+            Show direct contact button on listings
+          </label>
+
+          <label>
+            <input id="dataSharingInline" type="checkbox">
+            Enable data sharing with 3rd-party services (analytics/ads)
+          </label>
+
+          <label>
+            <input id="analyticsInline" type="checkbox" checked>
+            Enable site analytics (collect anonymous usage data)
+          </label>
+
+          <div style="margin-top:12px">
+            <button id="savePrivacyInline" class="btn">Save Privacy Settings</button>
+          </div>
+        </form>
+      </div>
+
+      <h3 style="margin-top:18px">Admin visibility</h3>
+      <div class="card">
+        <form id="adminPrivacyFormInline">
+          <label>
+            <input id="adminSeeUserContactsInline" type="checkbox" checked>
+            Allow admins to view user contact details
+          </label>
+          <label>
+            <input id="adminExportDataInline" type="checkbox">
+            Allow admins to export user data
+          </label>
+          <div style="margin-top:12px">
+            <button id="saveAdminPrivacyInline" class="btn">Save Admin Privacy</button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <section id="requests" class="tab-panel">
@@ -498,8 +599,8 @@
             });
           }
 
-          if(settingsBtn){ settingsBtn.addEventListener('click', function(){ /* anchor navigates to edit page */ }); }
-          if(privacyBtn){ privacyBtn.addEventListener('click', function(){ window.location.href = 'admin-edit-profile.html#privacy'; }); }
+          if(settingsBtn){ settingsBtn.addEventListener('click', function(e){ e.preventDefault(); try{ switchTab('settings'); }catch(err){} }); }
+          if(privacyBtn){ privacyBtn.addEventListener('click', function(e){ e.preventDefault(); try{ switchTab('privacy'); }catch(err){} }); }
         }catch(e){ console.warn('Profile panel init failed', e); }
       });
     </script>
@@ -2228,5 +2329,23 @@
       document.addEventListener('DOMContentLoaded', ()=>trySetup(0));
     })();
   </script>
+    <script>
+      // Wire inline settings & privacy form save handlers
+      (function(){
+        const postJson = (path, body)=>{
+          if(typeof window.apiFetch === 'function') return window.apiFetch(path, { method: 'POST', body: JSON.stringify(body), headers:{'content-type':'application/json'} });
+          return fetch(path, { method: 'POST', body: JSON.stringify(body), headers:{'content-type':'application/json'} }).catch(()=>null);
+        };
+
+        const el = id => document.getElementById(id);
+        const setup = ()=>{
+          const saveApp = el('saveAppSettingsInline'); if(saveApp) saveApp.addEventListener('click', async (e)=>{ e.preventDefault(); const body = { siteTitle: el('siteTitleInline').value, defaultLang: el('defaultLangInline').value, maintenanceMode: !!el('maintenanceModeInline').checked, allowRegistration: !!el('allowRegistrationInline').checked }; const r = await postJson('/api/admin/settings', body); if(r && r.ok) alert('App settings saved'); else alert('Save failed'); });
+          const saveAdminDef = el('saveAdminDefaultsInline'); if(saveAdminDef) saveAdminDef.addEventListener('click', async (e)=>{ e.preventDefault(); const body = { itemsPerPage: Number(el('adminItemsPerPageInline').value)||20, emailAlerts: !!el('adminEmailAlertsInline').checked }; const r = await postJson('/api/admin/settings/admin-defaults', body); if(r && r.ok) alert('Admin defaults saved'); else alert('Save failed'); });
+          const savePriv = el('savePrivacyInline'); if(savePriv) savePriv.addEventListener('click', async (e)=>{ e.preventDefault(); const body = { publicProfile: !!el('publicProfileInline').checked, showContactInfo: !!el('showContactInfoInline').checked, showPhoneButton: !!el('showPhoneButtonInline').checked, dataSharing: !!el('dataSharingInline').checked, analytics: !!el('analyticsInline').checked }; const r = await postJson('/api/admin/privacy', body); if(r && r.ok) alert('Privacy saved'); else alert('Save failed'); });
+          const saveAdminPriv = el('saveAdminPrivacyInline'); if(saveAdminPriv) saveAdminPriv.addEventListener('click', async (e)=>{ e.preventDefault(); const body = { adminSeeUserContacts: !!el('adminSeeUserContactsInline').checked, adminExportData: !!el('adminExportDataInline').checked }; const r = await postJson('/api/admin/privacy/admin', body); if(r && r.ok) alert('Admin privacy saved'); else alert('Save failed'); });
+        };
+        try{ setup(); }catch(e){ console.warn('Inline settings init failed', e); }
+      })();
+    </script>
 </body>
 </html>
