@@ -1462,7 +1462,9 @@
     async function loadSendAlertHistory(){
       const histEl = document.getElementById('sendAlertHistory');
       if(!histEl) return;
-      histEl.textContent = 'Loading…';
+      // Quick visible fallback so the panel never appears empty
+      histEl.textContent = '';
+      try{ histEl.innerHTML = '<div style="color:#444">Loading sent alerts…</div>'; }catch(e){}
       try{
         // Try server-side history first
         try{
@@ -1471,8 +1473,8 @@
         }catch(e){}
         // Fallback to localStorage
         try{ const arr = JSON.parse(localStorage.getItem('sentNotifications')||'[]'); if(arr && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; } }catch(e){}
-        histEl.textContent = 'No sent alerts yet.';
-      }catch(e){ histEl.textContent = 'Failed to load history.' }
+        try{ histEl.innerHTML = '<div style="color:#666">No sent alerts yet.</div>'; }catch(e){}
+      }catch(e){ try{ histEl.innerHTML = '<div style="color:#c33">Failed to load history.</div>'; }catch(_){ } }
     }
 
     try{
