@@ -480,17 +480,28 @@ app.post('/api/admin/profile', async (req, res) => {
       }
     }catch(e){ console.warn('users update failed', e); }
 
-    // If no users row, update admin_logins where possible (limited fields)
+    // If no users row, update admin_logins where possible (attempt to persist extended fields)
     try{
       const arow = await pool.query('SELECT id FROM admin_logins WHERE id = $1 OR email = $2 LIMIT 1', [sess.id, sess.email]);
       if(arow && arow.rows && arow.rows[0]){
         const adminId = arow.rows[0].id;
-        const allowedAdmin = ['username','email','full_name'];
-        const provided = Object.keys(body || {}).filter(k => allowedAdmin.indexOf(k) !== -1);
+        // Allow extended admin fields if the columns exist in the DB (migration may add these)
+        const candidateFields = ['username','email','full_name','avatar_url','phone','bio','gender','location'];
+        const provided = Object.keys(body || {}).filter(k => candidateFields.indexOf(k) !== -1);
         if(provided.length===0) return res.status(400).json({ error: 'No updatable admin fields provided' });
-        const sets = provided.map((c, idx) => `${c} = $${idx+1}`);
-        const values = provided.map(c => body[c] === undefined ? null : body[c]);
-        const sql = `UPDATE admin_logins SET ${sets.join(', ')} WHERE id = $${provided.length + 1} RETURNING id, username, email, created_at, full_name`;
+
+        // Check which of the candidate fields actually exist on admin_logins
+        const colsRes = await pool.query(
+          `SELECT column_name FROM information_schema.columns WHERE table_name = 'admin_logins' AND column_name = ANY($1::text[])`,
+          [candidateFields]
+        );
+        const existing = (colsRes.rows || []).map(r => r.column_name);
+        const toUpdate = provided.filter(p => existing.indexOf(p) !== -1);
+        if(toUpdate.length===0) return res.status(400).json({ error: 'No writable admin columns exist on DB' });
+
+        const sets = toUpdate.map((c, idx) => `${c} = $${idx+1}`);
+        const values = toUpdate.map(c => body[c] === undefined ? null : body[c]);
+        const sql = `UPDATE admin_logins SET ${sets.join(', ')} WHERE id = $${toUpdate.length + 1} RETURNING id, username, email, created_at, full_name, avatar_url, phone, bio, gender, location`;
         const result = await pool.query(sql, [...values, adminId]);
         if(result && result.rows && result.rows[0]) return res.json(result.rows[0]);
         return res.status(500).json({ error: 'Failed to update admin_logins' });

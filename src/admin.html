@@ -871,6 +871,40 @@
               try{ const bioEl = document.getElementById('editBio'); if(bioEl) payload.bio = bioEl.value || ''; }catch(e){}
               try{ const gEl = document.getElementById('editGender'); if(gEl) payload.gender = gEl.value || ''; }catch(e){}
               if(avatarUrl){ payload.avatar_url = avatarUrl; payload.avatar = avatarUrl; }
+              else {
+                // If no avatar was uploaded in this save, try to detect an existing
+                // already-uploaded avatar URL shown in the UI and include it.
+                try{
+                  const pick = ()=>{
+                    const candidates = [
+                      document.getElementById('editAvatarPreview'),
+                      document.getElementById('admin-avatar'),
+                      document.getElementById('hamburgerProfileAvatar'),
+                      document.getElementById('adminHeaderAvatar')
+                    ];
+                    for(const el of candidates){
+                      try{
+                        if(!el) continue;
+                        const img = el.querySelector && el.querySelector('img');
+                        if(img && img.src) return img.src;
+                        // fallback: element may contain a background-image style with url(...)
+                        const bg = (el.style && el.style.backgroundImage) ? el.style.backgroundImage : null;
+                        if(bg && typeof bg === 'string'){
+                          const m = bg.match(/url\(["']?(.*?)["']?\)/);
+                          if(m && m[1]) return m[1];
+                        }
+                      }catch(e){}
+                    }
+                    return null;
+                  };
+                  const existing = pick();
+                  if(existing && !existing.startsWith('blob:')){
+                    avatarUrl = existing;
+                    payload.avatar_url = avatarUrl;
+                    payload.avatar = avatarUrl;
+                  }
+                }catch(e){}
+              }
               // Use global saveAdminProfile helper
               try{
                 const resp = await window.saveAdminProfile(payload);
