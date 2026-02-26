@@ -1496,6 +1496,17 @@ app.get('/api/debug/properties-triggers', async (req, res) => {
   }
 });
 
+app.get('/api/debug/properties-meta', async (req, res) => {
+  try {
+    const tables = await pool.query("SELECT schemaname, tablename FROM pg_tables WHERE tablename = 'properties'");
+    const classInfo = await pool.query("SELECT oid, relname, relkind, relnamespace::regnamespace::text AS schema_name FROM pg_class WHERE relname = 'properties'");
+    const cols = await pool.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'properties' ORDER BY ordinal_position");
+    return res.json({ tables: tables.rows || [], classInfo: classInfo.rows || [], columns: cols.rows || [] });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to fetch meta', details: e && e.message ? e.message : e });
+  }
+});
+
 // Debug: basic DB info and existence check
 app.get('/api/debug/db-info', async (req, res) => {
   try {
