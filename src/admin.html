@@ -1407,7 +1407,17 @@
       const overviewSendAlertBtn = document.getElementById('overviewSendAlertBtn');
       if(overviewSendAlertBtn) overviewSendAlertBtn.addEventListener('click', function(e){
         e.preventDefault();
-        try{ window.location.href = 'send-alert.html'; }catch(err){ console.warn('navigate to send-alert failed', err); }
+        try{
+          // If we're already on the admin page, switch to the in-page panel.
+          const path = (location && location.pathname) ? String(location.pathname) : '';
+          if(path.indexOf('admin.html') !== -1 || path.endsWith('/') || path === '' ){ 
+            try{ switchTab('send-alert'); }catch(_){}
+            setTimeout(()=>{ try{ const t = document.getElementById('sendAlertTitle'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },200);
+          } else {
+            // Not on admin page — navigate to admin with hash so the panel opens inside the admin UI
+            try{ location.href = 'admin.html#send-alert'; }catch(e){ console.warn('navigation failed', e); }
+          }
+        }catch(err){ console.warn('send alert navigation failed', err); }
       });
     }catch(e){}
 
