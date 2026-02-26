@@ -599,7 +599,7 @@
             });
           }
 
-          if(settingsBtn){ settingsBtn.addEventListener('click', function(e){ e.preventDefault(); try{ switchTab('settings'); }catch(err){} }); }
+          if(settingsBtn){ settingsBtn.addEventListener('click', function(e){ e.preventDefault(); try{ switchTab('edit-profile'); }catch(err){} }); }
           if(privacyBtn){ privacyBtn.addEventListener('click', function(e){ e.preventDefault(); try{ switchTab('privacy'); }catch(err){} }); }
         }catch(e){ console.warn('Profile panel init failed', e); }
       });
