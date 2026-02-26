@@ -740,6 +740,7 @@
       try{ if(typeof updateBackButton === 'function') updateBackButton(); }catch(e){}
       // Call panel-specific loaders when switching
       try{ if(name === 'edit-profile' && typeof loadEditProfile === 'function') { setTimeout(()=>{ try{ loadEditProfile(); }catch(e){} }, 40); } }catch(e){}
+      try{ if(name === 'chat'){ setTimeout(()=>{ try{ const si = document.getElementById('chatSearchInput'); if(si){ si.focus(); si.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },60); } }catch(e){}
     }
 
     // Helper: return currently opened tab id (or null)
