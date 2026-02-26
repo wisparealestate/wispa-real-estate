@@ -41,6 +41,8 @@
 
     async loadConversations(){
       try{
+        // Ensure full conversation view is closed when rendering the list
+        try{ if(this.fullView) this.fullView.style.display = 'none'; if(this.listEl) this.listEl.style.display = 'block'; this.currentConv = null; }catch(e){}
         this.listEl.innerHTML = 'Loading...';
         const j = await this.apiGet('/api/conversations');
         const convs = Array.isArray(j && j.conversations ? j.conversations : j) ? (j.conversations || j) : [];

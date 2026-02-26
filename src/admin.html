@@ -1143,6 +1143,12 @@
           try{ window._adminChatWidget.loadConversations(); return; }catch(e){ console.warn('AdminChatWidget.loadConversations failed', e); }
         }
       }catch(e){}
+      // Defensive: ensure full conversation view is closed and hash doesn't point to a conversation
+      try{
+        const full = document.getElementById('chat-fullview');
+        if (full) full.style.display = 'none';
+        try{ if (location.hash && location.hash.startsWith('#conversation')) location.hash = 'chat'; }catch(_){ }
+      }catch(_){ }
       const out = document.getElementById('admin-chats-list');
       out.innerHTML = 'Loading…';
       try{
