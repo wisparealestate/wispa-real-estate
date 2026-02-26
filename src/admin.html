@@ -1334,6 +1334,8 @@
         e.preventDefault();
         try{ switchTab('notifications'); }catch(e){}
         setTimeout(()=>{ try{ setActiveNotifTab && setActiveNotifTab('send'); renderNotificationsView && renderNotificationsView('send'); }catch(e){} },50);
+        // after render, focus the title input for quick compose
+        setTimeout(()=>{ try{ const t = document.getElementById('sendAlertTitle'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth', block:'center'}); } }catch(e){} },300);
       });
     }catch(e){}
 
