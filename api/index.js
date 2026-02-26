@@ -1434,6 +1434,10 @@ app.get('/api/properties/:id', async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing id' });
   try {
+    try{
+      const info = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+      if(info && info.rows && info.rows[0]) await writeDiagLog({ handler: 'get-by-id-info', id, info: info.rows[0] });
+    }catch(e){ /* ignore */ }
     const pRes = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
     try{ await writeDiagLog({ handler: 'get-by-id', id, rowCount: (pRes && pRes.rowCount) || 0 }); }catch(e){}
     if (!pRes.rows || pRes.rows.length === 0) return res.status(404).json({ error: 'Property not found' });
@@ -1456,6 +1460,28 @@ app.get('/api/debug/properties-recent', async (req, res) => {
     return res.json({ recent: r.rows || [] });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to fetch recent properties', details: e.message });
+  }
+});
+
+// Debug: comprehensive properties inspection
+app.get('/api/debug/properties-inspect', async (req, res) => {
+  try {
+    const id = req.query.id || null;
+    const info = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+    const countRes = await pool.query('SELECT count(*) AS cnt FROM properties');
+    const recentRes = await pool.query('SELECT id, title, address, created_at FROM properties ORDER BY created_at DESC LIMIT 20');
+    let byId = null;
+    if (id) {
+      const r = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+      byId = r.rows || [];
+    }
+    // Also include basic pg_stat_activity snapshot (limited) to help debug connections
+    let activity = [];
+    try { const a = await pool.query("SELECT pid, usename, application_name, client_addr, state, query FROM pg_stat_activity ORDER BY state_change DESC LIMIT 6"); activity = a.rows || []; } catch(e){}
+    await writeDiagLog({ handler: 'inspect', info: info.rows && info.rows[0], count: countRes.rows && countRes.rows[0] && countRes.rows[0].cnt, recent: recentRes.rows && recentRes.rows.length, idQuery: id ? id : null });
+    return res.json({ info: info.rows && info.rows[0], count: countRes.rows && countRes.rows[0] && Number(countRes.rows[0].cnt), recent: recentRes.rows || [], byId, activity });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed inspect', details: e && e.message ? e.message : e });
   }
 });
 
