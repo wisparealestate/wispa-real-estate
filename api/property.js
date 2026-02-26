@@ -107,13 +107,13 @@ export async function addPropertyWithPhotos(property, photoUrls) {
 
           // Now look for any existing property (no time window)
           const dupRes = await client.query(
-            `SELECT id FROM properties WHERE lower(trim(coalesce(title,''))) = $1 AND lower(trim(coalesce(address,''))) = $2 AND coalesce(price,0) = $3 LIMIT 1`,
+            `SELECT id FROM public.properties WHERE lower(trim(coalesce(title,''))) = $1 AND lower(trim(coalesce(address,''))) = $2 AND coalesce(price,0) = $3 LIMIT 1`,
             [titleNorm, addrNorm, priceNorm]
           );
           if (dupRes.rows && dupRes.rows.length) {
             const existingId = dupRes.rows[0].id;
             const updateRes = await client.query(
-              `UPDATE properties SET
+              `UPDATE public.properties SET
                  user_id = $1, title = $2, description = $3, price = $4, address = $5, image_url = $6,
                  bedrooms = $7, bathrooms = $8, type = $9, area = $10, sale_rent = $11, post_to = $12
                WHERE id = $13 RETURNING *`,
@@ -145,7 +145,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
 
       if (!propertyRow) {
         const propRes = await client.query(
-          `INSERT INTO properties
+          `INSERT INTO public.properties
           (user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          RETURNING *`,
@@ -174,17 +174,17 @@ export async function addPropertyWithPhotos(property, photoUrls) {
 
     // Replace photos for this property: delete existing then insert provided list (avoids duplicates)
     if (Array.isArray(photoUrls) && photoUrls.length) {
-      await client.query('DELETE FROM property_photos WHERE property_id = $1', [propertyId]);
+      await client.query('DELETE FROM public.property_photos WHERE property_id = $1', [propertyId]);
       for (const url of photoUrls) {
         if (!url) continue;
         await client.query(
-          "INSERT INTO property_photos (property_id, photo_url) VALUES ($1, $2)",
+          "INSERT INTO public.property_photos (property_id, photo_url) VALUES ($1, $2)",
           [propertyId, url]
         );
       }
     }
     // Fetch photos and return assembled property
-    const photosRes = await client.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [propertyId]);
+    const photosRes = await client.query('SELECT photo_url FROM public.property_photos WHERE property_id = $1', [propertyId]);
     const photos = photosRes.rows.map(r => r.photo_url);
     // Create a site-wide notification about the new property only when a new row was inserted
     if (didInsertNew) {
@@ -192,7 +192,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         const notifPayload = { propertyId: propertyId, title: p.title || propertyRow.title || null };
         try {
           await client.query(
-            `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+            `INSERT INTO public.notifications (category, title, body, target, data, is_read, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,now(),now())`,
             ['properties', (p.title || propertyRow.title) ? `New property: ${p.title || propertyRow.title}` : 'New property posted', p.description || null, null, JSON.stringify(notifPayload), false]
           );
@@ -201,7 +201,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
           try {
             await client.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'notification_category'::regtype AND enumlabel = 'properties') THEN ALTER TYPE notification_category ADD VALUE 'properties'; END IF; END$$;`);
             await client.query(
-              `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+              `INSERT INTO public.notifications (category, title, body, target, data, is_read, created_at, updated_at)
                VALUES ($1,$2,$3,$4,$5,$6,now(),now())`,
               ['properties', (p.title || propertyRow.title) ? `New property: ${p.title || propertyRow.title}` : 'New property posted', p.description || null, null, JSON.stringify(notifPayload), false]
             );
@@ -222,10 +222,26 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     // Verify visibility of the inserted row from the same session/client
     try{
       if(propertyId){
-        const verify = await client.query('SELECT id, title, created_at FROM properties WHERE id = $1', [propertyId]);
+        const verify = await client.query('SELECT id, title, created_at FROM public.properties WHERE id = $1', [propertyId]);
         await writeDiag({ where: 'verify-after-commit', propertyId, verifyRowCount: verify.rowCount, verifyRows: verify.rows });
       }
     }catch(e){ try{ await writeDiag({ where: 'verify-error', error: e && e.message ? e.message : String(e) }); }catch(_){} }
+    // As a fallback: if the global properties table appears empty to other connections, ensure at least one
+    try{
+      const globalCountRes = await pool.query('SELECT count(*) AS cnt FROM properties');
+      const globalCount = (globalCountRes && globalCountRes.rows && Number(globalCountRes.rows[0].cnt)) || 0;
+      await writeDiag({ where: 'global-count-after-commit', propertyId, globalCount });
+      if (globalCount === 0 && propertyRow) {
+        try{
+          const rein = await pool.query(
+            `INSERT INTO properties (user_id,title,description,price,address,image_url,bedrooms,bathrooms,type,area,sale_rent,post_to,created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING id`,
+            [propertyRow.user_id || null, propertyRow.title || p.title || null, propertyRow.description || p.description || null, propertyRow.price != null ? propertyRow.price : null, propertyRow.address || p.address || p.location || null, propertyRow.image_url || p.image || null, propertyRow.bedrooms != null ? propertyRow.bedrooms : null, propertyRow.bathrooms != null ? propertyRow.bathrooms : null, propertyRow.type || null, propertyRow.area != null ? propertyRow.area : null, propertyRow.sale_rent || null, propertyRow.post_to || null]
+          );
+          await writeDiag({ where: 'reinsertion', originalPropertyId: propertyId, newId: (rein && rein.rows && rein.rows[0] && rein.rows[0].id) || null });
+        }catch(e){ await writeDiag({ where: 'reinsertion-error', error: e && e.message ? e.message : String(e) }); }
+      }
+    }catch(e){ try{ await writeDiag({ where: 'global-count-error', error: e && e.message ? e.message : String(e) }); }catch(_){} }
     // Merge provided property fields (e.g. type, bedrooms, bathrooms, location) into returned row
     const merged = Object.assign({}, propertyRow, p || {}, { images: photos });
     return { property: merged, propertyId };
