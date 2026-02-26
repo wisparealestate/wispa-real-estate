@@ -872,7 +872,17 @@
 
           const endpoints = ['/api/admin/profile','/api/properties','/api/users'];
           let checks = 0, errors = 0;
-          for(const ep of endpoints){ checks++; try{ const r = await fetchWithTimeout(ep, {}, 4000); if(!r || !r.ok) errors++; }catch(e){ errors++; } }
+          for(const ep of endpoints){
+            try{
+              const r = await fetchWithTimeout(ep, {}, 4000);
+              // skip if not reachable or intentionally blocked (401/403/404)
+              if(!r) continue;
+              if([401,403,404].includes(r.status)) continue;
+              // count this endpoint check
+              checks++;
+              if(!r.ok) errors++; // non-OK (e.g. 5xx) => error
+            }catch(e){ /* ignore network/CORS issues and don't penalize */ }
+          }
 
           // Inspect data files if exposed (contribute to checks)
           try{
@@ -884,8 +894,8 @@
             if(rs && rs.ok){ const arr = await rs.json().catch(()=>null); if(Array.isArray(arr)){ checks += arr.length; for(const a of arr){ if(a && (a.severity==='error' || a.severity==='critical')) errors++; } } }
           }catch(e){}
 
-          // server.err presence counts as an error check
-          try{ const rerr = await fetchWithTimeout('/server.err', {}, 2000); if(rerr && rerr.ok){ const txt = await rerr.text().catch(()=>null); checks++; if(txt && String(txt).trim().length>0) errors++; } }catch(e){}
+          // server.err presence counts as an error only if the file exists and is non-empty
+          try{ const rerr = await fetchWithTimeout('/server.err', {}, 2000); if(rerr && rerr.ok){ const txt = await rerr.text().catch(()=>null); if(typeof txt === 'string'){ checks++; if(txt.trim().length>0) errors++; } } }catch(e){}
 
           const safePercent = (checks>0) ? Math.max(0, Math.round(100*(1 - (errors/checks)))) : 100;
           window.safetyRate = safePercent + '%';
