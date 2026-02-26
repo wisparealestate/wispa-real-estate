@@ -787,6 +787,8 @@ async function openAdminChat(chatId) {
     }
     document.getElementById('chat-fullview').style.display = 'block';
     document.getElementById('admin-chats-list').style.display = 'none';
+    // hide the chat list actions (search + refresh) while viewing a conversation
+    try{ const actions = document.getElementById('chatActions'); if(actions) actions.style.display = 'none'; }catch(e){}
     document.getElementById('chat-full-title').textContent = chat.userName || chat.conversationTitle || chat.participantName || chat.participantId;
     document.getElementById('chat-full-sub').textContent = chat.conversationTitle || chat.participantId || '';
     try{ document.getElementById('chat-full-title').dataset.chatId = chatId; }catch(e){}
@@ -949,6 +951,8 @@ async function openAdminChat(chatId) {
 function backToChatList() {
     document.getElementById('chat-fullview').style.display = 'none';
     document.getElementById('admin-chats-list').style.display = 'block';
+    // restore chat action bar
+    try{ const actions = document.getElementById('chatActions'); if(actions) actions.style.display = ''; }catch(e){}
 }
 
 // Render chat list when switching to chat tab
