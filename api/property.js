@@ -219,6 +219,13 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         await writeDiag({ where: 'after', info: infoAfter.rows[0], propertyId, didInsertNew: !!didInsertNew });
       }
     }catch(e){ console.warn('[addPropertyWithPhotos] failed to read session DB info after commit', e && e.message ? e.message : e); }
+    // Verify visibility of the inserted row from the same session/client
+    try{
+      if(propertyId){
+        const verify = await client.query('SELECT id, title, created_at FROM properties WHERE id = $1', [propertyId]);
+        await writeDiag({ where: 'verify-after-commit', propertyId, verifyRowCount: verify.rowCount, verifyRows: verify.rows });
+      }
+    }catch(e){ try{ await writeDiag({ where: 'verify-error', error: e && e.message ? e.message : String(e) }); }catch(_){} }
     // Merge provided property fields (e.g. type, bedrooms, bathrooms, location) into returned row
     const merged = Object.assign({}, propertyRow, p || {}, { images: photos });
     return { property: merged, propertyId };
