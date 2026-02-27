@@ -1131,9 +1131,17 @@ app.post("/api/properties", async (req, res) => {
     let sessUser = null;
     try{
       sessUser = await getSessionUser(req).catch ? await getSessionUser(req) : null;
-      if(sessUser && sessUser.id && (!property.user_id && property.user_id !== 0)){
-        property.user_id = sessUser.id;
-        console.log('[api-prop-dbg] assigned property.user_id from session:', sessUser.id);
+      // Only assign session user id to `property.user_id` when the session corresponds
+      // to a real end-user account. Admin sessions come from `admin_logins` and should
+      // not be written into the `properties.user_id` foreign key (it references `users`).
+      if (sessUser && sessUser.id && (!property.user_id && property.user_id !== 0)){
+        if (!sessUser.role || (sessUser.role && String(sessUser.role).toLowerCase() !== 'admin')){
+          property.user_id = sessUser.id;
+          console.log('[api-prop-dbg] assigned property.user_id from session:', sessUser.id);
+        } else {
+          // Admin session: do not set user_id to avoid FK violation; leave null so property is global
+          console.log('[api-prop-dbg] session is admin, not assigning user_id to property');
+        }
       }
     }catch(e){ /* ignore session read errors */ }
 
