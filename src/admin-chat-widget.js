@@ -77,17 +77,24 @@
         const title = c.participantName || c.userName || (c.property && (c.property.title || c.property.name)) || id;
         const last = c.last || c.updated || '';
         const propId = (c.property && (c.property.id || c.property.propertyId)) || c.propertyId || '';
+        const propTitle = (c.property && (c.property.title || c.property.name)) || '';
+        // try to find avatar url in common places
+        const avatar = c.avatar || c.userAvatar || c.participantAvatar || (c.user && (c.user.avatar || c.user.photo)) || (c.meta && c.meta.user && (c.meta.user.avatar || c.meta.user.photo)) || '';
+        const avatarUrl = avatar ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(avatar) : avatar) : '';
         const row = document.createElement('div');
         row.style.padding='8px'; row.style.border='1px solid var(--border)'; row.style.borderRadius='8px'; row.style.cursor='pointer';
         row.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700">${this.escape(title)}</div>
-              <div style="color:#666;font-size:13px">${this.escape(String(last))}</div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="flex:0 0 auto">
+              ${avatarUrl ? `<img src="${this.escape(avatarUrl)}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)">` : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f3f6;border:1px solid var(--border);"></div>`}
             </div>
-            <div style="margin-left:12px;text-align:right;min-width:120px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escape(title)}</div>
+              <div style="color:#666;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escape(String(last))}</div>
+            </div>
+            <div style="flex:0 0 220px;text-align:right;min-width:120px">
               <div style="font-size:13px;color:#444">${this.escape(participant)}</div>
-              ${propId ? `<div style="margin-top:6px;font-size:12px;color:#0e76a8">Property: <strong>#${this.escape(String(propId))}</strong></div>` : ''}
+              ${propTitle ? `<div style="margin-top:6px;font-size:12px;color:#0e76a8">${this.escape(propTitle)} ${propId?`(#${this.escape(String(propId))})`:''}</div>` : (propId?`<div style="margin-top:6px;font-size:12px;color:#0e76a8">Property: <strong>#${this.escape(String(propId))}</strong></div>`:'')}
             </div>
           </div>
         `;
