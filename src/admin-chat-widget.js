@@ -141,7 +141,7 @@
       try{
         const titleEl = document.getElementById('chat-full-title');
         const subEl = document.getElementById('chat-full-sub');
-        if(titleEl){ titleEl.textContent = id; titleEl.dataset.chatId = id; }
+        if(titleEl){ titleEl.dataset.chatId = id; }
         if(subEl) subEl.textContent = '';
       }catch(e){}
       this.messagesEl.innerHTML = 'Loading messages...';
@@ -206,7 +206,11 @@
           }catch(e){ /* ignore property render errors */ }
         }
 
-        if(!merged || !merged.length){ this.messagesEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>'; try{ if(this.inputEl) this.inputEl.disabled = false; }catch(e){} return; }
+        if(!merged || !merged.length){
+          try{ if(this.inputEl) this.inputEl.disabled = false; }catch(e){}
+          if(this.messagesEl) this.messagesEl.innerHTML = '<div style="padding:12px;color:var(--text-light);">No messages yet.</div>';
+          return;
+        }
         merged.sort((a,b)=>{ const ta = new Date(a.timestamp||a.ts||a.time||0).getTime()||0; const tb = new Date(b.timestamp||b.ts||b.time||0).getTime()||0; return ta-tb; });
         const parts = merged.map(m => {
           const isAdmin = (m.sender === 'admin' || m.from === 'Admin');
@@ -219,8 +223,19 @@
             `<div style="font-size:11px;color:rgba(0,0,0,0.45);margin-top:6px;text-align:${isAdmin?'right':'left'};">${this.escape(ts)}</div>`+
             `</div></div>`;
         });
-        this.messagesEl.innerHTML = parts.join('');
-        try{ if(this.inputEl) { this.inputEl.disabled = false; this.inputEl.focus(); } }catch(e){}
+        // Avoid replacing DOM if nothing changed to prevent focus/input jumping
+        try{
+          const lastMsg = merged.length ? (merged[merged.length-1].timestamp || merged[merged.length-1].ts || merged[merged.length-1].time || '') : '';
+          const propId = property ? (property.id || property.propertyId || '') : '';
+          const lastSig = String(lastMsg) + '|' + String(merged.length) + '|' + String(propId);
+          if(this.messagesEl && this.messagesEl.dataset && this.messagesEl.dataset.lastSig === lastSig){
+            // do nothing
+          } else {
+            if(this.messagesEl && this.messagesEl.dataset) this.messagesEl.dataset.lastSig = lastSig;
+            if(this.messagesEl) this.messagesEl.innerHTML = parts.join('');
+          }
+        }catch(e){ if(this.messagesEl) this.messagesEl.innerHTML = parts.join(''); }
+        try{ if(this.inputEl) { this.inputEl.disabled = false; /* don't force-focus to avoid jump — leave focus management to user */ } }catch(e){}
         // start polling to refresh messages periodically
         this.startPolling();
       }catch(e){ this.messagesEl.innerHTML = 'Failed to load messages.'; }
