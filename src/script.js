@@ -3018,9 +3018,10 @@ if (typeof propertyImageIds === 'undefined') {
                     body: JSON.stringify(body)
                 });
                 if (!response) throw new Error('No response from API');
+                let savedResult = null;
                 if (typeof response.json === 'function') {
                     if (!response.ok) throw new Error('API save failed');
-                    await response.json();
+                    try { savedResult = await response.json(); } catch(e) { savedResult = null; }
                 }
                 // After a successful save, send notifications (user + admin), refresh server state so all devices sync
                 try {
@@ -3079,6 +3080,34 @@ if (typeof propertyImageIds === 'undefined') {
                 // the full search results. This prevents a newly-posted item
                 // from automatically appearing in the search listing until
                 // the user performs a search.
+                // Merge server-returned property into local `properties` so UI sections
+                // (featured/hot/available) reflect the new post immediately.
+                try {
+                    let serverProp = null;
+                    if (savedResult && savedResult.property) serverProp = savedResult.property;
+                    else if (savedResult && savedResult.propertyId) {
+                        serverProp = Object.assign({}, property, { id: savedResult.propertyId });
+                    }
+                    if (serverProp) {
+                        // normalize serverProp similar to loadProperties mapping
+                        if (serverProp.image_url && !serverProp.image) serverProp.image = serverProp.image_url;
+                        if (serverProp.image_url && (!serverProp.images || !Array.isArray(serverProp.images) || serverProp.images.length === 0)) serverProp.images = [serverProp.image_url];
+                        if (serverProp.post_to && !serverProp.postTo) serverProp.postTo = serverProp.post_to;
+                        if (serverProp.postTo) {
+                            serverProp.featured = serverProp.postTo === 'featured';
+                            serverProp.hot = serverProp.postTo === 'hot';
+                        }
+                        if (!Array.isArray(properties)) properties = [];
+                        // Replace existing temp entry if present (match by temp id or title/address)
+                        const existingIndex = properties.findIndex(p => String(p.id) === String(serverProp.id) || (p.title === serverProp.title && p.address === serverProp.address));
+                        if (existingIndex > -1) properties[existingIndex] = serverProp; else properties.unshift(serverProp);
+                    } else {
+                        // Fallback: push the posted property locally
+                        if (!Array.isArray(properties)) properties = [];
+                        properties.unshift(property);
+                    }
+                } catch(e) { console.warn('Failed to merge saved property into local list', e); }
+
                 try { renderFeaturedProperties(); } catch(e) {}
                 try { renderHotProperties(); } catch(e) {}
                 try { renderAvailableProperties(); } catch(e) {}
