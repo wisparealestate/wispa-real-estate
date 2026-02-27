@@ -834,19 +834,39 @@
             });
         }
 
-        // Try to fetch authoritative properties from API and update page (fallback to localStorage)
+        // Try to fetch authoritative property from API and update page.
+        // Fetch the single property by id first (fast), then fall back to listing fetch.
         (async function(){
             try {
-                const res = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
-                if (res && res.ok && typeof res.json === 'function') {
-                    const data = await res.json();
-                    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.properties) ? data.properties : []);
-                    if (Array.isArray(arr) && arr.length) {
-                        arr.forEach(p => { if (p && p.id != null) propertiesMap[String(p.id)] = p; });
-                        // if the API provided this property, use it (prefer DB record)
-                        const remote = propertiesMap[propertyId] || arr.find(x => String(x.id) === String(propertyId) || String(x.propertyId) === String(propertyId));
-                        if (remote) {
-                            property = remote;
+                // Attempt single-property fetch to reduce payload and latency
+                if (propertyId && propertyId !== 'Unknown') {
+                    try {
+                        const singleUrl = '/api/properties/' + encodeURIComponent(propertyId);
+                        const pres = window.apiFetch ? await window.apiFetch(singleUrl) : await fetch(singleUrl);
+                        if (pres && pres.ok && typeof pres.json === 'function') {
+                            const pdata = await pres.json();
+                            if (pdata && pdata.property) {
+                                property = pdata.property;
+                            }
+                        }
+                    } catch (e) {
+                        // ignore single-property errors and fall back to list fetch below
+                    }
+                }
+
+                // If single fetch did not yield a property, fall back to fetching the list
+                if (!property || !property.id) {
+                    const res = window.apiFetch ? await window.apiFetch('/api/properties') : await fetch('/api/properties');
+                    if (res && res.ok && typeof res.json === 'function') {
+                        const data = await res.json();
+                        const arr = Array.isArray(data) ? data : (data && Array.isArray(data.properties) ? data.properties : []);
+                        if (Array.isArray(arr) && arr.length) {
+                            arr.forEach(p => { if (p && p.id != null) propertiesMap[String(p.id)] = p; });
+                            // if the API provided this property, use it (prefer DB record)
+                            const remote = propertiesMap[propertyId] || arr.find(x => String(x.id) === String(propertyId) || String(x.propertyId) === String(propertyId));
+                            if (remote) {
+                                property = remote;
+                            }
                         }
                     }
                 }

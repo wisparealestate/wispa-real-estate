@@ -532,6 +532,43 @@
         initCustomDropdown('quick-type-dropdown', '#quick-type');
         initCustomDropdown('quick-status-dropdown', '#quick-status');
     </script>
+    <script>
+        // Optimize initial property loading: try the lightweight debug/recent endpoint
+        // first to reduce latency and avoid showing the local placeholder UI.
+        (function(){
+            const orig = window._globalLoadProperties || window.loadProperties;
+            window._globalLoadProperties = window.loadProperties = async function(){
+                try {
+                    const res = window.apiFetch ? await window.apiFetch('/api/debug/properties-recent') : await fetch('/api/debug/properties-recent');
+                    if (res && res.ok && typeof res.json === 'function') {
+                        const body = await res.json();
+                        const arr = Array.isArray(body.recent) ? body.recent : (Array.isArray(body) ? body : []);
+                        if (arr && arr.length) {
+                            // Normalize to the same shape `loadProperties` expects
+                            const mapped = arr.map(p => {
+                                const prop = Object.assign({}, p);
+                                if (prop.image_url && !prop.image) prop.image = prop.image_url;
+                                if (prop.image_url && (!prop.images || !Array.isArray(prop.images) || prop.images.length === 0)) prop.images = [prop.image_url];
+                                if (prop.post_to && !prop.postTo) prop.postTo = prop.post_to;
+                                if (prop.postTo) { prop.featured = prop.postTo === 'featured'; prop.hot = prop.postTo === 'hot'; }
+                                if (prop.price && typeof prop.price === 'string') { const num = Number(prop.price); if (!Number.isNaN(num)) prop.price = num; }
+                                return prop;
+                            });
+                            try { localStorage.setItem('properties', JSON.stringify(mapped)); } catch(e) {}
+                            // Expose globals expected by renderers
+                            try { properties = mapped; } catch(e) { window.properties = mapped; }
+                            try { filteredProperties = mapped.slice(); } catch(e) { window.filteredProperties = mapped.slice(); }
+                            if (typeof renderProperties === 'function') renderProperties(filteredProperties);
+                            return mapped;
+                        }
+                    }
+                } catch (e) { /* ignore and fall back */ }
+                // Fallback to original loader
+                if (typeof orig === 'function') return orig();
+                return [];
+            };
+        })();
+    </script>
 </body>
 </html>
 
