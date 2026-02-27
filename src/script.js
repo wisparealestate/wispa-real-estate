@@ -2416,7 +2416,9 @@ if (typeof propertyImageIds === 'undefined') {
             area: parseInt(document.getElementById('ad-area').value) || 0,
             location: document.getElementById('ad-location').value,
             images: images.length ? images : [document.getElementById('ad-image').value || getRandomPropertyImage()],
-            featured: (document.getElementById('ad-featured') ? document.getElementById('ad-featured').checked : false),
+            post_to: (document.getElementById('ad-post-to') ? document.getElementById('ad-post-to').value : 'available'),
+            featured: (document.getElementById('ad-post-to') && document.getElementById('ad-post-to').value === 'featured'),
+            hot: (document.getElementById('ad-post-to') && document.getElementById('ad-post-to').value === 'hot'),
             date: 'Just now'
         };
 
@@ -2427,6 +2429,7 @@ if (typeof propertyImageIds === 'undefined') {
             description: (document.getElementById('ad-description') ? document.getElementById('ad-description').value : (displayProperty.type || '')),
             price: displayProperty.price,
             address: displayProperty.location || '',
+            post_to: displayProperty.post_to || 'available',
             city: (document.getElementById('ad-city') ? document.getElementById('ad-city').value : ''),
             state: (document.getElementById('ad-state') ? document.getElementById('ad-state').value : ''),
             zip_code: (document.getElementById('ad-zip') ? document.getElementById('ad-zip').value : ''),

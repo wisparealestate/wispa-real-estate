@@ -36,6 +36,13 @@
     </div>
   </main>
 
+  <main class="profile-wrap">
+    <div id="myPropertiesSection" style="max-width:920px;margin:12px auto;padding:0 20px">
+      <h2 style="margin:12px 0">My Properties</h2>
+      <div id="myPropertiesList">Loading properties…</div>
+    </div>
+  </main>
+
   <script>
     function safeParse(key){ try{ return JSON.parse(localStorage.getItem(key)); }catch(e){return null;} }
     async function resolveCurrentUser(){
@@ -53,6 +60,39 @@
       document.getElementById('profileAvatar').src = user.avatar_url || user.avatar || user.image || ('https://ui-avatars.com/api/?name='+encodeURIComponent(user.username||user.full_name||'User')+'&background=4CAF50&color=fff');
       document.getElementById('editBtn').addEventListener('click', function(){ window.location.href = 'signup.html'; });
       document.getElementById('accountBtn').addEventListener('click', function(){ window.location.href = 'account.html'; });
+      // Render user's properties (if properties loaded globally)
+      try{
+        const listEl = document.getElementById('myPropertiesList');
+        function renderPropsForUser(userRow){
+          try{
+            const props = (window.properties || []).filter(p => p && String(p.user_id) === String(userRow.id));
+            if(!props || !props.length){ listEl.innerHTML = '<div style="color:#666">No properties posted yet.</div>'; return; }
+            const html = props.map(p=>{
+              const badge = p.post_to ? ('<span style="background:#ffea; padding:4px 8px; border-radius:6px; margin-left:8px; font-size:12px; font-weight:600;">'+String(p.post_to).toUpperCase()+'</span>') : '';
+              const img = (p.images && p.images[0]) ? ('<img src="'+(p.images[0])+'" style="width:140px;height:100px;object-fit:cover;border-radius:8px;margin-right:12px">') : '';
+              return `<div style="display:flex;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:#fff">
+                        ${img}
+                        <div style="flex:1">
+                          <div style="font-weight:700">${(p.title||'Untitled')}${badge}</div>
+                          <div style="color:#666;margin-top:6px">${p.address||p.location||''} • price: ${p.price||''}</div>
+                        </div>
+                      </div>`;
+            }).join('');
+            listEl.innerHTML = html;
+          }catch(e){ try{ listEl.textContent = 'Error rendering properties'; }catch(_){} }
+        }
+        // If window.properties already present, render; otherwise wait a bit for global loader in script.js
+        if(window.properties && window.properties.length){ renderPropsForUser(user); }
+        else {
+          // Poll briefly for properties to be loaded
+          let attempts = 0;
+          const iv = setInterval(()=>{
+            attempts++;
+            if(window.properties && window.properties.length){ clearInterval(iv); renderPropsForUser(user); }
+            if(attempts>20){ clearInterval(iv); if(listEl) listEl.innerHTML = '<div style="color:#666">Properties not available.</div>'; }
+          }, 150);
+        }
+      }catch(e){}
     })();
   </script>
 </body>
