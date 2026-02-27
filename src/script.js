@@ -905,9 +905,23 @@ async function openAdminChat(chatId) {
             }
         } catch(e) { console.warn('Failed to render property card in admin chat fullview', e); }
 
+        // Avoid re-rendering if messages have not changed to prevent input jump/focus issues
+        try{
+            const lastMsg = messages.length ? (messages[messages.length-1].timestamp || messages[messages.length-1].ts || messages[messages.length-1].time || '') : '';
+            const propId = propertyCard ? (propertyCard.id || propertyCard.propertyId || '') : '';
+            const lastSig = String(lastMsg) + '|' + String(messages.length) + '|' + String(propId);
+            if(msgsEl.dataset && msgsEl.dataset.lastSig === lastSig){
+                // nothing changed, leave existing DOM as-is
+                try{ document.getElementById('chat-full-input').disabled = false; }catch(e){}
+                return;
+            }
+            if(msgsEl.dataset) msgsEl.dataset.lastSig = lastSig;
+        }catch(e){}
+
         const htmlParts = messages.map(m => {
             const isAdmin = (m.sender === 'admin' || m.from === 'Admin');
-            const senderLabel = isAdmin ? 'Admin' : (m.userName || m.userEmail || m.sender || m.from || 'User');
+            // Prefer conversation-level userName if available to keep labels stable
+            const senderLabel = isAdmin ? 'Admin' : ((chat && chat.userName) ? chat.userName : (m.userName || m.userEmail || m.sender || m.from || 'User'));
             const ts = new Date(m.timestamp || m.ts || m.time || Date.now()).toLocaleString();
 
             // If this message contains a property payload, render a property preview inside the bubble
