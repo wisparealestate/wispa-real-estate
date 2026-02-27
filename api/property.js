@@ -99,66 +99,10 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       }
     }
     if (!propertyRow) {
-      // Strong duplicate protection:
-      // - Acquire a transaction-scoped advisory lock on a hash of the dedupe key
-      // - Look for any existing property with same normalized title+address+price
-      // - If found, update it; otherwise insert a new row
-      try {
-        const titleNorm = (p.title || '').trim().toLowerCase();
-        const addrNorm = (p.address || p.location || '').trim().toLowerCase();
-        const priceNorm = p.price != null ? Number(p.price) : 0;
-        if (titleNorm && addrNorm) {
-          const key = `${titleNorm}::${addrNorm}::${priceNorm}`;
-          // simple 32-bit hash for advisory lock
-          let h = 0;
-          for (let i = 0; i < key.length; i++) {
-            h = ((h << 5) - h) + key.charCodeAt(i);
-            h |= 0;
-          }
-          // Acquire an advisory lock for the duration of the transaction to prevent races
-          try {
-            await client.query('SELECT pg_advisory_xact_lock($1)', [h]);
-          } catch (e) {
-            // If advisory locks not allowed, ignore and continue (best-effort)
-          }
-
-          // Now look for any existing property (no time window)
-          const dupRes = await client.query(
-            `SELECT id FROM public.properties WHERE lower(trim(coalesce(title,''))) = $1 AND lower(trim(coalesce(address,''))) = $2 AND coalesce(price,0) = $3 LIMIT 1`,
-            [titleNorm, addrNorm, priceNorm]
-          );
-          if (dupRes.rows && dupRes.rows.length) {
-            const existingId = dupRes.rows[0].id;
-            const updateRes = await client.query(
-              `UPDATE public.properties SET
-                 user_id = $1, title = $2, description = $3, price = $4, address = $5, image_url = $6,
-                 bedrooms = $7, bathrooms = $8, type = $9, area = $10, sale_rent = $11, post_to = $12
-               WHERE id = $13 RETURNING *`,
-              [
-                p.user_id || null,
-                p.title || null,
-                p.description || null,
-                p.price != null ? p.price : null,
-                p.address || p.location || null,
-                p.image_url || p.image || null,
-                p.bedrooms != null ? p.bedrooms : null,
-                p.bathrooms != null ? p.bathrooms : null,
-                p.type || null,
-                p.area != null ? p.area : null,
-                p.sale_rent || null,
-                p.post_to || null,
-                existingId
-              ]
-            );
-            if (updateRes.rows && updateRes.rows.length) {
-              propertyRow = updateRes.rows[0];
-              propertyId = propertyRow.id;
-            }
-          }
-        }
-      } catch (e) {
-        // ignore dup-protection errors and fall back to insert
-      }
+      // Duplicate detection disabled per user request: allow multiple posts with
+      // identical title/address/price. Each POST will create a separate property
+      // (unique `id` governs identity). If the caller provided an explicit
+      // `incomingId` earlier, that path above still performs an update.
 
       if (!propertyRow) {
         // generate an 8-digit unique id to use as the property primary key
