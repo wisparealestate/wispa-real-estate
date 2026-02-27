@@ -76,11 +76,19 @@
         // participant (user) should be the primary left label
         const participant = c.participantName || c.userName || c.userNameDisplay || c.participantEmail || '';
         // property title/id should be shown on the right
-        const propTitle = (c.property && (c.property.title || c.property.name)) || c.meta && c.meta.property && (c.meta.property.title || c.meta.property.name) || '';
+        const propTitle = (c.property && (c.property.title || c.property.name)) || (c.meta && c.meta.property && (c.meta.property.title || c.meta.property.name)) || '';
         const propId = (c.property && (c.property.id || c.property.propertyId)) || c.propertyId || (c.meta && c.meta.property && (c.meta.property.id || c.meta.property.propertyId)) || '';
         const last = c.last || c.updated || '';
-        // fallback title (if no participant) show id or property
-        const leftTitle = participant || propTitle || id;
+        // fallback title (if no participant) show formatted property id or raw id
+        let leftTitle = participant || '';
+        if(!leftTitle){
+          if(id && String(id).toLowerCase().startsWith('property-')){
+            const parts = String(id).split('-');
+            leftTitle = 'Property #' + (parts[1] || id);
+          } else {
+            leftTitle = id || propTitle || 'Conversation';
+          }
+        }
         // try to find avatar url in common places
         const avatar = c.avatar || c.userAvatar || c.participantAvatar || (c.user && (c.user.avatar || c.user.photo)) || (c.meta && c.meta.user && (c.meta.user.avatar || c.meta.user.photo)) || '';
         const avatarUrl = avatar ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(avatar) : avatar) : '';
