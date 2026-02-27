@@ -2394,9 +2394,18 @@ if (typeof propertyImageIds === 'undefined') {
                 const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
                 // poster may be apiFetch which forwards to API_BASE; it will return a Response
                 const resp = await poster('/api/upload-photos', { method: 'POST', body: form });
-                if (resp && typeof resp.json === 'function') {
-                    const j = await resp.json();
-                    if (Array.isArray(j.urls) && j.urls.length) images = j.urls;
+                let uploadJson = null;
+                if (resp) {
+                    if (typeof resp.json === 'function') {
+                        try { uploadJson = await resp.json(); } catch(e) { uploadJson = null; }
+                    } else {
+                        // apiFetch may already return parsed JSON
+                        uploadJson = resp;
+                    }
+                }
+                if (uploadJson) {
+                    if (Array.isArray(uploadJson.urls) && uploadJson.urls.length) images = uploadJson.urls;
+                    else if (Array.isArray(uploadJson.uploaded) && uploadJson.uploaded.length) images = uploadJson.uploaded;
                 }
             } catch (e) {
                 console.warn('Image upload failed, falling back to converting files to data URLs for persistence', e);
@@ -2986,15 +2995,20 @@ if (typeof propertyImageIds === 'undefined') {
                         });
                         const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
                         const resp = await poster('/api/upload-photos', { method: 'POST', body: form });
-                        if (resp && typeof resp.json === 'function' && resp.ok) {
-                            const j = await resp.json();
-                            const urls = Array.isArray(j.urls) ? j.urls : (j && j.uploaded ? j.uploaded : []);
-                            if (urls && urls.length) {
-                                remotePhotos = remotePhotos.concat(urls);
-                                property.images = property.photoUrls = property.photos = remotePhotos;
+                        let uploadJson = null;
+                        if (resp) {
+                            if (typeof resp.json === 'function') {
+                                try { uploadJson = await resp.json(); } catch(e) { uploadJson = null; }
+                                // if resp.ok is present and false, treat as failure
+                                if (resp.ok === false) throw new Error('upload failed');
+                            } else {
+                                uploadJson = resp;
                             }
-                        } else if (resp && !resp.ok) {
-                            throw new Error('upload failed');
+                        }
+                        const urls = Array.isArray(uploadJson && uploadJson.urls) ? uploadJson.urls : (Array.isArray(uploadJson && uploadJson.uploaded) ? uploadJson.uploaded : []);
+                        if (urls && urls.length) {
+                            remotePhotos = remotePhotos.concat(urls);
+                            property.images = property.photoUrls = property.photos = remotePhotos;
                         }
                     }
                 } catch (uploadErr) {
