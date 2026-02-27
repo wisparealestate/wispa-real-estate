@@ -877,6 +877,9 @@
             // Normalize price string for display
             if (typeof property.price === 'number') property.price = '€' + property.price.toLocaleString();
 
+            // Map backend `image_url` to `image` so pages that expect `image` work
+            try { if (!property.image && property.image_url) property.image = property.image_url; } catch(e) {}
+
             // Ensure images array exists (fallback to image field)
             if (!property.images || !Array.isArray(property.images)) {
                 if (property.image) property.images = [property.image];
