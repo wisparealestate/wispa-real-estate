@@ -555,6 +555,12 @@
                                 return prop;
                             });
                             try { localStorage.setItem('properties', JSON.stringify(mapped)); } catch(e) {}
+                            // If the lightweight recent rows don't include images, fall back to original loader
+                            const hasImages = mapped.some(p => (Array.isArray(p.images) && p.images.length) || p.image || p.image_url || (Array.isArray(p.photoUrls) && p.photoUrls.length));
+                            if (!hasImages) {
+                                if (typeof orig === 'function') return orig();
+                                return mapped;
+                            }
                             // Expose globals expected by renderers
                             try { properties = mapped; } catch(e) { window.properties = mapped; }
                             try { filteredProperties = mapped.slice(); } catch(e) { window.filteredProperties = mapped.slice(); }
