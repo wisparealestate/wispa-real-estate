@@ -206,6 +206,23 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     // Fetch photos and return assembled property
     const photosRes = await client.query('SELECT photo_url FROM public.property_photos WHERE property_id = $1', [propertyId]);
     const photos = photosRes.rows.map(r => r.photo_url);
+    // If property has no canonical image_url, set it to the first photo we just inserted
+    try {
+      if (photos && photos.length) {
+        // propertyRow may be from an earlier SELECT/INSERT; prefer its image_url field
+        const currentImageUrl = propertyRow && (propertyRow.image_url || propertyRow.image) ? (propertyRow.image_url || propertyRow.image) : null;
+        if (!currentImageUrl) {
+          try {
+            await client.query('UPDATE public.properties SET image_url = $1 WHERE id = $2', [photos[0], propertyId]);
+            // Update the in-memory copy so returned object includes the new value
+            if (propertyRow) propertyRow.image_url = photos[0];
+            await writeDiag({ where: 'set-image_url-from-photos', propertyId, image: photos[0] });
+          } catch (e) {
+            await writeDiag({ where: 'set-image_url-error', propertyId, error: e && e.message ? e.message : String(e) });
+          }
+        }
+      }
+    } catch (e) { /* non-fatal */ }
     // Create a site-wide notification about the new property only when a new row was inserted
     if (didInsertNew) {
       try {
