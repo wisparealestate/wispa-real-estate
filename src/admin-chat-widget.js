@@ -73,11 +73,14 @@
       const ul = document.createElement('div'); ul.style.display = 'flex'; ul.style.flexDirection = 'column'; ul.style.gap='8px';
       rows.forEach(c => {
         const id = c.id || c.conversation_id || c.key || '';
+        // participant (user) should be the primary left label
         const participant = c.participantName || c.userName || c.userNameDisplay || c.participantEmail || '';
-        const title = c.participantName || c.userName || (c.property && (c.property.title || c.property.name)) || id;
+        // property title/id should be shown on the right
+        const propTitle = (c.property && (c.property.title || c.property.name)) || c.meta && c.meta.property && (c.meta.property.title || c.meta.property.name) || '';
+        const propId = (c.property && (c.property.id || c.property.propertyId)) || c.propertyId || (c.meta && c.meta.property && (c.meta.property.id || c.meta.property.propertyId)) || '';
         const last = c.last || c.updated || '';
-        const propId = (c.property && (c.property.id || c.property.propertyId)) || c.propertyId || '';
-        const propTitle = (c.property && (c.property.title || c.property.name)) || '';
+        // fallback title (if no participant) show id or property
+        const leftTitle = participant || propTitle || id;
         // try to find avatar url in common places
         const avatar = c.avatar || c.userAvatar || c.participantAvatar || (c.user && (c.user.avatar || c.user.photo)) || (c.meta && c.meta.user && (c.meta.user.avatar || c.meta.user.photo)) || '';
         const avatarUrl = avatar ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(avatar) : avatar) : '';
@@ -89,12 +92,12 @@
               ${avatarUrl ? `<img src="${this.escape(avatarUrl)}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)">` : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f3f6;border:1px solid var(--border);"></div>`}
             </div>
             <div style="flex:1;min-width:0">
-              <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escape(title)}</div>
+              <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escape(leftTitle)}</div>
               <div style="color:#666;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escape(String(last))}</div>
             </div>
             <div style="flex:0 0 220px;text-align:right;min-width:120px">
-              <div style="font-size:13px;color:#444">${this.escape(participant)}</div>
-              ${propTitle ? `<div style="margin-top:6px;font-size:12px;color:#0e76a8">${this.escape(propTitle)} ${propId?`(#${this.escape(String(propId))})`:''}</div>` : (propId?`<div style="margin-top:6px;font-size:12px;color:#0e76a8">Property: <strong>#${this.escape(String(propId))}</strong></div>`:'')}
+              <div style="font-size:13px;color:#444">${participant?this.escape(participant):''}</div>
+              ${propTitle || propId ? `<div style="margin-top:6px;font-size:12px;color:#0e76a8">${propTitle?this.escape(propTitle):'Property'} ${propId?`(#${this.escape(String(propId))})`:''}</div>` : ''}
             </div>
           </div>
         `;
