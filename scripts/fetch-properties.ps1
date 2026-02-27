@@ -3,7 +3,8 @@ $out = @()
 foreach ($id in $ids) {
   try {
     $r = Invoke-RestMethod -Uri "http://localhost:3001/api/properties/$id" -Method Get -ErrorAction Stop
-    $obj = [ordered]@{ id = $id; ok = $true; property = ($r.property ? $r.property : $r) }
+    if ($r -and $r.property) { $prop = $r.property } else { $prop = $r }
+    $obj = [ordered]@{ id = $id; ok = $true; property = $prop }
     $out += $obj
     Write-Host "Fetched $id"
   } catch {
