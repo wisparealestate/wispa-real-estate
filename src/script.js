@@ -175,6 +175,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // After loading properties, attempt to process any locally-stored photos (upload & migrate to remote)
     try { processLocalPhotosQueue(); } catch (e) { console.warn('processLocalPhotosQueue init failed', e); }
 
+    // Keep the main search results hidden until the user performs a search.
+    try {
+        const filteredResultsSection = document.getElementById('filtered-results-section');
+        if (filteredResultsSection) filteredResultsSection.style.display = 'none';
+    } catch (e) { }
+
     // Initialize attach + emoji controls but only inject into conversation input areas
     try{
         // hidden file input used by local attach buttons
@@ -3069,7 +3075,13 @@ if (typeof propertyImageIds === 'undefined') {
                     })();
                 } catch(e){}
 
-                try { await loadProperties(); } catch (e) { /* ignore */ }
+                // Refresh only the specific UI sections instead of reloading
+                // the full search results. This prevents a newly-posted item
+                // from automatically appearing in the search listing until
+                // the user performs a search.
+                try { renderFeaturedProperties(); } catch(e) {}
+                try { renderHotProperties(); } catch(e) {}
+                try { renderAvailableProperties(); } catch(e) {}
                 return property;
             } catch (err) {
                 console.warn('saveProperty API failed, falling back to localStorage', err);
