@@ -5,7 +5,7 @@ const { Pool } = require('pg');
   try{
     const title = 'TEST INSERT ' + Date.now();
     const insertRes = await pool.query(
-      'INSERT INTO properties (title, address, price, post_to, created_at, updated_at) VALUES ($1,$2,$3,$4,now(),now()) RETURNING id, title, address, price',
+      'INSERT INTO properties (title, address, price, post_to, created_at) VALUES ($1,$2,$3,$4,now()) RETURNING id, title, address, price',
       [title, '123 Test St', 12345, 'web']
     );
     console.log('inserted:', insertRes.rows[0]);
