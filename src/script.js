@@ -449,6 +449,9 @@ function resolvePropertyImages(property){
 // Process pending admin notifications stored in localStorage under 'pendingNotifications'
 async function processPendingNotifications(force = false){
     try{
+        // If the client has seen admin 401/403 responses recently, avoid repeatedly
+        // calling admin endpoints; let the queued items remain until an admin signs in.
+        if (window._wispaAdminUnauthorized && !force) return;
         // Attempt pending admin POSTs. Callers may pass `force = true` to bypass retries.
         const key = 'pendingNotifications';
         let pending = [];
@@ -459,6 +462,8 @@ async function processPendingNotifications(force = false){
         const remaining = [];
         for(const item of pending){
             try{
+                // Avoid attempting admin endpoint when global unauthorized flag set
+                if (window._wispaAdminUnauthorized && !force) { item.attempts = (item.attempts || 0) + 1; remaining.push(item); continue; }
                 const resp = await poster('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: item.title, body: item.body, data: item.data }) });
                 if(resp && resp.ok){
                     // success — skip
@@ -3074,9 +3079,17 @@ if (typeof propertyImageIds === 'undefined') {
                             const title = 'New property created';
                             const body = `A new property was posted: ${property.title || property.location || 'Listing'}`;
                             try{
-                                const resp = await poster2('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, body: body, data: { property: property } }) });
-                                if(!resp || !resp.ok){
-                                    throw new Error('admin notify failed');
+                                // If we've previously seen admin 401s, don't attempt network call
+                                if (window._wispaAdminUnauthorized) {
+                                    const key = 'pendingNotifications';
+                                    const pending = JSON.parse(localStorage.getItem(key) || '[]');
+                                    pending.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
+                                    localStorage.setItem(key, JSON.stringify(pending));
+                                } else {
+                                    const resp = await poster2('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, body: body, data: { property: property } }) });
+                                    if(!resp || !resp.ok){
+                                        throw new Error('admin notify failed');
+                                    }
                                 }
                             }catch(e){
                                 try{
