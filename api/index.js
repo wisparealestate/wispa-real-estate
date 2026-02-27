@@ -1127,20 +1127,34 @@ app.post("/api/properties", async (req, res) => {
       if(info && info.rows && info.rows[0]) console.log('[api-prop-dbg] DB before insert:', info.rows[0]);
     }catch(e){ console.warn('[api-prop-dbg] failed to query DB info before insert', e && e.message ? e.message : e); }
     console.log('[api-prop-dbg] creating property title:', (property && property.title) ? property.title : '(no title)');
-    // If session user exists and no explicit user_id provided, set it so the property appears on the user's page
+    // Prevent clients from spoofing `user_id` in the payload which can cause
+    // foreign-key violations if the provided id doesn't exist in `users`.
+    // Capture any client-supplied value then strip it; allow admins to set it
+    // explicitly if they provided a value and are authenticated as admin.
     let sessUser = null;
+    let clientUserId = null;
+    try {
+      if (property && (property.user_id || property.userId)) {
+        clientUserId = property.user_id || property.userId;
+        delete property.user_id; delete property.userId;
+      }
+    } catch (e) { /* ignore */ }
     try{
       sessUser = await getSessionUser(req).catch ? await getSessionUser(req) : null;
-      // Only assign session user id to `property.user_id` when the session corresponds
-      // to a real end-user account. Admin sessions come from `admin_logins` and should
-      // not be written into the `properties.user_id` foreign key (it references `users`).
       if (sessUser && sessUser.id && (!property.user_id && property.user_id !== 0)){
         if (!sessUser.role || (sessUser.role && String(sessUser.role).toLowerCase() !== 'admin')){
+          // Non-admin session: always attach the authenticated user's id
           property.user_id = sessUser.id;
           console.log('[api-prop-dbg] assigned property.user_id from session:', sessUser.id);
         } else {
-          // Admin session: do not set user_id to avoid FK violation; leave null so property is global
-          console.log('[api-prop-dbg] session is admin, not assigning user_id to property');
+          // Admin session: allow explicit client-supplied user id only if provided
+          if (clientUserId) {
+            const parsed = Number.isFinite(Number(clientUserId)) ? Number(clientUserId) : null;
+            property.user_id = parsed;
+            console.log('[api-prop-dbg] admin provided user_id applied:', parsed);
+          } else {
+            console.log('[api-prop-dbg] session is admin, not assigning user_id to property');
+          }
         }
       }
     }catch(e){ /* ignore session read errors */ }
