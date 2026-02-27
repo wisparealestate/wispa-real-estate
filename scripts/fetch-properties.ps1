@@ -9,7 +9,7 @@ foreach ($id in $ids) {
     Write-Host "Fetched $id"
   } catch {
     $out += [ordered]@{ id = $id; ok = $false; error = $_.Exception.Message }
-    Write-Host "Failed $id: $($_.Exception.Message)"
+    Write-Host ("Failed $id: " + $_.Exception.Message)
   }
 }
 $out | ConvertTo-Json -Depth 12
