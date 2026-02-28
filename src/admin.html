@@ -1261,7 +1261,7 @@
       e.preventDefault();
       // Prevent any existing conversation hash from causing an immediate open
       try{ window._suppressNextConversationOpen = true; }catch(_){}
-      try{ if(location.hash && location.hash.startsWith('#conversation')) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){}
+      try{ if(location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){}
         try{ window._suppressNextConversationOpen = true; }catch(_){}
         try{ if(location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){ }
       try{ setTimeout(()=>{ window._suppressNextConversationOpen = false; }, 1200); }catch(_){}
@@ -1279,7 +1279,7 @@
       try{
         const full = document.getElementById('chat-fullview');
         if (full) full.style.display = 'none';
-        try{ if (location.hash && location.hash.startsWith('#conversation')) location.hash = 'chat'; }catch(_){ }
+        try{ if (location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; }catch(_){ }
       }catch(_){ }
       const out = document.getElementById('admin-chats-list');
       out.innerHTML = 'Loading…';
@@ -1314,7 +1314,7 @@
         try{ convs = JSON.parse(localStorage.getItem('adminChats') || '[]'); }catch(e){ convs = []; }
         if(!convs || !convs.length){ try{ convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]') }catch(e){ convs = []; } }
         if(!convs || !convs.length){ out.innerHTML = '<div style="padding:12px;color:#666">No conversations yet.</div>'; return }
-        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+convs.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin.html#conversation?id=${encodeURIComponent(c.id)}" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
+        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+convs.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin.html#admin-conversation?id=${encodeURIComponent(c.id)}" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
         out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{
           if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
           ev.preventDefault();
