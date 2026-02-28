@@ -97,7 +97,7 @@
                     const emoji = prompt('Enter emoji or paste from picker:', '😊');
                     if(emoji) {
                         inputEl.value += emoji;
-                        inputEl.focus();
+                        try{ if(document.activeElement !== inputEl) inputEl.focus(); }catch(e){}
                     }
                 });
             }
@@ -258,7 +258,19 @@
             }
             function render(){
                 const msgs = loadMessages();
+                // signature to avoid unnecessary DOM replaces which can jump input focus/scroll
+                try{
+                    const lastMsg = msgs && msgs.length ? (msgs[msgs.length-1].time || msgs[msgs.length-1].ts || '') : '';
+                    const lastSig = String(lastMsg) + '|' + String(msgs.length) + '|' + String(convId);
+                    if (messagesEl && messagesEl.dataset && messagesEl.dataset.lastSig === lastSig) {
+                        return; // nothing changed
+                    }
+                    if (messagesEl && messagesEl.dataset) messagesEl.dataset.lastSig = lastSig;
+                }catch(e){}
                 let html = '';
+                // preserve input focus & selection to avoid caret jumping
+                let hadFocus = false, selStart = null, selEnd = null;
+                try{ hadFocus = (document.activeElement === inputEl); selStart = inputEl.selectionStart; selEnd = inputEl.selectionEnd; }catch(e){}
                 // Insert property preview as a pinned card above the scrollable messages area
                 const propertyCard = getPropertyPreviewCard();
                 // remove any existing pinned card
@@ -341,7 +353,9 @@
                 messagesEl.innerHTML = html;
                 // Scroll to latest message
                 setTimeout(function() {
-                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    try{ messagesEl.scrollTop = messagesEl.scrollHeight; }catch(e){}
+                    // restore focus & selection if needed
+                    try{ if(hadFocus){ inputEl.focus(); if(selStart != null && selEnd != null) inputEl.setSelectionRange(selStart, selEnd); } }catch(e){}
                 }, 0);
             }
             render();

@@ -800,9 +800,25 @@ async function openAdminChat(chatId) {
     document.getElementById('admin-chats-list').style.display = 'none';
     // hide the chat list actions (search + refresh) while viewing a conversation
     try{ const actions = document.getElementById('chatActions'); if(actions) actions.style.display = 'none'; }catch(e){}
-    document.getElementById('chat-full-title').textContent = chat.userName || chat.conversationTitle || chat.participantName || chat.participantId;
-    document.getElementById('chat-full-sub').textContent = chat.conversationTitle || chat.participantId || '';
-    try{ document.getElementById('chat-full-title').dataset.chatId = chatId; }catch(e){}
+    try{
+        const titleEl = document.getElementById('chat-full-title');
+        // prefer preserved participantName from local adminChats (localStorage) to avoid losing the user's displayed name
+        let preserved = null;
+        try{
+            const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+            const meta = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+            if(meta) preserved = meta.participantName || meta.userName || null;
+        }catch(e){}
+        const computed = preserved || chat.userName || chat.conversationTitle || chat.participantName || chat.participantId || '';
+        if(titleEl){
+            // Only set title if it's empty or different from the preserved/computed value to avoid unnecessary DOM updates
+            if(!titleEl.textContent || titleEl.textContent.trim() === '' || titleEl.textContent !== computed){
+                titleEl.textContent = computed;
+            }
+            try{ titleEl.dataset.chatId = chatId; }catch(e){}
+        }
+        const subEl = document.getElementById('chat-full-sub'); if(subEl) subEl.textContent = chat.conversationTitle || chat.participantId || '';
+    }catch(e){ console.warn('set chat title failed', e); }
     // Render messages (include property card at top if available)
     const msgsEl = document.getElementById('chat-full-messages');
     // Determine propertyCard: prefer explicit conversationProperty, then API-provided property,
