@@ -1260,11 +1260,12 @@
     chatsBtn.addEventListener('click', (e)=>{
       e.preventDefault();
       // Prevent any existing conversation hash from causing an immediate open
-      try{ window._suppressNextConversationOpen = true; }catch(_){}
-      try{ if(location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){}
-        try{ window._suppressNextConversationOpen = true; }catch(_){}
-        try{ if(location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){ }
-      try{ setTimeout(()=>{ window._suppressNextConversationOpen = false; }, 1200); }catch(_){}
+      try{ window._suppressNextConversationOpen = true; }catch(_){ }
+      try{ if(location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){ }
+      // Ensure chat panel is shown even if hashchange doesn't fire
+      try{ switchTab('chat'); }catch(_){}
+      try{ if(typeof renderAdminChatList === 'function') renderAdminChatList(); }catch(_){ }
+      try{ setTimeout(()=>{ window._suppressNextConversationOpen = false; }, 1200); }catch(_){ }
     });
 
     // Render admin chat list: prefer server-backed conversations, fall back to localStorage
