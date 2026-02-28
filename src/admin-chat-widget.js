@@ -109,6 +109,9 @@
             <div style="flex:0 0 220px;text-align:right;min-width:120px">
               <div style="font-size:13px;color:#444">${participant?this.escape(participant):''}</div>
               ${propTitle || propId ? `<div style="margin-top:6px;font-size:12px;color:#0e76a8">${propTitle?this.escape(propTitle):'Property'} ${propId?`(#${this.escape(String(propId))})`:''}</div>` : ''}
+              <div style="margin-top:8px;font-size:12px;color:#666">
+                <a href="admin-conversation.html?id=${this.escape(String(id))}" style="color:var(--text);text-decoration:none">Open full page</a>
+              </div>
             </div>
           </div>
         `;
