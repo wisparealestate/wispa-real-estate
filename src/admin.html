@@ -1300,7 +1300,7 @@
               const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
               console.log('admin chat clicked (server list)', id, a.href);
               try{
-                try { location.hash = 'conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
+                try { location.hash = 'admin-conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
                 if (id && typeof openAdminChat === 'function') openAdminChat(id);
                 else if (typeof renderAdminChatList === 'function') renderAdminChatList();
               }catch(e){ console.error(e) }
@@ -1321,7 +1321,7 @@
           const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
           console.log('admin chat clicked (local list)', id, a.href);
           try{
-            try { location.hash = 'conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
+            try { location.hash = 'admin-conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
             if (id && typeof openAdminChat === 'function') openAdminChat(id);
             else if (typeof renderAdminChatList === 'function') renderAdminChatList();
           }catch(e){ console.error(e) }
@@ -2335,8 +2335,8 @@
         }
       }catch(e){ hashPath = 'overview'; try{ location.hash = '#overview'; }catch(_){} }
       const hashQuery = parts[1] || '';
-      // Support legacy #conversation links by mapping them to the chat tab
-      if (hashPath === 'conversation') {
+      // Support legacy #conversation links and new #admin-conversation links by mapping them to the chat tab
+      if (hashPath === 'conversation' || hashPath === 'admin-conversation') {
         const params = new URLSearchParams(hashQuery);
         let convId = params.get('id') || params.get('conv') || null;
         // If a user just clicked the Chat button we should not auto-open a conversation
@@ -2351,14 +2351,14 @@
         renderNotificationsView('all');
         loadProperties();
         loadUsers();
-        // Open conversation when hash changes (supports admin.html#conversation?id=... links)
+        // Open conversation when hash changes (supports admin.html#conversation?id=... and admin.html#admin-conversation?id=... links)
         window.addEventListener('hashchange', function(){
           try{
             const raw = (location.hash && location.hash.slice(1)) || '';
             const parts = String(raw).split('?');
             const path = parts[0] || '';
             const qs = parts[1] || '';
-            if (path === 'conversation'){
+            if (path === 'conversation' || path === 'admin-conversation'){
               const params = new URLSearchParams(qs);
               const convId = params.get('id') || params.get('conv') || null;
               console.log('hashchange detected, conversation id=', convId);
