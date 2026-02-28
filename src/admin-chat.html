@@ -283,7 +283,7 @@
                 }
                 convs.forEach(c => {
                     const a = document.createElement('a');
-                    a.href = `admin.html#admin-conversation?id=${encodeURIComponent(c.id)}`;
+                    a.href = `admin-conversation.html?id=${encodeURIComponent(c.id)}`;
                     a.className = 'conversation-item';
                     a.innerHTML = `
                         <div class="avatar">${(c.participantName||c.userName||'U').split(' ').map(n=>n[0]).join('')}</div>
