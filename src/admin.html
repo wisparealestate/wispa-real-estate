@@ -1262,8 +1262,8 @@
       // Prevent any existing conversation hash from causing an immediate open
       try{ window._suppressNextConversationOpen = true; }catch(_){}
       try{ if(location.hash && location.hash.startsWith('#conversation')) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){}
-      switchTab('chat'); renderAdminChatList();
-      // clear suppression after a short delay so future hash links still work
+        try{ window._suppressNextConversationOpen = true; }catch(_){}
+        try{ if(location.hash && (location.hash.startsWith('#conversation') || location.hash.startsWith('#admin-conversation'))) location.hash = 'chat'; else location.hash = 'chat'; }catch(_){ }
       try{ setTimeout(()=>{ window._suppressNextConversationOpen = false; }, 1200); }catch(_){}
     });
 
@@ -1292,7 +1292,7 @@
           // Normalize to expected meta fields
             if (convs && convs.length) {
             const mapped = convs.map(c => ({ id: c.id || c.conversation_id || c.key || (c.user_id?('user-'+c.user_id):null), participant: c.participantName || c.userName || c.userNameDisplay || c.user_email || '', propertyTitle: (c.property && (c.property.title || c.property.name)) || (c.meta && c.meta.property && (c.meta.property.title || c.meta.property.name)) || '', propertyId: (c.property && (c.property.id || c.property.propertyId)) || c.propertyId || (c.meta && c.meta.property && (c.meta.property.id || c.meta.property.propertyId)) || '', lastMessage: c.last || c.last_message || c.lastMessage || c.updated || '', unread: c.unread || 0, avatar: (c.avatar||c.userAvatar|| (c.user && (c.user.avatar||c.user.photo)) || (c.meta && c.meta.user && (c.meta.user.avatar||c.meta.user.photo)) || '') }));
-            out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+mapped.map(c=>{ const id = c.id||''; const participant = c.participant||''; let displayLeft = participant; if(!displayLeft){ if(id.toLowerCase().startsWith('property-')){ const parts = id.split('-'); displayLeft = 'Property #' + (parts[1]||id); } else { displayLeft = id || c.propertyTitle || 'Conversation'; } } return `<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin.html#conversation?id=${encodeURIComponent(c.id||'')}" data-id="${escapeHtml(c.id||'')}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;gap:12px;align-items:center"><div style="flex:0 0 auto">${c.avatar?`<img src="${escapeHtml(c.avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)">`:`<div style="width:40px;height:40px;border-radius:50%;background:#f0f3f6;border:1px solid var(--border);"></div>`}</div><div style="flex:1;min-width:0"><div style="font-weight:700">${escapeHtml(displayLeft)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="min-width:160px;text-align:right;color:#0e76a8">${escapeHtml(c.propertyTitle? (c.propertyTitle + (c.propertyId ? (' (#'+c.propertyId+')') : '')) : (c.propertyId?('Property (#'+c.propertyId+')') : ''))}</div></a></li>` }).join('')+'</ul>';
+            out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+mapped.map(c=>{ const id = c.id||''; const participant = c.participant||''; let displayLeft = participant; if(!displayLeft){ if(id.toLowerCase().startsWith('property-')){ const parts = id.split('-'); displayLeft = 'Property #' + (parts[1]||id); } else { displayLeft = id || c.propertyTitle || 'Conversation'; } } return `<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin.html#admin-conversation?id=${encodeURIComponent(c.id||'')}" data-id="${escapeHtml(c.id||'')}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;gap:12px;align-items:center"><div style="flex:0 0 auto">${c.avatar?`<img src="${escapeHtml(c.avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)">`:`<div style="width:40px;height:40px;border-radius:50%;background:#f0f3f6;border:1px solid var(--border);"></div>`}</div><div style="flex:1;min-width:0"><div style="font-weight:700">${escapeHtml(displayLeft)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="min-width:160px;text-align:right;color:#0e76a8">${escapeHtml(c.propertyTitle? (c.propertyTitle + (c.propertyId ? (' (#'+c.propertyId+')') : '')) : (c.propertyId?('Property (#'+c.propertyId+')') : ''))}</div></a></li>` }).join('')+'</ul>';
             out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{
               // allow modifier clicks (open in new tab/window)
               if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
@@ -2390,7 +2390,7 @@
   <div id="wispa-admin-debug" style="display:none;position:fixed;right:12px;bottom:12px;z-index:99999;background:rgba(255,255,255,0.95);border:1px solid #e6eef6;padding:8px;border-radius:8px;box-shadow:0 10px 30px rgba(8,24,50,0.08);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:0">
     <div style="font-size:12px;color:#333;margin-bottom:6px;font-weight:600">Debug</div>
     <div style="display:flex;gap:6px;">
-        <button id="wispa-debug-auth" type="button" style="padding:6px 8px;background:#fff;border:1px solid #dfeaf7;border-radius:6px;cursor:pointer">Test Admin Auth</button>
+        <a href="admin.html#admin-conversation?id=${encodeURIComponent(c.id||'')}" data-id="${escapeHtml(c.id||'')}" class="admin-chat-link"
         <button id="wispa-retry-notifs" type="button" style="padding:6px 8px;background:#fff;border:1px solid #dfeaf7;border-radius:6px;cursor:pointer">Retry Notifications</button>
     </div>
   </div>
