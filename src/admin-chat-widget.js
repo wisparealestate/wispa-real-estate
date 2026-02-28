@@ -22,7 +22,7 @@
       const back = document.getElementById('chat-back');
       if(back) back.addEventListener('click', ()=> this.closeConversation());
       // load list
-      this.loadConversations();
+      try{ this.loadConversations(); }catch(e){ this.showError('Failed to initialize chat list', e); }
     }
 
     async apiGet(path){
@@ -56,7 +56,10 @@
             this.searchEl.addEventListener('change', ()=> this.renderConversations());
           }
         }catch(e){}
-      }catch(e){ this.listEl.innerHTML = 'Failed to load conversations.'; }
+      }catch(e){
+        try{ if(this.listEl) this.listEl.innerHTML = 'Failed to load conversations.'; }catch(_){ }
+        this.showError('Failed to load conversations', e);
+      }
     }
 
     renderConversations(){
@@ -130,6 +133,28 @@
         this._statusEl.textContent = msg || '';
         if(timeout && timeout > 0){ setTimeout(()=>{ try{ if(this._statusEl) this._statusEl.textContent = ''; }catch(e){} }, timeout); }
       }catch(e){}
+    }
+
+    showError(message, err){
+      try{
+        const text = message + (err ? (': ' + (err && err.message ? err.message : String(err))) : '');
+        console.warn('AdminChatWidget error:', message, err);
+        if(!this._errorEl){
+          this._errorEl = document.createElement('div');
+          this._errorEl.style.background = '#fff6f6';
+          this._errorEl.style.color = '#c33';
+          this._errorEl.style.border = '1px solid #f5c6cb';
+          this._errorEl.style.padding = '8px';
+          this._errorEl.style.borderRadius = '6px';
+          this._errorEl.style.margin = '8px 0';
+          this._errorEl.style.fontSize = '13px';
+          if(this.listEl && this.listEl.parentNode) this.listEl.parentNode.insertBefore(this._errorEl, this.listEl);
+          else if(this.fullView && this.fullView.parentNode) this.fullView.parentNode.insertBefore(this._errorEl, this.fullView);
+        }
+        this._errorEl.textContent = text;
+        // auto-clear after 8s
+        setTimeout(()=>{ try{ if(this._errorEl) this._errorEl.textContent = ''; }catch(e){} }, 8000);
+      }catch(e){ console.warn('showError failed', e); }
     }
 
     async openConversation(id){
@@ -238,7 +263,10 @@
         try{ if(this.inputEl) { this.inputEl.disabled = false; /* don't force-focus to avoid jump — leave focus management to user */ } }catch(e){}
         // start polling to refresh messages periodically
         this.startPolling();
-      }catch(e){ this.messagesEl.innerHTML = 'Failed to load messages.'; }
+      }catch(e){
+        try{ if(this.messagesEl) this.messagesEl.innerHTML = 'Failed to load messages.'; }catch(_){ }
+        this.showError('Failed to load messages', e);
+      }
     }
 
     startPolling(){
@@ -250,40 +278,51 @@
     closeConversation(){ this.fullView.style.display='none'; this.listEl.style.display='block'; }
 
     async sendMessage(){
-      if(!this.currentConv) return alert('No conversation open');
+      if(!this.currentConv){ try{ this.showError('No conversation open'); }catch(e){}; return; }
       const text = (this.inputEl && this.inputEl.value) ? String(this.inputEl.value).trim() : '';
       if(!text) return;
       if(this.sending) return;
       this.sending = true;
+      if(this.sendBtn) this.sendBtn.disabled = true;
+      if(this.inputEl) this.inputEl.disabled = true;
       try{
-        if(this.sendBtn) this.sendBtn.disabled = true;
-        if(this.inputEl) this.inputEl.disabled = true;
-        // Try per-conversation endpoint first
-        const j = await this.apiPost('/api/conversations/' + encodeURIComponent(this.currentConv) + '/messages', { text });
-        if (j && !j._error) {
+        // Primary per-conversation endpoint
+        let resObj = await this.apiPost('/api/conversations/' + encodeURIComponent(this.currentConv) + '/messages', { text }).catch(err => ({ _error: true, error: String(err) }));
+        if(resObj && !resObj._error){
           if(this.inputEl) this.inputEl.value = '';
           await this.openConversation(this.currentConv);
           this.showStatus('Sent', 1500);
           return;
         }
-        // Fallback: some servers expect a single endpoint '/api/conversations/messages' with body { convId, message }
+
+        // Fallback endpoint
         try{
           const poster = window.apiFetch ? window.apiFetch : fetch;
           const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ convId: this.currentConv, message: { sender: 'admin', text } }) };
-          const res = await poster('/api/conversations/messages', opts);
-          if (res && res.ok) {
+          const r = await poster('/api/conversations/messages', opts).catch(()=>null);
+          if(r && r.ok){
             if(this.inputEl) this.inputEl.value = '';
             await this.openConversation(this.currentConv);
+            this.showStatus('Sent', 1500);
             return;
-          } else {
-            try{ const txt = await (res && res.text ? res.text() : ''); let parsed = null; try{ parsed = JSON.parse(txt); }catch(e){}; console.warn('send fallback failed', res && res.status, parsed || txt); }
-            catch(e){}
           }
-        }catch(e){ /* ignore fallback failure */ }
-        this.showStatus('Send failed', 3000);
-        alert('Send failed');
-      }catch(e){ alert('Send failed'); }
-      finally{ this.sending = false; try{ if(this.sendBtn) this.sendBtn.disabled = false; if(this.inputEl) this.inputEl.disabled = false; }catch(e){} }
+          // Non-OK: surface body
+          const txt = r && r.text ? await r.text().catch(()=>'') : '';
+          let parsed = null; try{ parsed = JSON.parse(txt); }catch(e){}
+          const info = parsed || txt || (r && r.status) || 'unknown';
+          this.showError('send fallback failed', info);
+        }catch(fbErr){
+          this.showError('sendMessage fallback error', fbErr);
+        }
+
+        // If we reach here, sending didn't succeed
+        this.showError('Send failed');
+      }catch(err){
+        this.showError('Send failed', err);
+      }finally{
+        this.sending = false;
+        try{ if(this.sendBtn) this.sendBtn.disabled = false; if(this.inputEl) this.inputEl.disabled = false; }catch(e){}
+      }
     }
   }
 

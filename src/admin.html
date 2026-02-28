@@ -1334,7 +1334,7 @@
     document.getElementById('chat-full-send').addEventListener('click', (e)=>{ 
       // If new AdminChatWidget is present, let it handle sending
       if(window._adminChatWidget && typeof window._adminChatWidget.sendMessage === 'function') return;
-      const text = document.getElementById('chat-full-input').value || ''; if(!text.trim()) return; try{ const id = (document.getElementById('chat-full-title').dataset && document.getElementById('chat-full-title').dataset.chatId) || null; if(!id){ /* try to infer from title */ } sendAdminMessage(id, text); document.getElementById('chat-full-input').value=''; }catch(err){ console.error(err) } 
+      const text = document.getElementById('chat-full-input').value || ''; if(!text.trim()) return; try{ const id = (document.getElementById('chat-full-title').dataset && document.getElementById('chat-full-title').dataset.chatId) || null; if(!id){ /* try to infer from title */ } sendAdminMessage(id, text); document.getElementById('chat-full-input').value=''; }catch(err){ try{ if(window._adminChatWidget && typeof window._adminChatWidget.showError === 'function') window._adminChatWidget.showError('Failed to send chat', err); else console.error(err); }catch(e){ console.error(err); } } 
     });
 
     async function sendAdminMessage(chatId, text){
@@ -1418,7 +1418,7 @@
           try{ localStorage.setItem(acKey, JSON.stringify(ac)); }catch(e){}
         }catch(e){}
         try{ openAdminChat(chatId); }catch(e){}
-      }catch(e){ console.error('Failed to send admin message', e); }
+      }catch(e){ try{ if(window._adminChatWidget && typeof window._adminChatWidget.showError === 'function') window._adminChatWidget.showError('Failed to send admin message', e); else console.error('Failed to send admin message', e); }catch(_){ console.error('Failed to send admin message', e); } }
     }
 
     async function loadProfile(){
