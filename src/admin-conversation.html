@@ -3,436 +3,121 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Redirecting...</title>
-  <script>
-    (function(){
-      const search = location.search || '';
-      const target = '/admin.html#conversation' + search;
-      location.replace(target);
-    })();
-  </script>
-</head>
-<body>Redirecting to admin conversation...</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Admin Conversation - Wispa Real Estate</title>
-    <link rel="stylesheet" href="styles.css">
+  <title>Admin Conversation - Wispa Real Estate</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <main>
-        <div class="main-container">
-            <section class="services-hero">
-                <div class="hero-content">
-                    <p class="eyebrow">Conversation</p>
-                    <h1>Messages</h1>
-                    <p class="lead">Open conversation and message your user or agent. This view is opened when selecting a conversation from the admin chat list.</p>
-                </div>
-            </section>
-            <section class="services-section">
-                <div style="max-width:900px;margin:20px auto;">
-                    <div id="chatBox" class="chat-box" style="background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;height:520px;">
-                        <div id="messages" style="flex:1;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:10px;background:transparent"></div>
-                        <div style="border-top:1px solid var(--border);padding:12px;display:flex;gap:8px;align-items:center;">
-                            <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;">
-                            <label for="fileInput" style="margin:0 8px 0 0;cursor:pointer;display:inline-flex;align-items:center;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M16.5 6.5L7.5 15.5C6.67 16.33 5.33 16.33 4.5 15.5C3.67 14.67 3.67 13.33 4.5 12.5L13.5 3.5C15.43 1.57 18.57 1.57 20.5 3.5C22.43 5.43 22.43 8.57 20.5 10.5L11.5 19.5C8.57 22.43 3.43 22.43 0.5 19.5C-2.43 16.57-2.43 11.43 0.5 8.5L9.5 0.5" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </label>
-                            <input type="file" id="fileInput" style="display:none;" title="Attach file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" multiple>
-                            <div id="selectedFiles" style="font-size:13px;color:#555;margin-right:8px;max-width:180px;overflow-x:auto;white-space:nowrap;"></div>
-                            <button id="emojiBtn" style="background:none;border:none;font-size:22px;cursor:pointer;" title="Insert emoji">😊</button>
-                            <button id="sendBtn" class="btn">Send</button>
-                        </div>
-                        <!-- Move emoji and file logic inside main IIFE so loadMessages/render are accessible -->
-                    </div>
-                </div>
-            </section>
+  <main>
+    <div class="main-container">
+      <section class="services-hero">
+        <div class="hero-content">
+          <p class="eyebrow">Conversation</p>
+          <h1>Messages</h1>
+          <p class="lead">Open a conversation and message your user or agent.</p>
         </div>
-    </main>
-    <footer>
-        <p style="text-align:center">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
-    </footer>
-    <script src="script.js"></script>
-    <script>
-        // Populate in-memory cache for conversation page and shim localStorage to server-backed adminGet/adminSet
-        (async function(){
-            const keys = ['adminChats','properties','adminProfile','agentProfile','wispaUser'];
-            window._adminCache = window._adminCache || {};
-            for (const k of keys) {
-                try { const v = window.adminGet ? await window.adminGet(k) : null; window._adminCache[k] = v === null || v === undefined ? null : JSON.stringify(v); } catch(e){ window._adminCache[k] = null; }
-            }
-            // Provide sync helpers to read/write admin cache without using localStorage
-            window.adminLoadKeySync = function(key) {
-                try {
-                    if (window._adminCache && typeof window._adminCache[key] !== 'undefined' && window._adminCache[key] !== null) {
-                        try { return JSON.parse(window._adminCache[key]); } catch(e) { return window._adminCache[key]; }
-                    }
-                } catch(e) {}
-                return null;
-            };
-            window.adminSaveKeySync = function(key, value) {
-                try {
-                    if (window.adminSet) window.adminSet(key, value).catch(()=>{});
-                    if (window._adminCache) window._adminCache[key] = JSON.stringify(value);
-                } catch(e) {}
-            };
-        })();
+      </section>
+      <section class="services-section">
+        <div style="max-width:1000px;margin:20px auto;">
+          <div id="chatBox" class="chat-box" style="background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;height:640px;">
+            <div id="messages-area" style="flex:1;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:10px;background:transparent"></div>
+            <div style="border-top:1px solid var(--border);padding:12px;display:flex;gap:8px;align-items:center;">
+              <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;">
+              <label for="fileInput" style="margin:0 8px 0 0;cursor:pointer;display:inline-flex;align-items:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.5 6.5L7.5 15.5C6.67 16.33 5.33 16.33 4.5 15.5C3.67 14.67 3.67 13.33 4.5 12.5L13.5 3.5C15.43 1.57 18.57 1.57 20.5 3.5C22.43 5.43 22.43 8.57 20.5 10.5L11.5 19.5C8.57 22.43 3.43 22.43 0.5 19.5C-2.43 16.57-2.43 11.43 0.5 8.5L9.5 0.5" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </label>
+              <input type="file" id="fileInput" style="display:none;" title="Attach file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" multiple>
+              <div id="selectedFiles" style="font-size:13px;color:#555;margin-right:8px;max-width:220px;overflow-x:auto;white-space:nowrap;"></div>
+              <button id="emojiBtn" style="background:none;border:none;font-size:22px;cursor:pointer;" title="Insert emoji">😊</button>
+              <button id="sendBtn" class="btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer>
+    <p style="text-align:center">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+  </footer>
 
-        (function(){
-            // Use all possible conversation key formats to find messages
-            const urlParams = new URLSearchParams(window.location.search);
-            const convId = urlParams.get('id') || 'conv-1';
-            const messagesEl = document.getElementById('messages');
-            const inputEl = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendBtn');
-            // Emoji picker logic
-            const emojiBtn = document.getElementById('emojiBtn');
-            if(emojiBtn && inputEl){
-                emojiBtn.addEventListener('click', function(){
-                    const emoji = prompt('Enter emoji or paste from picker:', '😊');
-                    if(emoji) {
-                        inputEl.value += emoji;
-                        try{ if(document.activeElement !== inputEl) inputEl.focus(); }catch(e){}
-                    }
-                });
-            }
-            // File attachment logic
-            const fileInput = document.getElementById('fileInput');
-            const selectedFilesDiv = document.getElementById('selectedFiles');
-            if(fileInput && sendBtn && selectedFilesDiv){
-                fileInput.addEventListener('change', function(){
-                    if(fileInput.files && fileInput.files.length){
-                        let names = [];
-                        for(let i=0;i<fileInput.files.length;i++){
-                            names.push(fileInput.files[i].name);
-                        }
-                        selectedFilesDiv.textContent = names.join(', ');
-                        sendBtn.disabled = false;
-                    }else{
-                        selectedFilesDiv.textContent = '';
-                        sendBtn.disabled = false;
-                    }
-                });
-                sendBtn.addEventListener('click', function(){
-                    if(fileInput.files && fileInput.files.length){
-                        const msgs = loadMessages();
-                        const now = Date.now();
-                        let adminProfile = {};
-                        try { adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; } catch(e){}
-                        for(let i=0;i<fileInput.files.length;i++){
-                            const file = fileInput.files[i];
-                            msgs.push({
-                                sender: 'admin',
-                                senderName: adminProfile.adminName || 'Admin',
-                                senderAvatar: adminProfile.adminAvatar || '',
-                                text: '[File] ' + file.name,
-                                fileName: file.name,
-                                fileType: file.type,
-                                time: now,
-                                ts: now
-                            });
-                        }
-                        saveMessages(msgs);
-                        fileInput.value = '';
-                        selectedFilesDiv.textContent = '';
-                        sendBtn.disabled = false;
-                        render();
-                    }
-                });
-            }
-            function getPropertyPreviewCard() {
-                if (!convId.startsWith('property-')) return '';
-                const m = convId.match(/^property-(\d+)-/);
-                if (!m) return '';
-                const propertyId = m[1];
-                let property = null;
-                try {
-                    const props = (window.adminLoadKeySync ? (window.adminLoadKeySync('properties') || []) : (window._adminCache && window._adminCache['properties'] ? JSON.parse(window._adminCache['properties']) : []));
-                    property = Array.isArray(props) ? props.find(p => String(p.id) === String(propertyId)) : null;
-                } catch(e){}
-                if (!property) return '';
-                    // Determine badge
-                    let badge = '';
-                    if (property.hot) badge = "🔥 Hot Property";
-                    else if (property.featured) badge = "⭐ Featured Property";
-                    else badge = "✅ Available Property";
-                    return `
-                        <div class="chat-message-row property-bubble" style="justify-content:center;display:flex;">
-                            <a href="property-detail.html?id=${property.id}" target="_blank" style="text-decoration:none;display:block;max-width:600px;width:100%;">
-                            <div class="chat-message" style="background:#f7fafd;border:1px solid var(--border);max-width:600px;cursor:pointer;">
-                                <div style="display:flex;align-items:center;gap:18px;">
-                                    <img src="${property.images && property.images.length ? property.images[0] : ''}" alt="Property" style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f7f7f7;">
-                                    <div style="flex:1;min-width:0">
-                                        <div style="font-weight:700;font-size:17px;line-height:1.2;">${property.title || 'Property'}</div>
-                                        <div style="display:flex;align-items:center;gap:10px;color:var(--secondary);font-size:14px;margin:2px 0 6px 0;">
-                                            <span>${property.location || ''}</span>
-                                            <span style='background:#3498db;color:#fff;font-size:12px;padding:2px 8px;border-radius:6px;'>${badge}</span>
-                                        </div>
-                                        <div style="display:flex;gap:16px;font-size:14px;color:#444;align-items:center;">
-                                            <span>€${property.price ? property.price.toLocaleString() : ''}</span>
-                                            <span>${property.bedrooms || 0} bed</span>
-                                            <span>${property.bathrooms || 0} bath</span>
-                                            <span style="background:#eaf6ff;color:#3498db;padding:2px 8px;border-radius:6px;font-size:13px;">${property.type === 'rent' ? 'For Rent' : 'For Sale'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            </a>
-                        </div>
-                    `;
-            }
-            // Try all possible key formats for compatibility
-            function getAllPossibleKeys() {
-                const keys = [];
-                // adminMessages_id
-                keys.push('adminMessages_' + convId);
-                // wispaMessages_id
-                keys.push('wispaMessages_' + convId);
-                // Try to find userId from any adminChats or conversation metadata
-                let userId = null;
-                try {
-                    const adminChats = (window.adminLoadKeySync ? (window.adminLoadKeySync('adminChats') || []) : (window._adminCache && window._adminCache['adminChats'] ? JSON.parse(window._adminCache['adminChats']) : []));
-                    const meta = Array.isArray(adminChats) ? adminChats.find(c => c.id === convId) : null;
-                    if (meta && meta.userId) userId = meta.userId;
-                } catch(e){}
-                if (!userId) {
-                    // Try to extract userId from convId if it matches property-*-WISPA-*
-                    const m = convId.match(/^property-\d+-(WISPA-[^_]+)/);
-                    if (m) userId = m[1];
-                }
-                if (userId) {
-                    keys.push('wispaMessages_' + userId + '_' + convId);
-                }
-                // If property chat, try wispaMessages_userid_property-propertyid
-                const m2 = convId.match(/^property-(\d+)-(WISPA-[^_]+)/);
-                if (m2) {
-                    const propertyId = m2[1];
-                    const userId2 = m2[2];
-                    keys.push('wispaMessages_' + userId2 + '_property-' + propertyId);
-                }
-                return keys;
-            }
-            function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-            function loadMessages(){
-                const keys = getAllPossibleKeys();
-                let all = [];
-                const seen = new Set();
-                for (let i = 0; i < keys.length; i++) {
-                        let arr = null;
-                        try { arr = (window.adminLoadKeySync ? window.adminLoadKeySync(keys[i]) : (window._adminCache && window._adminCache[keys[i]] ? JSON.parse(window._adminCache[keys[i]]) : null)); } catch(e) { arr = null; }
-                        if (arr) {
-                            try {
-                                const msgs = Array.isArray(arr) ? arr : (typeof arr === 'string' ? JSON.parse(arr) : null);
-                                if (Array.isArray(msgs)) {
-                                    msgs.forEach(m => {
-                                        const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                                        if (!seen.has(sig)) {
-                                            all.push(m);
-                                            seen.add(sig);
-                                        }
-                                    });
-                                }
-                            } catch(e){}
-                        }
-                }
-                // Sort by time/ts ascending
-                all.sort((a,b) => {
-                    const ta = a.time || a.ts || 0;
-                    const tb = b.time || b.ts || 0;
-                    return ta - tb;
-                });
-                return all;
-            }
-            function saveMessages(v){
-                // Save to all relevant keys (admin and user/agent)
-                const keys = getAllPossibleKeys();
-                for (let i = 0; i < keys.length; i++) {
-                    if (window.adminSaveKeySync) window.adminSaveKeySync(keys[i], v);
-                    else if (window._adminCache) window._adminCache[keys[i]] = JSON.stringify(v);
-                }
-            }
-            function render(){
-                const msgs = loadMessages();
-                // signature to avoid unnecessary DOM replaces which can jump input focus/scroll
-                try{
-                    const lastMsg = msgs && msgs.length ? (msgs[msgs.length-1].time || msgs[msgs.length-1].ts || '') : '';
-                    const lastSig = String(lastMsg) + '|' + String(msgs.length) + '|' + String(convId);
-                    if (messagesEl && messagesEl.dataset && messagesEl.dataset.lastSig === lastSig) {
-                        return; // nothing changed
-                    }
-                    if (messagesEl && messagesEl.dataset) messagesEl.dataset.lastSig = lastSig;
-                }catch(e){}
-                let html = '';
-                // preserve input focus & selection to avoid caret jumping
-                let hadFocus = false, selStart = null, selEnd = null;
-                try{ hadFocus = (document.activeElement === inputEl); selStart = inputEl.selectionStart; selEnd = inputEl.selectionEnd; }catch(e){}
-                // Insert property preview as a pinned card above the scrollable messages area
-                const propertyCard = getPropertyPreviewCard();
-                // remove any existing pinned card
-                try{ const existing = document.getElementById('messages-property-card'); if(existing && existing.parentNode) existing.parentNode.removeChild(existing); }catch(e){}
-                if (propertyCard) {
-                    try{
-                        const wrapper = document.createElement('div'); wrapper.innerHTML = propertyCard;
-                        const node = wrapper.firstElementChild;
-                        if(node){ node.id = 'messages-property-card'; node.style.position = 'relative'; node.style.zIndex = '2'; }
-                        // insert as sibling before messagesEl so it stays visible above the scroll area
-                        if(node && messagesEl && messagesEl.parentNode) messagesEl.parentNode.insertBefore(node, messagesEl);
-                    }catch(e){ console.warn('Failed to insert pinned property card', e); }
-                }
-                if (!msgs || msgs.length === 0) {
-                    html += '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);">No messages yet. Start the conversation below!</p>';
-                    messagesEl.innerHTML = html;
-                    return;
-                }
-                msgs.forEach(m => {
-                    // Determine sender type and get correct profile info
-                    let senderType = '';
-                    if (m.sender === 'admin' || m.senderName === 'Admin') senderType = 'admin';
-                    else if ((m.sender && m.sender.toLowerCase() === 'agent') || (m.senderRole && m.senderRole.toLowerCase().includes('agent'))) senderType = 'agent';
-                    else senderType = 'user';
+  <script src="script.js"></script>
+  <script>
+    // Admin cache shim (preserve existing helpers)
+    (async function(){
+      const keys = ['adminChats','properties','adminProfile','agentProfile','wispaUser'];
+      window._adminCache = window._adminCache || {};
+      for (const k of keys) {
+        try { const v = window.adminGet ? await window.adminGet(k) : null; window._adminCache[k] = v === null || v === undefined ? null : JSON.stringify(v); } catch(e){ window._adminCache[k] = null; }
+      }
+      window.adminLoadKeySync = function(key) {
+        try { if (window._adminCache && typeof window._adminCache[key] !== 'undefined' && window._adminCache[key] !== null) { try { return JSON.parse(window._adminCache[key]); } catch(e) { return window._adminCache[key]; } } } catch(e) {}
+        return null;
+      };
+      window.adminSaveKeySync = function(key, value) {
+        try { if (window.adminSet) window.adminSet(key, value).catch(()=>{}); if (window._adminCache) window._adminCache[key] = JSON.stringify(value); } catch(e) {}
+      };
+    })();
 
-                    let profile = { username: '', avatar: '', role: '' };
-                    if (senderType === 'admin') {
-                        let adminProfile = {};
-                        try { adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; } catch(e){}
-                        profile.username = m.senderName || adminProfile.adminName || 'Admin';
-                        profile.avatar = m.senderAvatar || adminProfile.adminAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username) + '&background=3498db&color=fff';
-                        profile.role = m.senderRole || adminProfile.adminRole || 'Manager';
-                    } else if (senderType === 'agent') {
-                        let agentProfile = null;
-                        try { agentProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('agentProfile') : (window._adminCache && window._adminCache['agentProfile'] ? JSON.parse(window._adminCache['agentProfile']) : null)) || null; } catch(e) { agentProfile = null; }
-                        profile.username = m.senderName || (agentProfile && (agentProfile.agentName || agentProfile.name)) || m.sender || 'Agent';
-                        profile.avatar = m.senderAvatar || (agentProfile && (agentProfile.agentAvatar || agentProfile.avatar)) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username);
-                        profile.role = m.senderRole || (agentProfile && (agentProfile.agentRole || agentProfile.role)) || 'Agent';
-                    } else {
-                        let userProfile = null;
-                        try { userProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('wispaUser') : (window._adminCache && window._adminCache['wispaUser'] ? JSON.parse(window._adminCache['wispaUser']) : null)) || null; } catch(e) { userProfile = null; }
-                        profile.username = m.senderName || (userProfile && (userProfile.name || userProfile.username)) || m.sender || 'User';
-                        profile.avatar = m.senderAvatar || (userProfile && userProfile.avatar) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username);
-                        profile.role = m.senderRole || '';
-                    }
+    // Conversation page script (redesigned)
+    (function(){
+      const urlParams = new URLSearchParams(window.location.search);
+      const convId = urlParams.get('id') || 'conv-1';
+      const messagesEl = document.getElementById('messages-area');
+      const inputEl = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const fileInput = document.getElementById('fileInput');
+      const selectedFilesDiv = document.getElementById('selectedFiles');
+      const emojiBtn = document.getElementById('emojiBtn');
 
-                    // Profile link
-                    let profileLink = '#';
-                    if (senderType === 'admin') profileLink = 'admin.html#profile';
-                    else if (senderType === 'agent') profileLink = 'agent-profile.html';
-                    else {
-                        const convIdParam = encodeURIComponent(convId);
-                        profileLink = `profile.html?from=adminchat&conv=${convIdParam}`;
-                    }
-                    const profilePic = `<a href="${profileLink}" title="View Profile" style="display:inline-block;vertical-align:middle;"><img src="${profile.avatar}" alt="profile" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #eee;margin-right:7px;vertical-align:middle;"></a>`;
-                    // Display label
-                    let displayLabel = '';
-                    if (senderType === 'admin' || senderType === 'agent') {
-                        displayLabel = `${escapeHtml(profile.username)} - ${escapeHtml(profile.role)}`;
-                    } else {
-                        displayLabel = escapeHtml(profile.username);
-                    }
-                    // Status icon
-                    let statusIcon = '';
-                    if (m.status === 'pending' || m.pending) {
-                        statusIcon = `<span title=\"Pending - Click to resend\" style=\"color:#888;margin-left:7px;vertical-align:middle;display:inline-block;cursor:pointer;font-size:0.9em;\" onclick=\"resendMessage(this, ${encodeURIComponent(JSON.stringify(m))})\">&#x21bb;</span>`;
-                    } else if (m.read) {
-                        statusIcon = `<span title=\"Read\" style=\"color:#3498db;margin-left:7px;vertical-align:middle;display:inline-block;font-size:0.75em;\">&#10003;&#10003;</span>`;
-                    } else {
-                        statusIcon = `<span title=\"Sent\" style=\"color:#3498db;margin-left:7px;vertical-align:middle;display:inline-block;font-size:0.75em;\">&#10003;</span>`;
-                    }
-                    html += `<div class="chat-message-row${senderType === 'admin' ? ' admin' : ''}" style="display:flex;justify-content:${senderType === 'admin' ? 'flex-end' : 'flex-start'};margin-bottom:14px;">
-                        <div class="chat-message${senderType === 'admin' ? ' admin' : ''}" style="max-width:48%;min-width:120px;word-break:break-word;overflow-wrap:anywhere;background:#fff;border-radius:14px;border:1px solid #eee;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-                            <div style="display:flex;align-items:center;">${profilePic}<span class="sender">${displayLabel}</span></div>
-                            <div class="timestamp" style="font-size:0.78rem;margin-left:35px;">${m.time ? new Date(m.time).toLocaleString() : (m.ts ? new Date(m.ts).toLocaleString() : '')}</div>
-                            <div><span>${escapeHtml(m.text)}</span>${statusIcon}</div>
-                        </div>
-                    </div>`;
-                });
-                messagesEl.innerHTML = html;
-                // Scroll to latest message
-                setTimeout(function() {
-                    try{ messagesEl.scrollTop = messagesEl.scrollHeight; }catch(e){}
-                    // restore focus & selection if needed
-                    try{ if(hadFocus){ inputEl.focus(); if(selStart != null && selEnd != null) inputEl.setSelectionRange(selStart, selEnd); } }catch(e){}
-                }, 0);
-            }
-            render();
-            sendBtn.addEventListener('click', function(){
-                const val = inputEl.value.trim();
-                if (!val) return;
-                const msgs = loadMessages();
-                const now = Date.now();
-                // Get current admin profile
-                let adminProfile = {};
-                try { adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; } catch(e){}
-                msgs.push({
-                    sender: 'admin',
-                    senderName: adminProfile.adminName || 'Admin',
-                    senderAvatar: adminProfile.adminAvatar || '',
-                    text: val,
-                    time: now,
-                    ts: now
-                });
-                saveMessages(msgs);
-                inputEl.value = '';
-                render();
-                // Also persist keys via adminSaveKeySync for real-time update hooks
-                const keys = getAllPossibleKeys();
-                for (let i = 0; i < keys.length; i++) {
-                    const cur = (window.adminLoadKeySync ? (window.adminLoadKeySync(keys[i]) || []) : (window._adminCache && window._adminCache[keys[i]] ? JSON.parse(window._adminCache[keys[i]]) : null));
-                    if (window.adminSaveKeySync) window.adminSaveKeySync(keys[i], cur || []);
-                }
-            });
-            inputEl.addEventListener('keydown', function(e){
-                if (e.key === 'Enter') sendBtn.click();
-            });
-            window.addEventListener('storage', function(e){
-                if (!e.key) return;
-                if (typeof getMessageKey === 'function') {
-                    if (e.key === getMessageKey()) render();
-                }
-            });
-            // If no messages, show a placeholder
-            if (loadMessages().length === 0) {
-                messagesEl.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);">No messages yet. Start the conversation below!</p>';
-            }
-        })();
-    </script>
-    <script>
-    // Resend pending message handler
-    function resendMessage(el, mStr) {
-        let m = {};
-        try { m = JSON.parse(decodeURIComponent(mStr)); } catch(e) { m = {}; }
-        // Remove pending and set status to sent
-        m.pending = false;
-        m.status = 'sent';
-        // Find and update the message in storage
-        const convId = new URLSearchParams(window.location.search).get('id') || 'conv-1';
-        const keys = [
-            'adminMessages_' + convId,
-            'wispaMessages_' + convId
-        ];
-        let updated = false;
-        for (let i = 0; i < keys.length; i++) {
-            let arr = [];
-            try { arr = (window.adminLoadKeySync ? (window.adminLoadKeySync(keys[i]) || []) : (window._adminCache && window._adminCache[keys[i]] ? JSON.parse(window._adminCache[keys[i]]) : [])); } catch(e){}
-            for (let j = 0; j < arr.length; j++) {
-                if ((arr[j].time||arr[j].ts) === (m.time||m.ts) && arr[j].text === m.text && arr[j].sender === m.sender) {
-                    arr[j].pending = false;
-                    arr[j].status = 'sent';
-                    updated = true;
-                }
-            }
-            if (updated) {
-                if (window.adminSaveKeySync) window.adminSaveKeySync(keys[i], arr);
-                else if (window._adminCache) window._adminCache[keys[i]] = JSON.stringify(arr);
-            }
+      function getAllPossibleKeys(){
+        const keys = [];
+        keys.push('adminMessages_' + convId);
+        keys.push('wispaMessages_' + convId);
+        try{ const adminChats = (window.adminLoadKeySync ? (window.adminLoadKeySync('adminChats') || []) : (window._adminCache && window._adminCache['adminChats'] ? JSON.parse(window._adminCache['adminChats']) : [])); const meta = Array.isArray(adminChats) ? adminChats.find(c => c && c.id && (c.id === convId || String(c.id).indexOf(String(convId)) !== -1)) : null; if(meta && meta.userId) keys.push('wispaMessages_' + meta.userId + '_' + convId); }catch(e){}
+        const m2 = convId.match(/^property-(\d+)-(WISPA-[^_]+)/);
+        if(m2) keys.push('wispaMessages_' + m2[2] + '_property-' + m2[1]);
+        return keys;
+      }
+
+      function loadMessages(){
+        const keys = getAllPossibleKeys(); const out = []; const seen = new Set();
+        for(const k of keys){
+          try{ const raw = window.adminLoadKeySync ? window.adminLoadKeySync(k) : (window._adminCache && window._adminCache[k] ? JSON.parse(window._adminCache[k]) : null); const arr = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null); if(Array.isArray(arr)){ for(const m of arr){ const sig = (m.time||m.ts||'') + '|' + (m.text||'') + '|' + (m.sender||''); if(!seen.has(sig)){ out.push(m); seen.add(sig); } } } }catch(e){}
         }
-        // Rerender
-        if (typeof render === 'function') render();
-    }
-    </script>
+        out.sort((a,b)=>(a.time||a.ts||0)-(b.time||b.ts||0));
+        return out;
+      }
+
+      function saveMessages(arr){ const keys = getAllPossibleKeys(); for(const k of keys){ try{ if(window.adminSaveKeySync) window.adminSaveKeySync(k, arr); else if(window._adminCache) window._adminCache[k] = JSON.stringify(arr); }catch(e){} } }
+
+      function escapeHtml(s){ try{return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }catch(e){return '';} }
+
+      function buildMessageHtml(m){ const isAdmin = (m.sender === 'admin' || (m.senderName && m.senderName.toLowerCase && m.senderName.toLowerCase()==='admin')); const username = m.senderName || m.userName || m.sender || (isAdmin? 'Admin':'User'); const ts = m.time ? new Date(m.time).toLocaleString() : (m.ts ? new Date(m.ts).toLocaleString() : ''); const txt = escapeHtml(m.text||''); return `<div style="display:flex;justify-content:${isAdmin?'flex-end':'flex-start'};margin-bottom:12px;"><div style="max-width:70%;background:${isAdmin?'#3498db':'#fff'};color:${isAdmin?'#fff':'#222'};padding:10px;border-radius:10px;border:1px solid #eee;">` + `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:${isAdmin?'#fff':'#666'};">${escapeHtml(username)}</div>` + `<div style="white-space:pre-wrap">${txt}</div>` + `<div style="font-size:11px;color:rgba(0,0,0,0.45);margin-top:6px;text-align:${isAdmin?'right':'left'};">${escapeHtml(ts)}</div>` + `</div></div>`; }
+
+      function getPropertyPreviewCard(){ if(!convId.startsWith('property-')) return ''; const m = convId.match(/^property-(\d+)-/); if(!m) return ''; try{ const props = (window.adminLoadKeySync ? (window.adminLoadKeySync('properties') || []) : (window._adminCache && window._adminCache['properties'] ? JSON.parse(window._adminCache['properties']) : [])); const p = Array.isArray(props) ? props.find(x=>String(x.id)===String(m[1])) : null; if(!p) return ''; const badge = p.hot ? '🔥 Hot Property' : (p.featured ? '⭐ Featured Property' : '✅ Available Property'); const img = p.images && p.images.length ? p.images[0] : ''; return `<div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;border:1px solid var(--border);max-width:900px;">` + `<a href="property-detail.html?id=${p.id}&conversation=true" style="text-decoration:none;color:inherit;display:flex;gap:18px;align-items:center;">` + `<div style="width:110px;height:80px;flex:0 0 110px;">${img?`<img src="${img}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;">`:'<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;"></div>'}</div>` + `<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:17px;">${escapeHtml(p.title||p.name||'Property')}</div><div style="color:var(--secondary)">${escapeHtml(p.location||'')} <span style="background:#3498db;color:#fff;padding:2px 8px;border-radius:6px;margin-left:8px;">${badge}</span></div></div>` + `</a></div>`; }catch(e){return ''; } }
+
+      function render(){ const msgs = loadMessages(); try{ const lastMsg = msgs && msgs.length ? (msgs[msgs.length-1].time || msgs[msgs.length-1].ts || '') : ''; const lastSig = String(lastMsg) + '|' + String(msgs.length) + '|' + String(convId); if(messagesEl && messagesEl.dataset && messagesEl.dataset.lastSig === lastSig) return; if(messagesEl && messagesEl.dataset) messagesEl.dataset.lastSig = lastSig; }catch(e){}
+        let hadFocus=false, selStart=null, selEnd=null; try{ hadFocus = (document.activeElement === inputEl); selStart = inputEl.selectionStart; selEnd = inputEl.selectionEnd; }catch(e){}
+        try{ const existing = document.getElementById('messages-property-card'); if(existing && existing.parentNode) existing.parentNode.removeChild(existing); }catch(e){}
+        const propCard = getPropertyPreviewCard(); if(propCard && messagesEl && messagesEl.parentNode){ const tmp = document.createElement('div'); tmp.innerHTML = propCard; messagesEl.parentNode.insertBefore(tmp.firstElementChild, messagesEl); }
+        let html = ''; if(!msgs || msgs.length===0){ html = '<p style="text-align:center;color:var(--text-light);">No messages yet. Start the conversation below!</p>'; messagesEl.innerHTML = html; return; } for(const m of msgs) html += buildMessageHtml(m);
+        messagesEl.innerHTML = html; setTimeout(()=>{ try{ messagesEl.scrollTop = messagesEl.scrollHeight; }catch(e){}; try{ if(hadFocus){ inputEl.focus(); if(selStart!=null && selEnd!=null) inputEl.setSelectionRange(selStart, selEnd); } }catch(e){} }, 0);
+      }
+
+      // Wire UI
+      if(emojiBtn && inputEl){ emojiBtn.addEventListener('click', ()=>{ const e = prompt('Insert emoji','😊'); if(e){ inputEl.value += e; try{ if(document.activeElement !== inputEl) inputEl.focus(); }catch(err){} } }); }
+      if(fileInput && selectedFilesDiv){ fileInput.addEventListener('change', ()=>{ try{ if(fileInput.files && fileInput.files.length){ const names = Array.from(fileInput.files).map(f=>f.name); selectedFilesDiv.textContent = names.join(', '); sendBtn.disabled = false; } else { selectedFilesDiv.textContent=''; sendBtn.disabled=false; } }catch(e){} }); }
+      if(sendBtn){ sendBtn.addEventListener('click', ()=>{ try{ const val = (inputEl && inputEl.value) ? inputEl.value.trim() : ''; if(!val && !(fileInput && fileInput.files && fileInput.files.length)) return; const msgs = loadMessages(); const now = Date.now(); let adminProfile = {}; try{ adminProfile = (window.adminLoadKeySync ? window.adminLoadKeySync('adminProfile') : (window._adminCache && window._adminCache['adminProfile'] ? JSON.parse(window._adminCache['adminProfile']) : null)) || {}; }catch(e){}
+            if(fileInput && fileInput.files && fileInput.files.length){ for(const f of Array.from(fileInput.files)){ msgs.push({ sender:'admin', senderName: adminProfile.adminName||'Admin', senderAvatar: adminProfile.adminAvatar||'', text: '[File] '+f.name, fileName: f.name, fileType: f.type, time: now, ts: now }); } fileInput.value=''; selectedFilesDiv.textContent=''; }
+            if(val){ msgs.push({ sender:'admin', senderName: adminProfile.adminName||'Admin', senderAvatar: adminProfile.adminAvatar||'', text: val, time: now, ts: now }); }
+            saveMessages(msgs); if(inputEl) inputEl.value=''; render(); const keys = getAllPossibleKeys(); for(const k of keys){ try{ const cur = window.adminLoadKeySync ? (window.adminLoadKeySync(k)||[]) : (window._adminCache && window._adminCache[k] ? JSON.parse(window._adminCache[k]) : []); if(window.adminSaveKeySync) window.adminSaveKeySync(k, cur||[]); }catch(e){} }
+          }catch(e){ console.warn('send failed', e); } }); }
+      if(inputEl){ inputEl.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); if(sendBtn) sendBtn.click(); } }); }
+      window.addEventListener('storage', function(e){ if(!e.key) return; try{ render(); }catch(e){} });
+
+      // Expose for existing handlers
+      window.render = render; window.loadMessages = loadMessages; window.saveMessages = saveMessages;
+      try{ render(); }catch(e){ console.warn('render failed', e); }
+    })();
+  </script>
 </body>
 </html>
