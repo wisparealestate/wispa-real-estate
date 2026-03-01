@@ -7,6 +7,15 @@ const _configured = window.WISPA_API_BASE || _defaultRemote;
 window.WISPA_API_BASE = window.WISPA_API_BASE || _configured;
 // Ensure legacy pages that use `API_URL` pick up the same base.
 window.API_URL = window.API_URL || window.WISPA_API_BASE;
+// Load server-backed storage shim so existing localStorage calls persist to DB
+(function(){
+    try{
+        const s = document.createElement('script');
+        s.src = '/storage-sync.js';
+        s.async = false;
+        document.head && document.head.appendChild(s);
+    }catch(e){}
+})();
 // Ensure small helpers exist globally: normalize image URLs and escape HTML
 window.normalizeImageUrl = window.normalizeImageUrl || function(u){
     try{ if(!u) return u; const s = String(u).trim(); if(s.indexOf('data:')===0) return s; if(location && location.protocol === 'https:'){ if(s.startsWith('http://')) return s.replace(/^http:/,'https:'); if(s.startsWith('//')) return 'https:' + s; } return s; }catch(e){ return u; }

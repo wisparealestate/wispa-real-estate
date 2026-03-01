@@ -1,9 +1,0 @@
-[
-  {
-    "id": 1,
-    "title": "Smoke Alert",
-    "message": "This is a test system alert",
-    "severity": "info",
-    "createdAt": "2026-02-22T02:39:14.430Z"
-  }
-]

@@ -176,6 +176,56 @@ async function writeJson(name, data){
   const p = path.join(dataDir, name);
   await fs.writeFile(p, JSON.stringify(data, null, 2), 'utf8');
 }
+// Key/value storage endpoints - back a simple KV store in the DB (or fallback to file)
+async function ensureKvTable(){
+  try{
+    await pool.query(`CREATE TABLE IF NOT EXISTS kv_store (k text PRIMARY KEY, v jsonb, updated_at timestamptz DEFAULT now())`);
+  }catch(e){ /* ignore if pool not configured or lacks permission */ }
+}
+
+app.get('/api/storage/all', async (req, res) => {
+  try{
+    await ensureKvTable();
+    const r = await pool.query('SELECT k, v FROM kv_store');
+    const out = {};
+    if(r && r.rows){ r.rows.forEach(row => { try{ out[row.k] = row.v; }catch(e){} }); }
+    return res.json({ store: out });
+  }catch(e){
+    // fallback to file-backed store
+    try{
+      const entries = await readJson('kv_store.json');
+      const o = {};
+      if(Array.isArray(entries)) entries.forEach(e => { if(e && e.k) o[e.k] = e.v; });
+      return res.json({ store: o });
+    }catch(err){ return res.status(500).json({ error: 'Failed to load storage', details: String(e) }); }
+  }
+});
+
+app.post('/api/storage', async (req, res) => {
+  try{
+    const { key, value } = req.body || {};
+    if(!key) return res.status(400).json({ error: 'Missing key' });
+    // Ensure table exists where possible
+    try{ await ensureKvTable(); }catch(e){}
+    try{
+      if(value === null){
+        await pool.query('DELETE FROM kv_store WHERE k = $1', [key]);
+        return res.json({ ok: true, deleted: true });
+      }
+      await pool.query('INSERT INTO kv_store(k, v, updated_at) VALUES($1, $2, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, updated_at = now()', [key, value]);
+      return res.json({ ok: true });
+    }catch(dbErr){
+      // Fallback to file-backed persistence for environments without DB
+      try{
+        const arr = await readJson('kv_store.json');
+        const filtered = (arr || []).filter(x => x && x.k !== key);
+        if(value !== null) filtered.push({ k: key, v: value });
+        await writeJson('kv_store.json', filtered);
+        return res.json({ ok: true, fallback: true });
+      }catch(err){ return res.status(500).json({ error: 'Failed to persist storage', details: String(dbErr) }); }
+    }
+  }catch(e){ return res.status(500).json({ error: 'Storage endpoint failed', details: String(e) }); }
+});
 // Get notifications for a user (real DB)
 app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
