@@ -760,11 +760,24 @@ app.post('/api/upload-photos', upload.array('files'), async (req, res) => {
         // Insert uploaded photos. By default replace existing photos for the property
         // unless client explicitly requests append via ?append=true
         const wantAppend = (req.query && String(req.query.append) === 'true');
-        if (!wantAppend) {
-          await client.query('DELETE FROM property_photos WHERE property_id = $1', [propertyId]);
-        }
-        for (const u of urls) {
-          await client.query('INSERT INTO property_photos (property_id, photo_url) VALUES ($1, $2)', [propertyId, u]);
+        try {
+          // Try to persist into properties.images (JSONB)
+          if (wantAppend) {
+            const existing = await client.query('SELECT images FROM public.properties WHERE id = $1', [propertyId]);
+            const existingImages = (existing && existing.rows && existing.rows[0] && Array.isArray(existing.rows[0].images)) ? existing.rows[0].images : [];
+            const merged = existingImages.concat(urls).filter(Boolean);
+            await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify(merged), propertyId]);
+          } else {
+            await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify(urls.filter(Boolean)), propertyId]);
+          }
+        } catch (e) {
+          // Fallback to legacy property_photos table
+          if (!wantAppend) {
+            await client.query('DELETE FROM property_photos WHERE property_id = $1', [propertyId]);
+          }
+          for (const u of urls) {
+            await client.query('INSERT INTO property_photos (property_id, photo_url) VALUES ($1, $2)', [propertyId, u]);
+          }
         }
         await client.query('COMMIT');
         return res.json({ urls, persisted: true, propertyId });
@@ -1495,12 +1508,15 @@ app.get("/api/properties", async (req, res) => {
       // For each DB row, fetch photos and include them
       for (let i = 0; i < rows.length; i++){
         const r = rows[i];
-        try {
-          const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [r.id]);
-          const photos = photosRes.rows.map(p => p.photo_url).filter(Boolean);
-          if (photos.length) r.images = photos;
-        } catch(e) {
-          // ignore photo fetch errors
+        // Prefer images stored on the properties row; fall back to legacy property_photos table
+        if (!Array.isArray(r.images) || r.images.length === 0) {
+          try {
+            const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [r.id]);
+            const photos = photosRes.rows.map(p => p.photo_url).filter(Boolean);
+            if (photos.length) r.images = photos;
+          } catch(e) {
+            // ignore photo fetch errors
+          }
         }
         // Use address column as location when present
         if (!r.location && r.address) r.location = r.address;
@@ -1527,10 +1543,13 @@ app.get('/api/properties/:id', async (req, res) => {
     try{ await writeDiagLog({ handler: 'get-by-id', id, rowCount: (pRes && pRes.rowCount) || 0 }); }catch(e){}
     if (!pRes.rows || pRes.rows.length === 0) return res.status(404).json({ error: 'Property not found' });
     const prop = pRes.rows[0];
-    try {
-      const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [id]);
-      prop.images = photosRes.rows.map(r => r.photo_url).filter(Boolean);
-    } catch (e) { /* ignore photo fetch errors */ }
+    // Prefer images stored on the property record
+    if (!Array.isArray(prop.images) || prop.images.length === 0) {
+      try {
+        const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [id]);
+        prop.images = photosRes.rows.map(r => r.photo_url).filter(Boolean);
+      } catch (e) { /* ignore photo fetch errors */ }
+    }
     if (!prop.location && prop.address) prop.location = prop.address;
     return res.json({ property: prop });
   } catch (err) {
@@ -1609,8 +1628,12 @@ app.delete('/api/properties/:id', async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing id' });
   try {
-    // Delete photos first (cascade may handle it depending on schema)
-    await pool.query('DELETE FROM property_photos WHERE property_id = $1', [id]);
+    // Remove images from properties (if column exists), else delete legacy photos first
+    try {
+      await pool.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify([]), id]);
+    } catch (e) {
+      try { await pool.query('DELETE FROM property_photos WHERE property_id = $1', [id]); } catch(_) {}
+    }
     const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });
     return res.json({ success: true, deleted: result.rows[0] });
@@ -1649,11 +1672,14 @@ app.post('/api/properties/:id/generate-document', async (req, res) => {
     if (!prop) return res.status(404).json({ error: 'Property not found' });
 
     // Gather photos if DB available
-    let photos = [];
-    try {
-      const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [id]);
-      photos = photosRes.rows.map(r => r.photo_url).filter(Boolean);
-    } catch (e) { /* ignore */ }
+    // Prefer images stored on the property record
+    let photos = (prop && Array.isArray(prop.images) ? prop.images : []);
+    if (!photos || !photos.length) {
+      try {
+        const photosRes = await pool.query('SELECT photo_url FROM property_photos WHERE property_id = $1', [id]);
+        photos = photosRes.rows.map(r => r.photo_url).filter(Boolean);
+      } catch (e) { /* ignore */ }
+    }
 
     // Compose document content (simple JSON summary)
     const doc = {
