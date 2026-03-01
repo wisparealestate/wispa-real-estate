@@ -98,7 +98,9 @@ const statements = splitSqlStatements(sql).filter(s => {
 });
 
 (async () => {
-  const client = new Client({ connectionString: dbUrl });
+  // Decide whether to enable SSL automatically (Render/postgres hosts or production)
+  const shouldUseSsl = (process.env.NODE_ENV === 'production') || (dbUrl && String(dbUrl).includes('render.com'));
+  const client = new Client({ connectionString: dbUrl, ssl: shouldUseSsl ? { rejectUnauthorized: false } : false });
   try {
     await client.connect();
     for (let i = 0; i < statements.length; i++) {
