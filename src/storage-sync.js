@@ -7,14 +7,21 @@
     // Load server KV store into cache asynchronously on startup.
     (async function loadRemote(){
       try{
-        const r = await fetch('/api/storage/all', { credentials: 'include' });
-        if(r && r.ok){ const j = await r.json(); if(j && j.store){ Object.keys(j.store).forEach(k => {
+        // Allow opt-out for static deployments without server KV
+        if (window.WISPA_SKIP_STORAGE_SYNC) return;
+        const base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+        const url = base ? (base + '/api/storage/all') : '/api/storage/all';
+        const r = await fetch(url, { credentials: 'include' });
+        // If storage endpoint is not present (404) or not ok, simply skip without throwing
+        if (!r || !r.ok) return;
+        const j = await r.json();
+        if (j && j.store){ Object.keys(j.store).forEach(k => {
             try{
               const v = j.store[k];
               // store stringified JSON for compatibility with localStorage.getItem
               window._storageCache[k] = (typeof v === 'string' || typeof v === 'number') ? String(v) : JSON.stringify(v);
             }catch(e){}
-        }); } }
+        }); }
       }catch(e){}
     })();
 
