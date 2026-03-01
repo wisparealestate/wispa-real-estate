@@ -137,42 +137,14 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     }
 
     // Persist photos on the properties table in the `images` jsonb column.
-    // If the DB doesn't have `images`, fall back to the legacy property_photos table.
     let photos = [];
     if (Array.isArray(photoUrls)) {
-      try {
-        await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify(photoUrls || []), propertyId]);
-        photos = photoUrls.filter(Boolean);
-      } catch (e) {
-        // Fallback: legacy property_photos table
-        try {
-          await client.query('DELETE FROM public.property_photos WHERE property_id = $1', [propertyId]);
-          for (const url of photoUrls) {
-            if (!url) continue;
-            await client.query(
-              "INSERT INTO public.property_photos (property_id, photo_url) VALUES ($1, $2)",
-              [propertyId, url]
-            );
-          }
-          const photosRes = await client.query('SELECT photo_url FROM public.property_photos WHERE property_id = $1', [propertyId]);
-          photos = photosRes.rows.map(r => r.photo_url);
-        } catch (e2) {
-          // ignore fallback errors
-        }
-      }
+      await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify(photoUrls || []), propertyId]);
+      photos = photoUrls.filter(Boolean);
     } else {
-      // No photoUrls provided: try to read existing images from properties.images, else legacy table
-      try {
-        const pImgs = await client.query('SELECT images FROM public.properties WHERE id = $1', [propertyId]);
-        if (pImgs && pImgs.rows && pImgs.rows[0] && Array.isArray(pImgs.rows[0].images)) photos = pImgs.rows[0].images;
-      } catch (e) {
-        try {
-          const photosRes = await client.query('SELECT photo_url FROM public.property_photos WHERE property_id = $1', [propertyId]);
-          photos = photosRes.rows.map(r => r.photo_url);
-        } catch (e2) {
-          // ignore
-        }
-      }
+      // No photoUrls provided: read existing images from properties.images
+      const pImgs = await client.query('SELECT images FROM public.properties WHERE id = $1', [propertyId]);
+      if (pImgs && pImgs.rows && pImgs.rows[0] && Array.isArray(pImgs.rows[0].images)) photos = pImgs.rows[0].images;
     }
     // If property has no canonical image_url, set it to the first photo we just inserted
     try {
@@ -267,9 +239,7 @@ export async function addPropertyWithPhotos(property, photoUrls) {
 
 // Get property photos
 export async function getPropertyPhotos(propertyId) {
-  const res = await pool.query(
-    "SELECT photo_url FROM property_photos WHERE property_id = $1",
-    [propertyId]
-  );
-  return res.rows.map(r => r.photo_url);
+  const res = await pool.query('SELECT images FROM public.properties WHERE id = $1', [propertyId]);
+  if (res && res.rows && res.rows[0] && Array.isArray(res.rows[0].images)) return res.rows[0].images;
+  return [];
 }

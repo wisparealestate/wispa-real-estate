@@ -22,7 +22,7 @@ WITH dup AS (
 INSERT INTO properties_backup
 SELECT p.* FROM properties p JOIN dup d ON p.id = d.id;
 
--- Delete photos for duplicate properties and delete the duplicate properties
+-- Clear images for duplicate properties and delete the duplicate properties
 BEGIN;
 WITH dup AS (
   SELECT id FROM (
@@ -31,14 +31,10 @@ WITH dup AS (
   ) t WHERE rn > 1
 )
 -- remove photos for duplicates
-DELETE FROM property_photos WHERE property_id IN (SELECT id FROM dup);
+UPDATE properties SET images = '[]'::jsonb WHERE id IN (SELECT id FROM dup);
 -- remove duplicate properties themselves
 DELETE FROM properties WHERE id IN (SELECT id FROM dup);
 COMMIT;
 
 -- Remove exact duplicate photo rows for the same property (keeps one row)
-DELETE FROM property_photos a
-USING property_photos b
-WHERE a.ctid < b.ctid
-  AND a.property_id = b.property_id
-  AND a.photo_url = b.photo_url;
+-- Legacy `property_photos` cleanup is no longer required; images are stored on properties.images

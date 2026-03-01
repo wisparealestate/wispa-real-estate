@@ -128,10 +128,11 @@ async function main(){
         const vals = [p.title, p.description, p.price, p.address, p.image_url, p.created_at || new Date(), p.bedrooms, p.bathrooms, p.type, p.area, p.sale_rent, p.post_to, found.id];
         const ur = await client.query(upd, vals);
         const pid = ur.rows[0].id;
-        // replace photos
-        await client.query('DELETE FROM property_photos WHERE property_id=$1', [pid]);
-        for(const url of p.images){
-          await client.query('INSERT INTO property_photos(property_id, photo_url) VALUES($1,$2)', [pid, url]);
+        // replace photos by updating properties.images
+        try {
+          await client.query('UPDATE properties SET images = $1 WHERE id = $2', [JSON.stringify(p.images || []), pid]);
+        } catch (e) {
+          // ignore update failures
         }
         report.actions.push({action:'update', property: p.title, property_id: pid});
       } else {
@@ -140,8 +141,10 @@ async function main(){
         const vals = [p.title, p.description, p.price, p.address, p.image_url, p.created_at || new Date(), p.bedrooms, p.bathrooms, p.type, p.area, p.sale_rent, p.post_to];
         const ir = await client.query(ins, vals);
         const pid = ir.rows[0].id;
-        for(const url of p.images){
-          await client.query('INSERT INTO property_photos(property_id, photo_url) VALUES($1,$2)', [pid, url]);
+        try {
+          await client.query('UPDATE properties SET images = $1 WHERE id = $2', [JSON.stringify(p.images || []), pid]);
+        } catch (e) {
+          // ignore update failures
         }
         report.actions.push({action:'insert', property: p.title, property_id: pid});
       }
