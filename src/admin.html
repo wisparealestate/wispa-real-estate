@@ -1308,25 +1308,9 @@
             }));
             return;
           }
-        }catch(e){ /* server may be unreachable or return no conversations; fall back to local */ }
-
-        // Fallback: Render admin chat list from localStorage keys or fallback chatNotifications
-        let convs = [];
-        try{ convs = JSON.parse(localStorage.getItem('adminChats') || '[]'); }catch(e){ convs = []; }
-        if(!convs || !convs.length){ try{ convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]') }catch(e){ convs = []; } }
-        if(!convs || !convs.length){ out.innerHTML = '<div style="padding:12px;color:#666">No conversations yet.</div>'; return }
-        out.innerHTML = '<ul style="list-style:none;margin:0;padding:0">'+convs.map(c=>`<li style="padding:10px;border-bottom:1px solid #f6f9fc"><a href="admin-conversation.html?id=${encodeURIComponent(c.id)}" data-id="${escapeHtml(c.id)}" class="admin-chat-link" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${escapeHtml(c.participantName||c.userName||c.title||c.id)}</div><div style="color:#666;font-size:13px">${escapeHtml(c.lastMessage||'')}</div></div><div style="color:#999">${escapeHtml(String(c.unread||''))}</div></a></li>`).join('')+'</ul>';
-        out.querySelectorAll('.admin-chat-link').forEach(a=>a.addEventListener('click', (ev)=>{
-          if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return;
-          ev.preventDefault();
-          const id = a.dataset.id || (function(){ try{ const m = a.href.match(/[?&]id=([^&]+)/); return m ? decodeURIComponent(m[1]) : null; }catch(e){ return null; } })();
-          console.log('admin chat clicked (local list)', id, a.href);
-          try{
-            try { location.hash = 'admin-conversation?id=' + encodeURIComponent(id); } catch(e) { console.warn('failed to set hash', e); }
-            if (id && typeof openAdminChat === 'function') openAdminChat(id);
-            else if (typeof renderAdminChatList === 'function') renderAdminChatList();
-          }catch(e){ console.error(e) }
-        }));
+        }catch(e){ /* server may be unreachable or return no conversations */ }
+        // No localStorage fallback: show empty state when server returns no conversations
+        out.innerHTML = '<div style="padding:12px;color:#666">No conversations yet.</div>'; return;
       }catch(e){ out.innerHTML = '<div style="padding:12px;color:#c33">Failed to load chats</div>'; }
     }
 

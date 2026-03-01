@@ -601,7 +601,7 @@ async function openAdminChat(chatId) {
                         // If API didn't include a userName, try to preserve a locally-known participantName
                         try{
                             if((!chat.userName || String(chat.userName).toLowerCase() === 'user')){
-                                const ac = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                                const ac = (typeof window !== 'undefined' && window.WISPA_DB_ONLY) ? (window._adminChats || []) : JSON.parse(localStorage.getItem('adminChats') || '[]');
                                 const found = (ac || []).find(a => a.id === chatId);
                                 if(found && found.participantName) chat.userName = found.participantName;
                             }
@@ -630,180 +630,196 @@ async function openAdminChat(chatId) {
         }
     } catch(e) { /* ignore */ }
 
-    // If server didn't return messages, fall back to localStorage merge
+    // If server didn't return messages, fall back to in-memory caches or legacy localStorage when allowed
     if (!messages || messages.length === 0) {
-        // Build all possible keys for this chatId
-        const keys = [];
-        keys.push('adminMessages_' + chatId);
-        keys.push('wispaMessages_' + chatId);
-        // Try to find userId from adminChats
-        let userId = null;
-        try {
-            const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-            const meta = adminChats.find(c => c.id === chatId);
-            if (meta && meta.userId) userId = meta.userId;
-        } catch(e){}
-        if (!userId) {
-            const m = chatId.match(/^property-\d+-(WISPA-[^_]+)/);
-            if (m) userId = m[1];
-        }
-        if (userId) {
-            keys.push('wispaMessages_' + userId + '_' + chatId);
-        }
-        const m2 = chatId.match(/^property-(\d+)-(WISPA-[^_]+)/);
-        if (m2) {
-            const propertyId = m2[1];
-            const userId2 = m2[2];
-            keys.push('wispaMessages_' + userId2 + '_property-' + propertyId);
-        }
-        // Merge messages from all keys
-        const seen = new Set();
-        console.log('openAdminChat: checking local keys', keys);
-        for (let i = 0; i < keys.length; i++) {
-            const arr = localStorage.getItem(keys[i]);
-            if (arr) {
-                try {
-                    const msgs = JSON.parse(arr);
-                    if (Array.isArray(msgs)) {
-                        console.log('openAdminChat: found', msgs.length, 'messages in', keys[i]);
-                        msgs.forEach(m => {
-                            const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                            if (!seen.has(sig)) {
-                                messages.push(m);
-                                seen.add(sig);
-                            }
-                        });
-                    }
-                } catch(e){}
-            }
-        }
-        // Sort by time/ts ascending
-        messages.sort((a,b) => {
-            const ta = a.time || a.ts || 0;
-            const tb = b.time || b.ts || 0;
-            return ta - tb;
-        });
-
-        // If still empty, perform a deep scan of all localStorage entries to find messages
-        if ((!messages || messages.length === 0)) {
+        // In DB-only mode prefer in-memory caches populated by the admin widget or other runtime loaders
+        if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
             try {
-                const seenKeys = new Set(keys);
-                // derive numeric property id if possible (property-585 -> 585)
-                let propNum = null;
-                try {
-                    const m = String(chatId).match(/^property-(\d+)/);
-                    if (m) propNum = m[1];
-                } catch(e){}
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (!key || seenKeys.has(key)) continue;
-                    try {
-                        const raw = localStorage.getItem(key);
-                        if (!raw) continue;
-                        const parsed = JSON.parse(raw);
-                        let candidateMsgs = [];
-                        if (Array.isArray(parsed)) {
-                            candidateMsgs = parsed;
-                        } else if (parsed && Array.isArray(parsed.messages)) {
-                            candidateMsgs = parsed.messages;
-                        } else if (parsed && Array.isArray(parsed.items)) {
-                            candidateMsgs = parsed.items;
-                        }
-                        if (!candidateMsgs || !candidateMsgs.length) continue;
-                        // Filter messages that reference this property/chatId
-                        const matches = candidateMsgs.filter(m => {
-                            try {
-                                if (!m) return false;
-                                // check meta.property presence
-                                if (m.meta && m.meta.property) {
-                                    const pp = m.meta.property;
-                                    if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
-                                    if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
-                                    if (pp.key && String(pp.key).indexOf(String(chatId)) !== -1) return true;
-                                }
-                                // check message-level property
-                                if (m.property) {
-                                    const pp = m.property;
-                                    if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
-                                    if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
-                                }
-                                // check if message id or conversation id matches chatId
-                                if (m.conversationId && String(m.conversationId).indexOf(String(chatId)) !== -1) return true;
-                                if (m.id && String(m.id).indexOf(String(chatId)) !== -1) return true;
-                                // finally, if text contains property id or chatId
-                                if (m.text && String(m.text).indexOf(String(propNum || chatId)) !== -1) return true;
-                                return false;
-                            } catch(e){ return false; }
-                        });
-                        if (matches && matches.length) {
-                            console.log('openAdminChat: deep-scan found', matches.length, 'messages in', key);
-                            matches.forEach(m => {
-                                const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                                try { if (!seen.has(sig)) { messages.push(m); seen.add(sig); } } catch(e) { messages.push(m); }
-                            });
-                        }
-                    } catch(e) {}
+                // messages cached per-conversation by admin widget
+                if (window._conversationCache && window._conversationCache[chatId]) {
+                    messages = Array.isArray(window._conversationCache[chatId]) ? window._conversationCache[chatId].slice() : [];
                 }
-                // resort if we found anything
-                if (messages && messages.length) {
-                    messages.sort((a,b) => { const ta = a.time || a.ts || 0; const tb = b.time || b.ts || 0; return ta - tb; });
+                // chat metadata may be stored in window._adminChats or window._conversationIndex
+                if (!chat) {
+                    chat = (window._adminChats || []).find(c => c && c.id === chatId) || null;
+                    if (!chat && window._conversationIndex && window._conversationIndex[chatId]) chat = window._conversationIndex[chatId];
                 }
-            } catch(e){ console.warn('openAdminChat: deep localStorage scan failed', e); }
-        }
-        // Get chat meta
-        try {
-            const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-            chat = adminChats.find(c => c.id === chatId);
-        } catch(e){}
-        if (!chat) {
-            const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-            chat = chats.find(c => c.id === chatId);
-        }
-        if (!chat) {
-            let resolved = null;
+            } catch(e){ console.warn('openAdminChat: in-memory cache lookup failed', e); }
+        } else {
+            // Legacy fallback: merge messages from localStorage keys (kept for non-DB modes)
+            // Build all possible keys for this chatId
+            const keys = [];
+            keys.push('adminMessages_' + chatId);
+            keys.push('wispaMessages_' + chatId);
+            // Try to find userId from adminChats
+            let userId = null;
             try {
                 const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-                resolved = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
-                if (!resolved) {
-                    const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-                    resolved = (chats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+                const meta = adminChats.find(c => c.id === chatId);
+                if (meta && meta.userId) userId = meta.userId;
+            } catch(e){}
+            if (!userId) {
+                const m = chatId.match(/^property-\d+-(WISPA-[^_]+)/);
+                if (m) userId = m[1];
+            }
+            if (userId) {
+                keys.push('wispaMessages_' + userId + '_' + chatId);
+            }
+            const m2 = chatId.match(/^property-(\d+)-(WISPA-[^_]+)/);
+            if (m2) {
+                const propertyId = m2[1];
+                const userId2 = m2[2];
+                keys.push('wispaMessages_' + userId2 + '_property-' + propertyId);
+            }
+            // Merge messages from all keys
+            const seen = new Set();
+            console.log('openAdminChat: checking local keys', keys);
+            for (let i = 0; i < keys.length; i++) {
+                const arr = localStorage.getItem(keys[i]);
+                if (arr) {
+                    try {
+                        const msgs = JSON.parse(arr);
+                        if (Array.isArray(msgs)) {
+                            console.log('openAdminChat: found', msgs.length, 'messages in', keys[i]);
+                            msgs.forEach(m => {
+                                const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                                if (!seen.has(sig)) {
+                                    messages.push(m);
+                                    seen.add(sig);
+                                }
+                            });
+                        }
+                    } catch(e){}
                 }
-                if (resolved && resolved.id && resolved.id !== chatId) {
-                    console.log('openAdminChat: resolved partial id', chatId, '->', resolved.id);
-                    return openAdminChat(resolved.id);
-                }
-                // Try scanning all localStorage keys for messages that include the chatId
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (!key) continue;
-                    if (String(key).indexOf(chatId) !== -1) {
+            }
+            // Sort by time/ts ascending
+            messages.sort((a,b) => {
+                const ta = a.time || a.ts || 0;
+                const tb = b.time || b.ts || 0;
+                return ta - tb;
+            });
+
+            // If still empty, perform a deep scan of all localStorage entries to find messages
+            if ((!messages || messages.length === 0)) {
+                try {
+                    const seenKeys = new Set(keys);
+                    // derive numeric property id if possible (property-585 -> 585)
+                    let propNum = null;
+                    try {
+                        const m = String(chatId).match(/^property-(\d+)/);
+                        if (m) propNum = m[1];
+                    } catch(e){}
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (!key || seenKeys.has(key)) continue;
                         try {
-                            const data = JSON.parse(localStorage.getItem(key) || 'null');
-                            if (Array.isArray(data) && data.length) {
-                                console.log('openAdminChat: found messages under storage key', key);
-                                messages = data.slice();
-                                break;
+                            const raw = localStorage.getItem(key);
+                            if (!raw) continue;
+                            const parsed = JSON.parse(raw);
+                            let candidateMsgs = [];
+                            if (Array.isArray(parsed)) {
+                                candidateMsgs = parsed;
+                            } else if (parsed && Array.isArray(parsed.messages)) {
+                                candidateMsgs = parsed.messages;
+                            } else if (parsed && Array.isArray(parsed.items)) {
+                                candidateMsgs = parsed.items;
+                            }
+                            if (!candidateMsgs || !candidateMsgs.length) continue;
+                            // Filter messages that reference this property/chatId
+                            const matches = candidateMsgs.filter(m => {
+                                try {
+                                    if (!m) return false;
+                                    // check meta.property presence
+                                    if (m.meta && m.meta.property) {
+                                        const pp = m.meta.property;
+                                        if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
+                                        if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
+                                        if (pp.key && String(pp.key).indexOf(String(chatId)) !== -1) return true;
+                                    }
+                                    // check message-level property
+                                    if (m.property) {
+                                        const pp = m.property;
+                                        if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
+                                        if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
+                                    }
+                                    // check if message id or conversation id matches chatId
+                                    if (m.conversationId && String(m.conversationId).indexOf(String(chatId)) !== -1) return true;
+                                    if (m.id && String(m.id).indexOf(String(chatId)) !== -1) return true;
+                                    // finally, if text contains property id or chatId
+                                    if (m.text && String(m.text).indexOf(String(propNum || chatId)) !== -1) return true;
+                                    return false;
+                                } catch(e){ return false; }
+                            });
+                            if (matches && matches.length) {
+                                console.log('openAdminChat: deep-scan found', matches.length, 'messages in', key);
+                                matches.forEach(m => {
+                                    const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                                    try { if (!seen.has(sig)) { messages.push(m); seen.add(sig); } } catch(e) { messages.push(m); }
+                                });
                             }
                         } catch(e) {}
                     }
-                }
-            } catch(e){ console.warn('openAdminChat: resolution attempt failed', e); }
-
-            // If no chat metadata found, create a minimal chat object so the conversation view opens
+                    // resort if we found anything
+                    if (messages && messages.length) {
+                        messages.sort((a,b) => { const ta = a.time || a.ts || 0; const tb = b.time || b.ts || 0; return ta - tb; });
+                    }
+                } catch(e){ console.warn('openAdminChat: deep localStorage scan failed', e); }
+            }
+            // Get chat meta
+            try {
+                const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                chat = adminChats.find(c => c.id === chatId);
+            } catch(e){}
             if (!chat) {
-                chat = resolved || { id: chatId };
-                // prefer participantName from resolved metadata
-                if (!chat.userName && (chat.participantName || chat.userName || chat.user_email || chat.userName)) {
-                    chat.userName = chat.participantName || chat.userName || chat.user_email || chat.userName;
+                const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                chat = chats.find(c => c.id === chatId);
+            }
+            if (!chat) {
+                let resolved = null;
+                try {
+                    const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                    resolved = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+                    if (!resolved) {
+                        const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                        resolved = (chats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+                    }
+                    if (resolved && resolved.id && resolved.id !== chatId) {
+                        console.log('openAdminChat: resolved partial id', chatId, '->', resolved.id);
+                        return openAdminChat(resolved.id);
+                    }
+                    // Try scanning all localStorage keys for messages that include the chatId
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (!key) continue;
+                        if (String(key).indexOf(chatId) !== -1) {
+                            try {
+                                const data = JSON.parse(localStorage.getItem(key) || 'null');
+                                if (Array.isArray(data) && data.length) {
+                                    console.log('openAdminChat: found messages under storage key', key);
+                                    messages = data.slice();
+                                    break;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                } catch(e){ console.warn('openAdminChat: resolution attempt failed', e); }
+
+                // If no chat metadata found, create a minimal chat object so the conversation view opens
+                if (!chat) {
+                    chat = resolved || { id: chatId };
+                    // prefer participantName from resolved metadata
+                    if (!chat.userName && (chat.participantName || chat.userName || chat.user_email || chat.userName)) {
+                        chat.userName = chat.participantName || chat.userName || chat.user_email || chat.userName;
+                    }
+                    // fallback: prettify id into a label
+                    if (!chat.userName) {
+                        try {
+                            const pretty = String(chatId).replace(/^property-\d+-/,'').replace(/[-_]/g,' ');
+                            chat.userName = pretty || chatId;
+                        } catch(e){ chat.userName = chatId; }
+                    }
+                    console.log('openAdminChat: opening minimal chat view for', chatId, 'title=', chat.userName);
                 }
-                // fallback: prettify id into a label
-                if (!chat.userName) {
-                    try {
-                        const pretty = String(chatId).replace(/^property-\d+-/,'').replace(/[-_]/g,' ');
-                        chat.userName = pretty || chatId;
-                    } catch(e){ chat.userName = chatId; }
-                }
-                console.log('openAdminChat: opening minimal chat view for', chatId, 'title=', chat.userName);
             }
         }
     }
@@ -816,9 +832,15 @@ async function openAdminChat(chatId) {
         // prefer preserved participantName from local adminChats (localStorage) to avoid losing the user's displayed name
         let preserved = null;
         try{
-            const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-            const meta = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
-            if(meta) preserved = meta.participantName || meta.userName || null;
+            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                const adminChats = window._adminChats || [];
+                const meta = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+                if(meta) preserved = meta.participantName || meta.userName || null;
+            } else {
+                const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                const meta = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
+                if(meta) preserved = meta.participantName || meta.userName || null;
+            }
         }catch(e){}
         const computed = preserved || chat.userName || chat.conversationTitle || chat.participantName || chat.participantId || '';
         if(titleEl){
@@ -1500,20 +1522,15 @@ if (typeof propertyImageIds === 'undefined') {
             const user = await (window.getCurrentUser ? window.getCurrentUser() : null);
             if (!user || !user.id) return;
             const userId = user.id;
-            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
-            // Only initialize demo liked properties if there are existing properties
-            if (likedProperties.length === 0 && properties.length > 0) {
-                const likedIds = [];
-                const count = Math.min(50, properties.length);
-                for (let i = 0; i < count; i++) {
-                    const randomIndex = Math.floor(Math.random() * properties.length);
-                    const randomId = properties[randomIndex].id;
-                    if (randomId && !likedIds.includes(randomId)) {
-                        likedIds.push(randomId);
+            // Load from server-backed KV store
+            try{
+                const r = await fetch('/api/storage/all', { credentials: 'include' });
+                if(r && r.ok){ const j = await r.json(); const key = 'likedProperties_' + userId; const arr = (j && j.store && j.store[key]) ? j.store[key] : null; if(Array.isArray(arr) && arr.length){ /* nothing to do */ } else {
+                    // Optionally initialize demo likes if none exist
+                    if(properties && properties.length){ const likedIds = []; const count = Math.min(50, properties.length); for(let i=0;i<count;i++){ const randomIndex = Math.floor(Math.random() * properties.length); const randomId = properties[randomIndex].id; if(randomId && !likedIds.includes(randomId)) likedIds.push(randomId); } if(likedIds.length){ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: likedIds }) }); }
                     }
                 }
-                if (likedIds.length) localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedIds));
-            }
+            }catch(e){}
         } catch (e) { /* ignore */ }
     }
 
@@ -1538,7 +1555,8 @@ if (typeof propertyImageIds === 'undefined') {
                 const id = btnEl.dataset.id || btnEl.dataset.propertyId || btnEl.getAttribute('data-id') || btnEl.getAttribute('data-property-id');
                 if (!id) return;
                 // user validated at init; reuse outer `user` and `userId`
-                const liked = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+                let liked = [];
+                try{ const r = await fetch('/api/storage/all', { credentials: 'include' }); if(r && r.ok){ const j = await r.json(); const key = 'likedProperties_' + userId; liked = (j && j.store && Array.isArray(j.store[key])) ? j.store[key] : []; } }catch(e){}
                 const idx = liked.findIndex(x => String(x) === String(id));
                 if (idx > -1) {
                     liked.splice(idx, 1);
@@ -1547,9 +1565,8 @@ if (typeof propertyImageIds === 'undefined') {
 
                     // remove existing like reaction for this user/post
                     try {
-                        let reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
-                        reactions = reactions.filter(r => !(String(r.postId) === String(id) && String(r.userId) === String(userId) && r.reaction === 'like'));
-                        localStorage.setItem('notificationReactions', JSON.stringify(reactions));
+                        // Remove reaction via API if available
+                        try{ await fetch('/api/notification-reactions', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ notificationId: null, userId: userId, reaction: 'unlike', postId: id }) }); }catch(e){}
                     } catch(e) { console.error(e); }
                 } else {
                     liked.push(String(id));
@@ -1558,46 +1575,18 @@ if (typeof propertyImageIds === 'undefined') {
 
                     // create a notification reaction for admin to see this like
                     try {
-                        const reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
                         const prop = (typeof properties !== 'undefined' && Array.isArray(properties)) ? properties.find(p => String(p.id) === String(id)) : null;
-                        const reactionObj = {
-                            id: 'react-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
-                            userId: userId,
-                            userName: (user && (user.username || user.email)) || userId,
-                            postId: id,
-                            postTitle: prop ? (prop.title || prop.location || 'Property') : 'Post',
-                            timestamp: new Date().toISOString(),
-                            date: new Date().toISOString(),
-                            read: false,
-                            reaction: 'like',
-                            notificationTitle: `Like on ${prop ? (prop.title || 'your post') : 'your post'}`
-                        };
-                        // Try to persist reaction to server, fallback to localStorage
-                        (async function(){
-                            try {
-                                await fetch('/api/notification-reactions', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(reactionObj)
-                                });
-                                // also update local copy for UI
-                                reactions.unshift(reactionObj);
-                                localStorage.setItem('notificationReactions', JSON.stringify(reactions));
-                                try { localStorage.setItem('notificationReactions_signal', String(Date.now())); } catch(e){}
-                            } catch (e) {
-                                reactions.unshift(reactionObj);
-                                localStorage.setItem('notificationReactions', JSON.stringify(reactions));
-                                try { localStorage.setItem('notificationReactions_signal', String(Date.now())); } catch(e){}
-                            }
-                        })();
+                        const reactionPayload = { notificationId: null, userId: userId, reaction: 'like' };
+                        try{ await fetch('/api/notification-reactions', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(reactionPayload) }); }catch(e){}
                     } catch(e) { console.error('error saving reaction', e); }
                 }
-                localStorage.setItem('likedProperties_' + userId, JSON.stringify(liked));
+                // persist liked list to server KV store
+                try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'likedProperties_' + userId, value: liked }) }); }catch(e){}
             });
         });
-
-        // initialize state from storage
-        const likedInit = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+        // initialize state from server KV store
+        let likedInit = [];
+        try{ const r = await fetch('/api/storage/all', { credentials: 'include' }); if(r && r.ok){ const j = await r.json(); likedInit = (j && j.store && Array.isArray(j.store['likedProperties_' + userId])) ? j.store['likedProperties_' + userId] : []; } }catch(e){}
         document.querySelectorAll(selector).forEach(btn => {
             const id = btn.dataset.id || btn.dataset.propertyId || btn.getAttribute('data-id') || btn.getAttribute('data-property-id');
             if (!id) return;
@@ -2547,25 +2536,17 @@ if (typeof propertyImageIds === 'undefined') {
     const sendChatBtn = document.getElementById('send-chat');
 
     function loadChatMessages() {
-        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-        chatMessages.innerHTML = '';
-        messages.forEach(msg => {
-            const msgDiv = document.createElement('div');
-            msgDiv.textContent = `${msg.timestamp}: ${msg.text}`;
-            chatMessages.appendChild(msgDiv);
-        });
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Chat is server-backed; prompt user to open a conversation.
+        try{
+            if(!chatMessages) return;
+            chatMessages.innerHTML = '<div style="padding:12px;color:var(--text-light);">Open a conversation to view messages (server-backed).</div>';
+        }catch(e){}
     }
 
     function sendMessage(text) {
-        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-        const newMsg = {
-            text: text,
-            timestamp: new Date().toLocaleString()
-        };
-        messages.push(newMsg);
-        localStorage.setItem('chatMessages', JSON.stringify(messages));
-        loadChatMessages();
+        // Use server API to send messages within a conversation. This generic sendMessage
+        // helper without a convId is not supported in DB-only mode.
+        console.warn('sendMessage(text) without conversation id is not supported in DB-only mode');
     }
 
     // Simple conversation API for per-conversation messaging (used by messages.html and property detail)
@@ -2578,6 +2559,8 @@ if (typeof propertyImageIds === 'undefined') {
             if (window._wispaCurrentUser && window._wispaCurrentUser.id) return window._wispaCurrentUser.id;
             // Trigger an async fetch to populate cache for future calls
             if (window.getCurrentUser) window.getCurrentUser().catch(()=>{});
+            // If running in DB-only mode, do not read localStorage
+            if (window.WISPA_DB_ONLY) return null;
             // Fallback to localStorage only if present (admin pages shim this)
             const wispaUser = (typeof localStorage !== 'undefined') ? localStorage.getItem('wispaUser') : null;
             if (!wispaUser) return null;
@@ -2592,9 +2575,10 @@ if (typeof propertyImageIds === 'undefined') {
         return 'wispaMessages_' + userId + '_' + convId; 
     }
 
+    // Return in-memory cached messages for convId if available. Do not read localStorage.
     window.getConversationMessages = function(convId) {
-        try { return JSON.parse(localStorage.getItem(_convKey(convId)) || '[]'); } catch (e) { return []; }
-    };
+            try { return (window._conversationCache && Array.isArray(window._conversationCache[convId])) ? window._conversationCache[convId] : []; } catch (e) { return []; }
+        };
 
     window.saveConversationMessage = function(convId, sender, text) {
         if (!convId) return;
@@ -2623,7 +2607,7 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {}
         if (sender === 'user') {
             try {
-                const u = (window._wispaCurrentUser) ? window._wispaCurrentUser : (JSON.parse(localStorage.getItem('wispaUser') || '{}'));
+                const u = (window._wispaCurrentUser) ? window._wispaCurrentUser : (window.WISPA_DB_ONLY ? null : (JSON.parse(localStorage.getItem('wispaUser') || '{}')));
                 if (u) {
                     if (u.username) msg.userName = u.username;
                     if (u.email) msg.userEmail = u.email;
@@ -2668,12 +2652,12 @@ if (typeof propertyImageIds === 'undefined') {
                     const r = await poster('/api/conversations/messages', opts);
                     if (!r || !r.ok) throw new Error('Post failed');
                 } catch (e) {
-                    // fallback to localStorage
-                    try { localStorage.setItem(key, JSON.stringify(list)); } catch(err){}
+                    // Server POST failed; do not persist to localStorage per DB-only policy
+                    console.warn('Failed to persist conversation message to server', e);
                 }
             } catch (e) {
-                // fallback to localStorage
-                try { localStorage.setItem(key, JSON.stringify(list)); } catch(err){}
+                // Do not persist locally in DB-only mode
+                console.warn('Failed to persist conversation message (outer error)', e);
             }
         })();
 
@@ -2688,39 +2672,30 @@ if (typeof propertyImageIds === 'undefined') {
         try { window.dispatchEvent(new CustomEvent('wispa:message', { detail: { convId, msg } })); } catch(e){}
         
         // Update user-specific conversation index
-        try {
-            const convsKey = 'conversations_' + userId;
-            const convs = JSON.parse(localStorage.getItem(convsKey) || '[]');
-            const existing = convs.find(c => c.id === convId);
-            const lastText = String(text).slice(0, 140);
-            if (existing) {
-                existing.last = lastText;
-                existing.updated = now;
-                // Only mark as unread if it's an admin/user reply (not a user sending)
-                // Admin replies should NOT create unread for user (admin uses different system)
-                if (sender === 'user') existing.unread = 0;
-            } else {
-                convs.unshift({ id: convId, agent: 'Agent', last: lastText, unread: 0, updated: now });
-            }
-            localStorage.setItem(convsKey, JSON.stringify(convs));
-            // also set a small signal key so other tabs re-render lists reliably
-            try { localStorage.setItem('wispaMessageSignal_' + userId, String(now)); } catch(e) {}
-        } catch (e) {}
+            try {
+                // Update in-memory conversation index for immediate UI reflection
+                window._conversationIndex = window._conversationIndex || {};
+                const idx = window._conversationIndex[userId] || [];
+                const existing = idx.find(c => c.id === convId);
+                const lastText = String(text).slice(0, 140);
+                if (existing) { existing.last = lastText; existing.updated = now; if (sender === 'user') existing.unread = 0; }
+                else { idx.unshift({ id: convId, agent: 'Agent', last: lastText, unread: 0, updated: now }); }
+                window._conversationIndex[userId] = idx;
+            } catch (e) {}
 
         // Track unread messages for ADMIN on property chats
         if (convId.startsWith('property-') && sender === 'user') {
             try {
-                const adminUnreadKey = 'adminUnread';
-                const adminUnread = JSON.parse(localStorage.getItem(adminUnreadKey) || '{}');
+                // Track in-memory admin unread counts (no localStorage)
+                window._adminUnread = window._adminUnread || {};
                 const chatId = 'property-' + convId.replace('property-', '') + '-' + userId;
-                adminUnread[chatId] = (adminUnread[chatId] || 0) + 1;
-                localStorage.setItem(adminUnreadKey, JSON.stringify(adminUnread));
+                window._adminUnread[chatId] = (window._adminUnread[chatId] || 0) + 1;
             } catch (e) {}
         }
 
         // Save a lightweight backup of the conversation (per-conversation backup key)
         try {
-            localStorage.setItem(key + '_backup', JSON.stringify(list));
+            if (!window.WISPA_DB_ONLY) localStorage.setItem(key + '_backup', JSON.stringify(list));
         } catch(e) {}
     };
 
@@ -2958,7 +2933,7 @@ if (typeof propertyImageIds === 'undefined') {
 
     // Update data loading functions to use API endpoints
     function loadProperties() {
-        // Prefer server state: try API first, then fall back to localStorage when offline
+        // Prefer server state: use API only (DB-backed)
         const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
         return poster('/api/properties')
             .then(resp => {
@@ -2988,25 +2963,11 @@ if (typeof propertyImageIds === 'undefined') {
                     return prop;
                 });
                 filteredProperties = [...properties];
-                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
                 renderProperties(filteredProperties);
                 return properties;
             })
             .catch(err => {
-                // Fallback to localStorage for offline/editor use
-                try {
-                    const stored = localStorage.getItem('properties');
-                    if (stored) {
-                        const parsed = JSON.parse(stored);
-                        if (Array.isArray(parsed)) {
-                            properties = parsed;
-                            filteredProperties = [...properties];
-                            renderProperties(filteredProperties);
-                            return Promise.resolve(properties);
-                        }
-                    }
-                } catch (e) { console.warn('loadProperties fallback failed', e); }
-                console.warn('Failed to load properties from API, using empty list', err);
+                console.warn('Failed to load properties from API', err);
                 properties = [];
                 filteredProperties = [];
                 renderProperties(filteredProperties);
@@ -3060,9 +3021,10 @@ if (typeof propertyImageIds === 'undefined') {
                 } catch (uploadErr) {
                     try {
                         const key = 'localPhotos_' + (property.id || ('tmp-' + Date.now()));
-                        localStorage.setItem(key, JSON.stringify(dataPhotos));
                         property._localPhotosKey = key;
-                        console.warn('Saved data-URL photos locally under', key, uploadErr);
+                        // persist photos to server KV store (best-effort)
+                        try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: dataPhotos }) }); }catch(e){}
+                        console.warn('Saved data-URL photos to server KV under', key, uploadErr);
                     } catch (e) { console.warn('Failed to save local photos', e); }
                 }
             }
@@ -3096,20 +3058,19 @@ if (typeof propertyImageIds === 'undefined') {
                                 timestamp: new Date().toISOString(),
                                 data: { propertyId: property.id || null }
                             };
-                            if(u && u.id){
-                                try{
-                                    await poster2('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, notification: notif }) });
-                                }catch(e){
-                                    // fallback: save to local notifications for this user so UI can show it
-                                    try{
-                                        const key = 'notifications_' + u.id;
-                                        const arr = JSON.parse(localStorage.getItem(key) || '[]');
-                                        arr.unshift(Object.assign({}, notif, { read: false }));
-                                        localStorage.setItem(key, JSON.stringify(arr));
-                                        try{ localStorage.setItem('wispaMessageSignal_' + u.id, String(Date.now())); }catch(e){}
-                                    }catch(e){}
-                                }
-                            }
+                                    if(u && u.id){
+                                        try{
+                                            await poster2('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, notification: notif }) });
+                                        }catch(e){
+                                            // fallback: queue in-memory pending notifications and try to persist to server KV
+                                            try{
+                                                window._pendingNotifications = window._pendingNotifications || {};
+                                                window._pendingNotifications[u.id] = window._pendingNotifications[u.id] || [];
+                                                window._pendingNotifications[u.id].unshift(Object.assign({}, notif, { read: false }));
+                                                try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications_' + u.id, value: window._pendingNotifications[u.id] }) }); }catch(e){}
+                                            }catch(e){}
+                                        }
+                                    }
                         }catch(e){}
                     })();
 
@@ -3122,10 +3083,9 @@ if (typeof propertyImageIds === 'undefined') {
                             try{
                                 // If we've previously seen admin 401s, don't attempt network call
                                 if (window._wispaAdminUnauthorized) {
-                                    const key = 'pendingNotifications';
-                                    const pending = JSON.parse(localStorage.getItem(key) || '[]');
-                                    pending.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
-                                    localStorage.setItem(key, JSON.stringify(pending));
+                                    window._pendingAdminNotifications = window._pendingAdminNotifications || [];
+                                    window._pendingAdminNotifications.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
+                                    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
                                 } else {
                                     const resp = await poster2('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, body: body, data: { property: property } }) });
                                     if(!resp || !resp.ok){
@@ -3134,10 +3094,9 @@ if (typeof propertyImageIds === 'undefined') {
                                 }
                             }catch(e){
                                 try{
-                                    const key = 'pendingNotifications';
-                                    const pending = JSON.parse(localStorage.getItem(key) || '[]');
-                                    pending.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
-                                    localStorage.setItem(key, JSON.stringify(pending));
+                                    window._pendingAdminNotifications = window._pendingAdminNotifications || [];
+                                    window._pendingAdminNotifications.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
+                                    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
                                 }catch(e){}
                             }
                         }catch(e){}
@@ -3237,55 +3196,25 @@ if (typeof propertyImageIds === 'undefined') {
     }
 
     function loadNotifications(userId) {
-        // Try to load from localStorage first
-        try {
-            const stored = localStorage.getItem('notifications_' + userId);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) {
-                    return Promise.resolve(parsed);
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to parse stored notifications', e);
-        }
+        // Server-backed notifications only; do not use localStorage fallback.
         try {
             const fetcher = window.apiFetch ? window.apiFetch : fetch;
             return fetcher('/api/notifications?userId=' + encodeURIComponent(userId))
                 .then(r => r.ok ? r.json() : Promise.reject())
                 .then(data => Array.isArray(data.notifications) ? data.notifications : (data.notifications || []))
-                .catch(() => {
-                    try { const stored = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); return stored; } catch(e){ return []; }
-                });
-        } catch (e) {
-            try { const stored = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); return Promise.resolve(stored); } catch(err){ return Promise.resolve([]); }
-        }
+                .catch(() => []);
+        } catch (e) { return Promise.resolve([]); }
     }
 
     function loadConversations(userId) {
-        // Try to load from localStorage first
-        try {
-            const stored = localStorage.getItem('conversations_' + userId);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) {
-                    return Promise.resolve(parsed);
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to parse stored conversations', e);
-        }
+        // Server-backed conversations only; do not use localStorage fallback.
         try {
             const fetcher = window.apiFetch ? window.apiFetch : fetch;
             return fetcher('/api/conversations?userId=' + encodeURIComponent(userId))
                 .then(r => r.ok ? r.json() : Promise.reject())
                 .then(data => Array.isArray(data.conversations) ? data.conversations : (data.conversations || []))
-                .catch(() => {
-                    try { const stored = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); return stored; } catch(e){ return []; }
-                });
-        } catch (e) {
-            try { const stored = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); return Promise.resolve(stored); } catch(err){ return Promise.resolve([]); }
-        }
+                .catch(() => []);
+        } catch (e) { return Promise.resolve([]); }
     }
 
     function renderChatMessages(messages) {
@@ -3317,11 +3246,20 @@ if (typeof propertyImageIds === 'undefined') {
                     return msgs;
                 })
                 .catch(() => {
+                    // In DB-only mode do not read localStorage; return empty list
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        renderChatMessages([]);
+                        return [];
+                    }
                     const msgs = JSON.parse(localStorage.getItem('chatMessages') || '[]');
                     renderChatMessages(msgs);
                     return msgs;
                 });
         } catch (e) {
+            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                renderChatMessages([]);
+                return Promise.resolve([]);
+            }
             const msgs = JSON.parse(localStorage.getItem('chatMessages') || '[]');
             renderChatMessages(msgs);
             return Promise.resolve(msgs);
@@ -3341,6 +3279,15 @@ if (typeof propertyImageIds === 'undefined') {
                 .then(r => r.ok ? r.json() : Promise.reject())
                 .then(() => loadChatMessages(cid))
                 .catch(() => {
+                    // fallback: if DB-only, render locally without persisting to localStorage
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        const messages = (window._localChatDrafts && Array.isArray(window._localChatDrafts[cid]) ) ? window._localChatDrafts[cid] : [];
+                        messages.push({ text: text, timestamp: new Date().toLocaleString() });
+                        window._localChatDrafts = window._localChatDrafts || {};
+                        window._localChatDrafts[cid] = messages;
+                        renderChatMessages(messages);
+                        return;
+                    }
                     // fallback to localStorage
                     const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
                     messages.push({ text: text, timestamp: new Date().toLocaleString() });
@@ -3348,6 +3295,14 @@ if (typeof propertyImageIds === 'undefined') {
                     loadChatMessages(cid);
                 });
         } catch (e) {
+            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                const messages = (window._localChatDrafts && Array.isArray(window._localChatDrafts[cid]) ) ? window._localChatDrafts[cid] : [];
+                messages.push({ text: text, timestamp: new Date().toLocaleString() });
+                window._localChatDrafts = window._localChatDrafts || {};
+                window._localChatDrafts[cid] = messages;
+                renderChatMessages(messages);
+                return Promise.resolve(messages);
+            }
             const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
             messages.push({ text: text, timestamp: new Date().toLocaleString() });
             localStorage.setItem('chatMessages', JSON.stringify(messages));

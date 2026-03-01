@@ -179,15 +179,9 @@
       try{
         const j = await this.apiGet('/api/conversations/' + encodeURIComponent(id) + '/messages');
         const msgs = Array.isArray(j && j.messages ? j.messages : j) ? (j.messages || j) : [];
-        // If no server messages, try localStorage keys
-        let merged = [];
-        if(Array.isArray(msgs) && msgs.length) merged = msgs;
-        else {
-          try{
-            const keys = ['adminMessages_'+id, 'wispaMessages_'+id];
-            for(const k of keys){ const raw = localStorage.getItem(k); if(raw){ try{ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length){ merged = merged.concat(arr); } }catch(e){} } }
-          }catch(e){}
-        }
+        // Use server messages only (DB-backed). Do not fall back to localStorage.
+        const merged = Array.isArray(msgs) ? msgs : [];
+        try{ window._conversationCache = window._conversationCache || {}; window._conversationCache[id] = merged; }catch(e){}
         // Render property card if available
         let property = null;
         if(j && j.property) property = j.property;
