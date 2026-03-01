@@ -35,7 +35,11 @@
           // attempt to JSON-parse value to preserve structure in DB
           let parsed = val;
           try{ parsed = JSON.parse(val); }catch(e){ parsed = val; }
-          try{ const _b = (window.WISPA_API_BASE || '').replace(/\/$/, ''); const _u = _b ? (_b + '/api/storage') : '/api/storage'; fetch(_u, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: k, value: parsed }) }).catch(()=>{}); }catch(e){}
+          try{
+            const toSend = (typeof parsed === 'string' || typeof parsed === 'number') ? parsed : JSON.stringify(parsed);
+            const _b = (window.WISPA_API_BASE || '').replace(/\/$/, ''); const _u = _b ? (_b + '/api/storage') : '/api/storage';
+            fetch(_u, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: k, value: toSend }) }).catch(()=>{});
+          }catch(e){}
         }catch(e){} }; }catch(e){}
 
     // removeItem deletes from cache and attempts to delete on server

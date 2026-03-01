@@ -49,7 +49,8 @@
       window._storageCache[key] = (typeof value === 'string' || typeof value === 'number') ? String(value) : JSON.stringify(value);
     }catch(e){}
     try{
-      const body = { key: key, value: value };
+      const toSend = (typeof value === 'string' || typeof value === 'number') ? value : JSON.stringify(value);
+      const body = { key: key, value: toSend };
       const base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
       const url = base ? (base + '/api/storage') : '/api/storage';
       await fetch(url, { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });

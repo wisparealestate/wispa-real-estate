@@ -1586,7 +1586,7 @@ if (typeof propertyImageIds === 'undefined') {
                                 if (randomId && !likedIds.includes(randomId)) likedIds.push(randomId);
                             }
                             if (likedIds.length) {
-                                await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: likedIds }) });
+                                await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: JSON.stringify(likedIds) }) });
                             }
                         }
                     }
@@ -1642,7 +1642,7 @@ if (typeof propertyImageIds === 'undefined') {
                     } catch(e) { console.error('error saving reaction', e); }
                 }
                 // persist liked list to server KV store
-                try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'likedProperties_' + userId, value: liked }) }); }catch(e){}
+                try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'likedProperties_' + userId, value: JSON.stringify(liked) }) }); }catch(e){}
             });
         });
         // initialize state from server KV store
@@ -2364,7 +2364,7 @@ if (typeof propertyImageIds === 'undefined') {
                         if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                             window._pendingContactMessages = window._pendingContactMessages || [];
                             window._pendingContactMessages.unshift(message);
-                            try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingContactMessages', value: window._pendingContactMessages }) }); }catch(e){}
+                            try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingContactMessages', value: JSON.stringify(window._pendingContactMessages) }) }); }catch(e){}
                             showNotification('Message saved offline.');
                             try { contactForm.reset(); } catch(e){}
                             return;
@@ -3104,7 +3104,7 @@ if (typeof propertyImageIds === 'undefined') {
                         const key = 'localPhotos_' + (property.id || ('tmp-' + Date.now()));
                         property._localPhotosKey = key;
                         // persist photos to server KV store (best-effort)
-                        try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: dataPhotos }) }); }catch(e){}
+                        try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: JSON.stringify(dataPhotos) }) }); }catch(e){}
                         console.warn('Saved data-URL photos to server KV under', key, uploadErr);
                     } catch (e) { console.warn('Failed to save local photos', e); }
                 }
@@ -3148,7 +3148,7 @@ if (typeof propertyImageIds === 'undefined') {
                                                 window._pendingNotifications = window._pendingNotifications || {};
                                                 window._pendingNotifications[u.id] = window._pendingNotifications[u.id] || [];
                                                 window._pendingNotifications[u.id].unshift(Object.assign({}, notif, { read: false }));
-                                                try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications_' + u.id, value: window._pendingNotifications[u.id] }) }); }catch(e){}
+                                                try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications_' + u.id, value: JSON.stringify(window._pendingNotifications[u.id]) }) }); }catch(e){}
                                             }catch(e){}
                                         }
                                     }
@@ -3166,7 +3166,7 @@ if (typeof propertyImageIds === 'undefined') {
                                 if (window._wispaAdminUnauthorized) {
                                     window._pendingAdminNotifications = window._pendingAdminNotifications || [];
                                     window._pendingAdminNotifications.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
-                                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
+                                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: JSON.stringify(window._pendingAdminNotifications) }) }); }catch(e){}
                                 } else {
                                     const resp = await poster2('/api/admin/sent-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, body: body, data: { property: property } }) });
                                     if(!resp || !resp.ok){
@@ -3177,7 +3177,7 @@ if (typeof propertyImageIds === 'undefined') {
                                 try{
                                     window._pendingAdminNotifications = window._pendingAdminNotifications || [];
                                     window._pendingAdminNotifications.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
-                                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
+                                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: JSON.stringify(window._pendingAdminNotifications) }) }); }catch(e){}
                                 }catch(e){}
                             }
                         }catch(e){}
@@ -3231,7 +3231,7 @@ if (typeof propertyImageIds === 'undefined') {
                     if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                         window._pendingProperties = window._pendingProperties || [];
                         window._pendingProperties.push(property);
-                        try { await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: window._pendingProperties }) }); } catch(e) {}
+                        try { await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: JSON.stringify(window._pendingProperties) }) }); } catch(e) {}
                         return Promise.resolve(property);
                     }
                 } catch(e){}
@@ -3249,7 +3249,7 @@ if (typeof propertyImageIds === 'undefined') {
                 if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                     window._pendingProperties = window._pendingProperties || [];
                     window._pendingProperties.push(property);
-                    try { await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: window._pendingProperties }) }); } catch(e){}
+                    try { await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: JSON.stringify(window._pendingProperties) }) }); } catch(e){}
                 } else {
                     try{ safeStorage.set('properties', properties).catch(()=>{}); }catch(e){}
                 }
@@ -3308,7 +3308,7 @@ if (typeof propertyImageIds === 'undefined') {
                     if (r && r.ok) return true;
                     // best-effort: persist to server KV when API call fails
                     window._pendingLikedProperties = liked;
-                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'likedProperties', value: liked }) }); }catch(e){}
+                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'likedProperties', value: JSON.stringify(liked) }) }); }catch(e){}
                     return false;
                 } catch(e) { return false; }
             } else {
