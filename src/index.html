@@ -1,4 +1,7 @@
     <script>
+    // Point frontend to API host so storage and API calls go to the proper backend.
+    // Change this value if your API is hosted elsewhere.
+    window.WISPA_API_BASE = window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
     // Optional: try to detect existing session but DO NOT redirect to login.
     // Keeping index open for now so users can browse without authentication.
     document.addEventListener('DOMContentLoaded', async function() {
@@ -7,7 +10,7 @@
             if (window.getCurrentUser) {
                 try { window._initialUser = await window.getCurrentUser(); } catch(e) { /* ignore */ }
             } else {
-                try { const r = await fetch('/api/me', { credentials: 'include' }); if (r && r.ok) { try { const j = await r.json(); window._initialUser = j && j.user ? j.user : j; } catch(e){} } } catch(e) { /* ignore */ }
+                try { const r = await fetch((window.WISPA_API_BASE||'') + '/api/me', { credentials: 'include' }); if (r && r.ok) { try { const j = await r.json(); window._initialUser = j && j.user ? j.user : j; } catch(e){} } } catch(e) { /* ignore */ }
             }
         }catch(e){ /* ignore */ }
     });
