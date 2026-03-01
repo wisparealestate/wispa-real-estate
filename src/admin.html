@@ -1528,15 +1528,17 @@
           if(res && res.ok){ const j = await res.json(); const arr = Array.isArray(j) ? j : (j.items || j.notifications || []); if(arr && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; } }
         }catch(e){}
         // Fallback to storage: prefer server KV in DB-only mode, otherwise localStorage
-        try{
-          if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
-            try{
-              const resp = await fetch('/api/storage/all');
-              if (resp && resp.ok){ const j = await resp.json(); const entry = j && j.store ? j.store['sentNotifications'] : null; const arr = entry && entry.value ? entry.value : entry || [];
-                if (Array.isArray(arr) && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; }
-              }
-            }catch(e){}
-          }
+              try{
+                if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                  try{
+                    const _base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+                    const _all = _base ? (_base + '/api/storage/all') : '/api/storage/all';
+                    const resp = await fetch(_all);
+                    if (resp && resp.ok){ const j = await resp.json(); const entry = j && j.store ? j.store['sentNotifications'] : null; const arr = entry && entry.value ? entry.value : entry || [];
+                      if (Array.isArray(arr) && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; }
+                    }
+                  }catch(e){}
+                }
           try{ const arr = JSON.parse(localStorage.getItem('sentNotifications')||'[]'); if(arr && arr.length){ histEl.innerHTML = '<ul>'+arr.map(it=>`<li><strong>${escapeHtml(it.title||'')}</strong> — ${escapeHtml((it.message||it.body||'').slice(0,200))} <span style="color:#666;font-size:12px">${escapeHtml(String(it.sentAt||it.createdAt||''))}</span></li>`).join('')+'</ul>'; return; } }catch(e){}
         }catch(e){}
         try{ histEl.innerHTML = '<div style="color:#666">No sent alerts yet.</div>'; }catch(e){}
@@ -1563,21 +1565,24 @@
           if(!res || !res.ok){ try{ res = await poster('/api/admin/sent-notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }); }catch(e){} }
           if(res && res.ok){ if(status) status.textContent = 'Sent.'; setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} },600); return; }
           // If DB-only, try saving into server KV (sentNotifications). If that fails, queue in-memory.
-          try{
-            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
-              const item = Object.assign({ id: 'local-'+Date.now(), title, message, sentAt: new Date().toISOString(), target }, {});
               try{
-                const respAll = await fetch('/api/storage/all');
-                if (respAll && respAll.ok){ const j = await respAll.json(); const entry = j && j.store ? j.store['sentNotifications'] : null; const arr = entry && entry.value ? entry.value : (Array.isArray(entry) ? entry : (entry || []));
-                  arr.unshift(item);
-                  const write = await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'sentNotifications', value: arr }) });
-                  if (write && write.ok){ if(status) status.textContent = 'Saved to server (offline)'; setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} },600); return; }
-                }
-              }catch(e){}
+                if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                  const item = Object.assign({ id: 'local-'+Date.now(), title, message, sentAt: new Date().toISOString(), target }, {});
+                  try{
+                    const _base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+                    const _all = _base ? (_base + '/api/storage/all') : '/api/storage/all';
+                    const _url = _base ? (_base + '/api/storage') : '/api/storage';
+                    const respAll = await fetch(_all);
+                    if (respAll && respAll.ok){ const j = await respAll.json(); const entry = j && j.store ? j.store['sentNotifications'] : null; const arr = entry && entry.value ? entry.value : (Array.isArray(entry) ? entry : (entry || []));
+                      arr.unshift(item);
+                      const write = await fetch(_url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'sentNotifications', value: arr }) });
+                      if (write && write.ok){ if(status) status.textContent = 'Saved to server (offline)'; setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} },600); return; }
+                    }
+                  }catch(e){}
               // KV write failed — queue in-memory pending admin notifications
               window._pendingAdminNotifications = window._pendingAdminNotifications || [];
               window._pendingAdminNotifications.unshift(Object.assign({ id: 'pending-'+Date.now(), title, message, sentAt: new Date().toISOString(), target }, {}));
-              try{ await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'pendingAdminNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
+              try{ const _base2 = (window.WISPA_API_BASE || '').replace(/\/$/, ''); const _url2 = _base2 ? (_base2 + '/api/storage') : '/api/storage'; await fetch(_url2, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'pendingAdminNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
               if(status) status.textContent = 'Queued (memory)'; setTimeout(()=>{ try{ loadSendAlertHistory(); }catch(e){} },600); return;
             }
           }catch(e){}

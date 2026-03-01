@@ -35,11 +35,11 @@
           // attempt to JSON-parse value to preserve structure in DB
           let parsed = val;
           try{ parsed = JSON.parse(val); }catch(e){ parsed = val; }
-          fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: k, value: parsed }) }).catch(()=>{});
+          try{ const _b = (window.WISPA_API_BASE || '').replace(/\/$/, ''); const _u = _b ? (_b + '/api/storage') : '/api/storage'; fetch(_u, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: k, value: parsed }) }).catch(()=>{}); }catch(e){}
         }catch(e){} }; }catch(e){}
 
     // removeItem deletes from cache and attempts to delete on server
-    try{ proto.removeItem = function(k){ try{ if(window._storageCache) delete window._storageCache[k]; fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: k, value: null }) }).catch(()=>{}); }catch(e){} }; }catch(e){}
+    try{ proto.removeItem = function(k){ try{ if(window._storageCache) delete window._storageCache[k]; try{ const _b = (window.WISPA_API_BASE || '').replace(/\/$/, ''); const _u = _b ? (_b + '/api/storage') : '/api/storage'; fetch(_u, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: k, value: null }) }).catch(()=>{}); }catch(e){} }catch(e){} }; }catch(e){}
 
     // clear cache locally; do not attempt to wipe server storage automatically
     try{ proto.clear = function(){ try{ window._storageCache = {}; }catch(e){} }; }catch(e){}

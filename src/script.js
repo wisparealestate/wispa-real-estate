@@ -3177,7 +3177,7 @@ if (typeof propertyImageIds === 'undefined') {
                                 try{
                                     window._pendingAdminNotifications = window._pendingAdminNotifications || [];
                                     window._pendingAdminNotifications.push({ title: title, body: body, data: { property: property }, attempts: 0, ts: Date.now() });
-                                    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
+                                    try{ await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingNotifications', value: window._pendingAdminNotifications }) }); }catch(e){}
                                 }catch(e){}
                             }
                         }catch(e){}

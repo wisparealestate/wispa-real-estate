@@ -7,7 +7,9 @@
   async function ensureLoaded(){
     if (window._storageCache && Object.keys(window._storageCache).length>0) return;
     try{
-      const r = await fetch('/api/storage/all', { credentials: 'include' });
+      const base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+      const all = base ? (base + '/api/storage/all') : '/api/storage/all';
+      const r = await fetch(all, { credentials: 'include' });
       if(r && r.ok){ const j = await r.json(); window._storageCache = window._storageCache || {}; if(j && j.store){ Object.keys(j.store).forEach(k => {
         try{ const v = j.store[k]; window._storageCache[k] = (typeof v === 'string' || typeof v === 'number') ? String(v) : JSON.stringify(v); }catch(e){}
       }); }}
@@ -22,7 +24,9 @@
     catch(e){}
     // Try server if not in cache
     try{
-      const r = await fetch('/api/storage/all', { credentials: 'include' });
+      const base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+      const all = base ? (base + '/api/storage/all') : '/api/storage/all';
+      const r = await fetch(all, { credentials: 'include' });
       if(r && r.ok){ const j = await r.json(); if(j && j.store && Object.prototype.hasOwnProperty.call(j.store, key)){
         const v = j.store[key]; if(typeof v === 'string' || typeof v === 'number') return v; if(v && v.value !== undefined) return v.value; return v;
       }}
@@ -46,14 +50,16 @@
     }catch(e){}
     try{
       const body = { key: key, value: value };
-      await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const base = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+      const url = base ? (base + '/api/storage') : '/api/storage';
+      await fetch(url, { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
       return true;
     }catch(e){ return false; }
   };
 
   window.storageApi.remove = async function(key){
     try{ if(window._storageCache) delete window._storageCache[key]; }catch(e){}
-    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ key: key, value: null }) }); return true; }catch(e){ return false; }
+    try{ const base = (window.WISPA_API_BASE || '').replace(/\/$/, ''); const url = base ? (base + '/api/storage') : '/api/storage'; await fetch(url, { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ key: key, value: null }) }); return true; }catch(e){ return false; }
   };
 
   // Convenience: get all keys (uses cache)
