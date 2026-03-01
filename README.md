@@ -58,6 +58,13 @@ A modern, user-friendly real estate platform for global property transactions, d
    - Like properties and view in Favorites.
    - Use the chat for inquiries.
 
+   ## Migration: client storage -> DB-backed
+
+   - Purpose: Remove reliance on `localStorage` and persist client-side data to the server DB.
+   - Implementation: a lightweight KV API (`GET /api/storage/all`, `POST /api/storage`) was added to `api/index.js` and a client shim (`src/storage-sync.js`) proxies existing `localStorage` calls to the server-backed store. The shim is loaded from `src/script.js`.
+   - Rollback: If your DB is unreachable, the server falls back to a file-backed store `data/kv_store.json`. To rollback to purely local behavior, remove the `src/storage-sync.js` include in `src/script.js` and restore any deleted `data/*.json` files from backups.
+
+
 ## Project Structure
 ```
 wispa-real-estate/
