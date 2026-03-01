@@ -958,10 +958,10 @@
                             const lk = 'wispaMessages_' + userId + '_' + convId;
                             if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                                 try{
-                                    const respAll = await fetch('/api/storage/all');
+                                    const respAll = await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage/all') : '/api/storage/all');
                                     if (respAll && respAll.ok){ const j = await respAll.json(); const existing = (j && j.store && Array.isArray(j.store[lk])) ? j.store[lk] : (j && j.store && j.store[lk] && j.store[lk].value ? j.store[lk].value : []);
                                         const merged = Array.isArray(existing) ? existing.concat(msgs) : msgs.slice();
-                                        await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: lk, value: merged }) });
+                                        await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage') : '/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: lk, value: merged }) });
                                     }
                                 }catch(e){}
                             } else {
@@ -1007,10 +1007,10 @@
                         const newMsgs = window._wispaMessages[key] || [];
                         if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                             try{
-                                const respAll = await fetch('/api/storage/all');
+                                const respAll = await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage/all') : '/api/storage/all');
                                 if (respAll && respAll.ok){ const j = await respAll.json(); const existing = (j && j.store && Array.isArray(j.store[lk])) ? j.store[lk] : (j && j.store && j.store[lk] && j.store[lk].value ? j.store[lk].value : []);
                                     const merged = Array.isArray(existing) ? existing.concat(newMsgs) : newMsgs.slice();
-                                    await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: lk, value: merged }) });
+                                    await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage') : '/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: lk, value: merged }) });
                                 }
                             }catch(e){
                                 // queue in-memory pending messages when KV unavailable
@@ -1034,7 +1034,7 @@
                     if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                         // read adminChats from server KV
                         try{
-                            const r = await fetch('/api/storage/all');
+                            const r = await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage/all') : '/api/storage/all');
                             if (r && r.ok){ const j = await r.json(); arr = (j && j.store && Array.isArray(j.store[KEY])) ? j.store[KEY] : (j && j.store && j.store[KEY] && j.store[KEY].value ? j.store[KEY].value : []); }
                             else arr = [];
                         }catch(e){ arr = []; }
@@ -1057,7 +1057,7 @@
                 }
                 try{
                     if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
-                        try{ await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: KEY, value: arr }) }); }catch(e){ window._pendingAdminChats = window._pendingAdminChats || []; window._pendingAdminChats.push({ key: KEY, value: arr }); }
+                        try{ await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage') : '/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: KEY, value: arr }) }); }catch(e){ window._pendingAdminChats = window._pendingAdminChats || []; window._pendingAdminChats.push({ key: KEY, value: arr }); }
                     } else {
                         localStorage.setItem(KEY, JSON.stringify(arr));
                     }
@@ -1069,13 +1069,13 @@
                     try{
                         if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                             try{
-                                const r2 = await fetch('/api/storage/all');
+                                const r2 = await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage/all') : '/api/storage/all');
                                 let notifsArr = [];
                                 if (r2 && r2.ok){ const j2 = await r2.json(); notifsArr = (j2 && j2.store && Array.isArray(j2.store[KEY2])) ? j2.store[KEY2] : (j2 && j2.store && j2.store[KEY2] && j2.store[KEY2].value ? j2.store[KEY2].value : []); }
                                 const nIdx = notifsArr.findIndex(n => n.id === convId);
                                 const notif = { id: convId, title: propertyTitle || ('Conversation ' + convId), lastMessage: lastMessage || '', updated: now, unread: 1 };
                                 if(nIdx === -1) notifsArr.unshift(notif); else { notifsArr[nIdx] = Object.assign({}, notifsArr[nIdx], notif); }
-                                try{ await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: KEY2, value: notifsArr }) }); }catch(e){ window._pendingAdminNotifications = window._pendingAdminNotifications || []; window._pendingAdminNotifications.push(notif); }
+                                try{ await fetch((window.WISPA_API_BASE || '').replace(/\/$/, '') ? ((window.WISPA_API_BASE || '').replace(/\/$/, '') + '/api/storage') : '/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: KEY2, value: notifsArr }) }); }catch(e){ window._pendingAdminNotifications = window._pendingAdminNotifications || []; window._pendingAdminNotifications.push(notif); }
                             }catch(e){ }
                         } else {
                             notifs = JSON.parse(localStorage.getItem(KEY2) || '[]');

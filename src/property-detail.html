@@ -1719,7 +1719,8 @@
                     try{
                         if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                             try{
-                                const r2 = await fetch('/api/storage/all');
+                                const _base2 = (window.WISPA_API_BASE || '').replace(/\/$/, '');
+                                const r2 = await fetch(_base2 ? (_base2 + '/api/storage/all') : '/api/storage/all');
                                 let notifsArr = [];
                                 if (r2 && r2.ok){ const j2 = await r2.json(); notifsArr = (j2 && j2.store && Array.isArray(j2.store[KEY2])) ? j2.store[KEY2] : (j2 && j2.store && j2.store[KEY2] && j2.store[KEY2].value ? j2.store[KEY2].value : []); }
                                 const nIdx = notifsArr.findIndex(n => n.id === convId);
