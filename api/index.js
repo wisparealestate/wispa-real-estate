@@ -1603,11 +1603,11 @@ app.delete('/api/properties/:id', async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing id' });
   try {
-    // Remove images from properties (if column exists), else delete legacy photos first
+    // Remove images from properties (if column exists)
     try {
       await pool.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify([]), id]);
     } catch (e) {
-      try { await pool.query('DELETE FROM property_photos WHERE property_id = $1', [id]); } catch(_) {}
+      // ignore failures when images column is absent
     }
     const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Not found' });

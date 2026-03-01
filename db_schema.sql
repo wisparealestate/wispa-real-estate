@@ -1,10 +1,4 @@
--- Table for property photos
-CREATE TABLE property_photos (
-    id SERIAL PRIMARY KEY,
-    property_id INTEGER REFERENCES properties(id) ON DELETE CASCADE,
-    photo_url TEXT NOT NULL,
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Legacy `property_photos` table removed: photos are stored on properties.images JSONB
 -- Users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
