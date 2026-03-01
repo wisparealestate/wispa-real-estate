@@ -98,22 +98,17 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         // If update didn't find a row, fall back to insert
       }
     }
-    if (!propertyRow) {
-      // Duplicate detection disabled per user request: allow multiple posts with
-      // identical title/address/price. Each POST will create a separate property
-      // (unique `id` governs identity). If the caller provided an explicit
-      // `incomingId` earlier, that path above still performs an update.
-
       if (!propertyRow) {
-        // generate an 8-digit unique id to use as the property primary key
-        const generatedId = await generateUnique8DigitId(client);
+        // Duplicate detection disabled per user request: allow multiple posts with
+        // identical title/address/price. Each POST will create a separate property.
+        // Let Postgres assign the primary key (avoid manual id generation). This
+        // improves consistency across connections and avoids id collision issues.
         const propRes = await client.query(
           `INSERT INTO public.properties
-          (id, user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          (user_id, title, description, price, address, image_url, bedrooms, bathrooms, type, area, sale_rent, post_to)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          RETURNING *`,
           [
-            generatedId,
             p.user_id || null,
             p.title || null,
             p.description || null,
@@ -134,7 +129,6 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         try{ await writeDiag({ event: 'inserted', propertyId, title: propertyRow.title }); }catch(e){}
         didInsertNew = true;
       }
-    }
 
     // Persist photos on the properties table in the `images` jsonb column.
     let photos = [];
