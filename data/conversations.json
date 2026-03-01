@@ -1,13 +1,1 @@
-[
-  {
-    "id": "conv-test-1",
-    "messages": [
-      {
-        "sender": "user",
-        "text": "Hello conv test",
-        "ts": "2026-02-20T09:53:21.7423645Z"
-      }
-    ],
-    "updated": 1771581201790
-  }
-]
+[]

@@ -1,18 +1,1 @@
-[
-  {
-    "id": 1772032279022,
-    "name": "Automated Test",
-    "email": "test@local",
-    "subject": "DB test",
-    "message": "Hello from verify script",
-    "createdAt": "2026-02-25T15:11:17.364Z"
-  },
-  {
-    "id": 1,
-    "name": "Smoke Contact",
-    "email": "contact@smoke.test",
-    "subject": "Test",
-    "message": "Contact message from smoke test",
-    "createdAt": "2026-02-22T02:39:14.430Z"
-  }
-]
+[]
