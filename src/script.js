@@ -156,20 +156,25 @@ window.clearAdminUnauthorized = function() {
         }catch(e){ alert('admin login failed: ' + (e && e.message ? e.message : String(e))); }
     };
 
-// Disable localStorage usage in DB-only mode only when explicitly configured.
-// Setting `window.WISPA_DISABLE_LOCALSTORAGE = true` or `window.WISPA_DB_ONLY = true`
-// will turn reads into no-ops to prevent accidental client-side persistence.
-try {
-    const noop = function(){ return null; };
-    const noWrite = function(){ /* no-op in DB-only mode */ };
-    // Only override localStorage when a deliberate flag is present.
-    if (typeof localStorage !== 'undefined' && (window.WISPA_DISABLE_LOCALSTORAGE || window.WISPA_DB_ONLY)) {
-        try { localStorage.getItem = noop; } catch(e){}
-        try { localStorage.setItem = noWrite; } catch(e){}
-        try { localStorage.removeItem = noWrite; } catch(e){}
-        try { localStorage.clear = noWrite; } catch(e){}
-    }
-} catch(e) {}
+// Provide safe storage helpers that prefer `storageApi` (server-backed) and
+// fallback to native `localStorage` when necessary. Do not overwrite native
+// `localStorage` methods here; helpers will use `storageApi` when available.
+window.safeStorage = window.safeStorage || (function(){
+    function tryParse(s, def){ try{ if(s==null) return def===undefined?null:def; return JSON.parse(s); }catch(e){ return s; } }
+
+    // synchronous read from cache (used by some legacy code paths)
+    function getSync(key, def){ try{ if(window.storageApi && typeof window.storageApi.getSync === 'function') return window.storageApi.getSync(key) ?? def; }catch(e){} return def===undefined?null:def; }
+
+    // async get
+    async function get(key){ try{ if(window.storageApi && typeof window.storageApi.get === 'function') return await window.storageApi.get(key); }catch(e){} return null; }
+
+    // async set
+    async function set(key, value){ try{ if(window.storageApi && typeof window.storageApi.set === 'function') return await window.storageApi.set(key, value); }catch(e){} return false; }
+
+    async function remove(key){ try{ if(window.storageApi && typeof window.storageApi.remove === 'function') return await window.storageApi.remove(key); }catch(e){} return false; }
+
+    return { getSync, get, set, remove };
+})();
 
 
 // Always load window.properties from API on page load (DB-only mode)
@@ -391,7 +396,7 @@ async function uploadLocalPhotosForProperty(property){
                 }
             }catch(e){ stored = null; }
         } else {
-            stored = JSON.parse(localStorage.getItem(key) || 'null');
+            stored = safeStorage.getSync(key, null);
         }
     }catch(e){ stored = null; }
     if(!stored || !Array.isArray(stored) || stored.length===0) return null;
@@ -423,18 +428,14 @@ async function uploadLocalPhotosForProperty(property){
                 if(Array.isArray(window.properties)){
                     const idx = window.properties.findIndex(p => String(p.id) === String(property.id));
                     if(idx>-1) window.properties[idx] = property;
-                    try{ if (!(typeof window !== 'undefined' && window.WISPA_DB_ONLY)) localStorage.setItem('properties', JSON.stringify(window.properties)); }catch(e){}
+                    try{ safeStorage.set('properties', window.properties).catch(()=>{}); }catch(e){}
                 }
             }catch(e){}
             // attempt to save to server so remote property record includes photos
             try{ await saveProperty(Object.assign({}, property, { photos: urls })); }catch(e){ /* ignore */ }
-            // remove stored data-urls to free space
+            // remove stored data-urls to free space (use safeStorage)
             try{
-                if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
-                    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: null }) }); }catch(e){}
-                } else {
-                    localStorage.removeItem(key);
-                }
+                try{ safeStorage.remove(key).catch(()=>{}); }catch(e){}
             }catch(e){}
             return urls;
         }
@@ -445,7 +446,7 @@ async function uploadLocalPhotosForProperty(property){
 // Process all properties with local photos and try to upload them
 async function processLocalPhotosQueue(){
     try{
-        const props = Array.isArray(window.properties) ? window.properties : (function(){ try{ if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) return []; const s = localStorage.getItem('properties'); return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
+        const props = Array.isArray(window.properties) ? window.properties : safeStorage.getSync('properties', []);
         if(!Array.isArray(props) || !props.length) return;
         for(const p of props){
             if(p && p._localPhotosKey){
@@ -468,7 +469,7 @@ function resolvePropertyImages(property){
     try{
         if(!property) return [];
         if(property._localPhotosKey){
-            try{ const raw = localStorage.getItem(property._localPhotosKey); if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; } }catch(e){}
+            try{ const arr = safeStorage.getSync(property._localPhotosKey, null); if(Array.isArray(arr) && arr.length) return arr; }catch(e){}
         }
         if(Array.isArray(property.photoUrls) && property.photoUrls.length) return property.photoUrls;
         if(Array.isArray(property.photos) && property.photos.length) return property.photos;
@@ -487,7 +488,7 @@ async function processPendingNotifications(force = false){
         // Attempt pending admin POSTs. Callers may pass `force = true` to bypass retries.
         const key = 'pendingNotifications';
         let pending = [];
-        try{ pending = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ pending = []; }
+        try{ pending = safeStorage.getSync(key, []); }catch(e){ pending = []; }
         if(!Array.isArray(pending) || pending.length === 0) return;
         if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
         const poster = (typeof window !== 'undefined' && window.apiFetch) ? window.apiFetch : fetch;
@@ -509,7 +510,7 @@ async function processPendingNotifications(force = false){
                 remaining.push(item);
             }
         }
-        try{ localStorage.setItem(key, JSON.stringify(remaining)); }catch(e){}
+        try{ safeStorage.set(key, remaining).catch(()=>{}); }catch(e){}
     }catch(e){ console.warn('processPendingNotifications failed', e); }
 }
 
@@ -597,15 +598,17 @@ async function openAdminChat(chatId) {
                                 let meta = null;
                                 try { meta = (typeof r.meta === 'string') ? JSON.parse(r.meta) : r.meta; } catch(e){ meta = r.meta || null }
                                 return {
-                                    sender: (r.sender || (meta && meta.sender) || 'user'),
-                                    text: (r.text || r.body || r.content || (meta && (meta.text || meta.body)) || ''),
-                                    timestamp: (r.timestamp || r.sent_at || r.sentAt || r.created_at || null),
-                                    userId: (r.userId || r.sender_id || r.user_id || (meta && (meta.userId || meta.user_id)) || null),
-                                    userEmail: (r.userEmail || (meta && (meta.userEmail || meta.user_email)) || r.user_email || r.email || null),
-                                    userName: (r.userName || (meta && (meta.userName || meta.user_name)) || r.user_name || r.userName || null),
-                                    meta: meta || null
+                                    id: r.id || r.messageId || null,
+                                    body: r.body || r.content || r.text || (meta && meta.text) || '',
+                                    timestamp: r.timestamp || r.sent_at || r.ts || r.time || (r.createdAt || Date.now()),
+                                    userId: r.userId || r.from || r.sender || null,
+                                    userName: r.userName || r.senderName || (meta && (meta.userName || meta.user_name)) || null,
+                                    userEmail: r.userEmail || null,
+                                    meta: meta,
+                                    raw: r
                                 };
                             });
+                        
                         // sort by timestamp ascending
                         messages.sort((a,b)=>{ const ta = new Date(a.timestamp).getTime()||0; const tb = new Date(b.timestamp).getTime()||0; return ta - tb; });
                         // derive chat meta from first message and prefer API-provided property payload
@@ -622,7 +625,7 @@ async function openAdminChat(chatId) {
                         // If API didn't include a userName, try to preserve a locally-known participantName
                         try{
                             if((!chat.userName || String(chat.userName).toLowerCase() === 'user')){
-                                const ac = (typeof window !== 'undefined' && window.WISPA_DB_ONLY) ? (window._adminChats || []) : JSON.parse(localStorage.getItem('adminChats') || '[]');
+                                    const ac = (typeof window !== 'undefined' && window.WISPA_DB_ONLY) ? (window._adminChats || []) : safeStorage.getSync('adminChats', []);
                                 const found = (ac || []).find(a => a.id === chatId);
                                 if(found && found.participantName) chat.userName = found.participantName;
                             }
@@ -675,8 +678,8 @@ async function openAdminChat(chatId) {
             // Try to find userId from adminChats
             let userId = null;
             try {
-                const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-                const meta = adminChats.find(c => c.id === chatId);
+                const adminChats = safeStorage.getSync('adminChats', []);
+                const meta = (adminChats || []).find(c => c.id === chatId);
                 if (meta && meta.userId) userId = meta.userId;
             } catch(e){}
             if (!userId) {
@@ -696,22 +699,19 @@ async function openAdminChat(chatId) {
             const seen = new Set();
             console.log('openAdminChat: checking local keys', keys);
             for (let i = 0; i < keys.length; i++) {
-                const arr = localStorage.getItem(keys[i]);
-                if (arr) {
-                    try {
-                        const msgs = JSON.parse(arr);
-                        if (Array.isArray(msgs)) {
-                            console.log('openAdminChat: found', msgs.length, 'messages in', keys[i]);
-                            msgs.forEach(m => {
-                                const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                                if (!seen.has(sig)) {
-                                    messages.push(m);
-                                    seen.add(sig);
-                                }
-                            });
-                        }
-                    } catch(e){}
-                }
+                try{
+                    const msgs = safeStorage.getSync(keys[i], []);
+                    if (Array.isArray(msgs) && msgs.length) {
+                        console.log('openAdminChat: found', msgs.length, 'messages in', keys[i]);
+                        msgs.forEach(m => {
+                            const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                            if (!seen.has(sig)) {
+                                messages.push(m);
+                                seen.add(sig);
+                            }
+                        });
+                    }
+                }catch(e){}
             }
             // Sort by time/ts ascending
             messages.sort((a,b) => {
@@ -730,56 +730,55 @@ async function openAdminChat(chatId) {
                         const m = String(chatId).match(/^property-(\d+)/);
                         if (m) propNum = m[1];
                     } catch(e){}
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (!key || seenKeys.has(key)) continue;
-                        try {
-                            const raw = localStorage.getItem(key);
-                            if (!raw) continue;
-                            const parsed = JSON.parse(raw);
-                            let candidateMsgs = [];
-                            if (Array.isArray(parsed)) {
-                                candidateMsgs = parsed;
-                            } else if (parsed && Array.isArray(parsed.messages)) {
-                                candidateMsgs = parsed.messages;
-                            } else if (parsed && Array.isArray(parsed.items)) {
-                                candidateMsgs = parsed.items;
-                            }
-                            if (!candidateMsgs || !candidateMsgs.length) continue;
-                            // Filter messages that reference this property/chatId
-                            const matches = candidateMsgs.filter(m => {
-                                try {
-                                    if (!m) return false;
-                                    // check meta.property presence
-                                    if (m.meta && m.meta.property) {
-                                        const pp = m.meta.property;
-                                        if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
-                                        if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
-                                        if (pp.key && String(pp.key).indexOf(String(chatId)) !== -1) return true;
-                                    }
-                                    // check message-level property
-                                    if (m.property) {
-                                        const pp = m.property;
-                                        if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
-                                        if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
-                                    }
-                                    // check if message id or conversation id matches chatId
-                                    if (m.conversationId && String(m.conversationId).indexOf(String(chatId)) !== -1) return true;
-                                    if (m.id && String(m.id).indexOf(String(chatId)) !== -1) return true;
-                                    // finally, if text contains property id or chatId
-                                    if (m.text && String(m.text).indexOf(String(propNum || chatId)) !== -1) return true;
-                                    return false;
-                                } catch(e){ return false; }
-                            });
-                            if (matches && matches.length) {
-                                console.log('openAdminChat: deep-scan found', matches.length, 'messages in', key);
-                                matches.forEach(m => {
-                                    const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
-                                    try { if (!seen.has(sig)) { messages.push(m); seen.add(sig); } } catch(e) { messages.push(m); }
+                    try {
+                        let keys = [];
+                        if (window.storageApi && typeof window.storageApi.keys === 'function') {
+                            try { keys = await window.storageApi.keys() || []; } catch(e){ keys = []; }
+                        } else {
+                            // storageApi.keys not available; cannot enumerate keys without localStorage
+                            keys = [];
+                        }
+                        for (const key of keys) {
+                            if (!key || seenKeys.has(key)) continue;
+                            try {
+                                const parsed = safeStorage.getSync(key, null);
+                                if (!parsed) continue;
+                                let candidateMsgs = [];
+                                if (Array.isArray(parsed)) candidateMsgs = parsed;
+                                else if (parsed && Array.isArray(parsed.messages)) candidateMsgs = parsed.messages;
+                                else if (parsed && Array.isArray(parsed.items)) candidateMsgs = parsed.items;
+                                if (!candidateMsgs || !candidateMsgs.length) continue;
+                                const matches = candidateMsgs.filter(m => {
+                                    try {
+                                        if (!m) return false;
+                                        if (m.meta && m.meta.property) {
+                                            const pp = m.meta.property;
+                                            if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
+                                            if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
+                                            if (pp.key && String(pp.key).indexOf(String(chatId)) !== -1) return true;
+                                        }
+                                        if (m.property) {
+                                            const pp = m.property;
+                                            if (pp.id && propNum && String(pp.id) === String(propNum)) return true;
+                                            if (pp.id && String(pp.id).indexOf(String(chatId)) !== -1) return true;
+                                        }
+                                        if (m.conversationId && String(m.conversationId).indexOf(String(chatId)) !== -1) return true;
+                                        if (m.id && String(m.id).indexOf(String(chatId)) !== -1) return true;
+                                        if (m.text && String(m.text).indexOf(String(propNum || chatId)) !== -1) return true;
+                                        return false;
+                                    } catch(e){ return false; }
                                 });
-                            }
-                        } catch(e) {}
-                    }
+                                if (matches && matches.length) {
+                                    console.log('openAdminChat: deep-scan found', matches.length, 'messages in', key);
+                                    matches.forEach(m => {
+                                        const sig = (m.time||m.ts||'')+'|'+(m.text||'')+'|'+(m.sender||'');
+                                        try { if (!seen.has(sig)) { messages.push(m); seen.add(sig); } } catch(e) { messages.push(m); }
+                                    });
+                                }
+                            } catch(e) {}
+                        }
+                        if (messages && messages.length) messages.sort((a,b) => { const ta = a.time || a.ts || 0; const tb = b.time || b.ts || 0; return ta - tb; });
+                    } catch(e){ console.warn('openAdminChat: deep localStorage scan failed', e); }
                     // resort if we found anything
                     if (messages && messages.length) {
                         messages.sort((a,b) => { const ta = a.time || a.ts || 0; const tb = b.time || b.ts || 0; return ta - tb; });
@@ -788,41 +787,49 @@ async function openAdminChat(chatId) {
             }
             // Get chat meta
             try {
-                const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
-                chat = adminChats.find(c => c.id === chatId);
+                const adminChats = safeStorage.getSync('adminChats', []);
+                chat = (adminChats || []).find(c => c.id === chatId);
             } catch(e){}
             if (!chat) {
-                const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-                chat = chats.find(c => c.id === chatId);
+                const chats = safeStorage.getSync('chatNotifications', []);
+                chat = (chats || []).find(c => c.id === chatId);
             }
             if (!chat) {
                 let resolved = null;
                 try {
-                    const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                    const adminChats = safeStorage.getSync('adminChats', []);
                     resolved = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
                     if (!resolved) {
-                        const chats = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
+                        const chats = safeStorage.getSync('chatNotifications', []);
                         resolved = (chats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
                     }
                     if (resolved && resolved.id && resolved.id !== chatId) {
                         console.log('openAdminChat: resolved partial id', chatId, '->', resolved.id);
                         return openAdminChat(resolved.id);
                     }
-                    // Try scanning all localStorage keys for messages that include the chatId
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (!key) continue;
-                        if (String(key).indexOf(chatId) !== -1) {
-                            try {
-                                const data = JSON.parse(localStorage.getItem(key) || 'null');
-                                if (Array.isArray(data) && data.length) {
-                                    console.log('openAdminChat: found messages under storage key', key);
-                                    messages = data.slice();
-                                    break;
-                                }
-                            } catch(e) {}
+                    // Try scanning all storage keys for messages that include the chatId
+                    try {
+                        let keys = [];
+                        if (window.storageApi && typeof window.storageApi.keys === 'function') {
+                            try { keys = await window.storageApi.keys() || []; } catch(e){ keys = []; }
+                        } else {
+                            // storageApi.keys not available; cannot enumerate keys without localStorage
+                            keys = [];
                         }
-                    }
+                        for (const key of keys) {
+                            if (!key) continue;
+                            if (String(key).indexOf(chatId) !== -1) {
+                                try {
+                                    const data = safeStorage.getSync(key, null);
+                                    if (Array.isArray(data) && data.length) {
+                                        console.log('openAdminChat: found messages under storage key', key);
+                                        messages = data.slice();
+                                        break;
+                                    }
+                                } catch(e) {}
+                            }
+                        }
+                    } catch(e) {}
                 } catch(e){ console.warn('openAdminChat: resolution attempt failed', e); }
 
                 // If no chat metadata found, create a minimal chat object so the conversation view opens
@@ -858,7 +865,7 @@ async function openAdminChat(chatId) {
                 const meta = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
                 if(meta) preserved = meta.participantName || meta.userName || null;
             } else {
-                const adminChats = JSON.parse(localStorage.getItem('adminChats') || '[]');
+                const adminChats = safeStorage.getSync('adminChats', []);
                 const meta = (adminChats || []).find(c => c && c.id && (c.id === chatId || String(c.id).indexOf(String(chatId)) !== -1));
                 if(meta) preserved = meta.participantName || meta.userName || null;
             }
@@ -1152,7 +1159,7 @@ async function updateNavUnreadCounts(){
         let userId = null;
         try{
             if (!window.WISPA_DB_ONLY) {
-                const wispaUserRaw = localStorage.getItem('wispaUser');
+                const wispaUserRaw = safeStorage.getSync('wispaUser', null);
                 if(wispaUserRaw){ try{ userId = JSON.parse(wispaUserRaw).id; }catch(e){} }
             }
         }catch(e){}
@@ -1175,15 +1182,11 @@ async function updateNavUnreadCounts(){
                     const notes = nj.notifications || nj || [];
                     notifCount = Array.isArray(notes) ? notes.filter(n => !n.read).length : 0;
                 } else {
-                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
-                        notifCount = 0;
-                    } else {
-                        const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
-                        notifCount = notes.filter(n => !n.read).length;
-                    }
+                    const notes = safeStorage.getSync('notifications_' + userId, []);
+                    notifCount = Array.isArray(notes) ? notes.filter(n => !n.read).length : 0;
                 }
             } catch (e) {
-                try { const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); notifCount = notes.filter(n => !n.read).length; } catch(e){}
+                try { const notes = safeStorage.getSync('notifications_' + userId, []); notifCount = Array.isArray(notes) ? notes.filter(n => !n.read).length : 0; } catch(e){}
             }
 
             try {
@@ -1193,15 +1196,11 @@ async function updateNavUnreadCounts(){
                     const convs = cj.conversations || cj || [];
                     if (Array.isArray(convs)) chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
                 } else {
-                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
-                        chatCount = 0;
-                    } else {
-                        const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
-                        chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
-                    }
+                    const convs = safeStorage.getSync('conversations_' + userId, []);
+                    chatCount = Array.isArray(convs) ? convs.reduce((s,c) => s + (Number(c.unread) || 0), 0) : 0;
                 }
             } catch (e) {
-                try { const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0); } catch(e){}
+                try { const convs = safeStorage.getSync('conversations_' + userId, []); chatCount = Array.isArray(convs) ? convs.reduce((s,c) => s + (Number(c.unread) || 0), 0) : 0; } catch(e){}
             }
         }
 
@@ -1226,9 +1225,9 @@ async function updateNavUnreadCounts(){
                 const _reactions = Array.isArray(window._notificationReactions) ? window._notificationReactions : [];
                 adminAlertCount = (_wispaNotifs.filter(n => !n.read).length || 0) + (_reactions.filter(r => !r.read).length || 0);
             } else {
-                const _wispaNotifs = JSON.parse(localStorage.getItem('wispaNotifications') || '[]');
-                const _reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
-                adminAlertCount = _wispaNotifs.filter(n => !n.read).length + _reactions.filter(r => !r.read).length;
+                const _wispaNotifs = safeStorage.getSync('wispaNotifications', []);
+                const _reactions = safeStorage.getSync('notificationReactions', []);
+                adminAlertCount = (Array.isArray(_wispaNotifs) ? _wispaNotifs.filter(n => !n.read).length : 0) + (Array.isArray(_reactions) ? _reactions.filter(r => !r.read).length : 0);
             }
         }catch(e){ adminAlertCount = 0; }
         // Prefer server-side conversation unread counts for admin badge; fallback to localStorage
@@ -1243,14 +1242,14 @@ async function updateNavUnreadCounts(){
                     if (Array.isArray(convsAll)) adminChatCount = convsAll.reduce((s, c) => s + (Number(c.unread) || 0), 0);
                     else adminChatCount = 0;
                 } else {
-                    const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]');
-                    adminChatCount = convs.filter(n => !n.read).length;
+                    const convs = safeStorage.getSync('chatNotifications', []);
+                    adminChatCount = Array.isArray(convs) ? convs.filter(n => !n.read).length : 0;
                 }
             } catch (e) {
-                try { const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]'); adminChatCount = convs.filter(n => !n.read).length; } catch(e) { adminChatCount = 0; }
+                try { const convs = safeStorage.getSync('chatNotifications', []); adminChatCount = Array.isArray(convs) ? convs.filter(n => !n.read).length : 0; } catch(e) { adminChatCount = 0; }
             }
         } catch (e) {
-            try { const convs = JSON.parse(localStorage.getItem('chatNotifications') || '[]'); adminChatCount = convs.filter(n => !n.read).length; } catch(e) { adminChatCount = 0; }
+            try { const convs = safeStorage.getSync('chatNotifications', []); adminChatCount = Array.isArray(convs) ? convs.filter(n => !n.read).length : 0; } catch(e) { adminChatCount = 0; }
         }
 
         const adminAlertsLink = document.querySelector('a[href="#alerts"]');
@@ -1282,30 +1281,30 @@ window.addEventListener('storage', function(e){
 function processPendingForCurrentUser(){
     try{
         if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) return; // server-side pending processing expected in DB-only mode
-        const wispaUserRaw = localStorage.getItem('wispaUser');
+        const wispaUserRaw = safeStorage.getSync('wispaUser', null);
         if(!wispaUserRaw) return;
         const userId = JSON.parse(wispaUserRaw).id;
         if(!userId) return;
 
         // Move pending notifications
-        const pending = JSON.parse(localStorage.getItem('pendingUserNotifications') || '{}');
+        const pending = safeStorage.getSync('pendingUserNotifications', {});
         if(pending[userId] && Array.isArray(pending[userId]) && pending[userId].length){
             const userNotifsKey = 'notifications_' + userId;
-            const existing = JSON.parse(localStorage.getItem(userNotifsKey) || '[]');
+            const existing = safeStorage.getSync(userNotifsKey, []);
             const toMove = pending[userId];
             // Mark as unread (read=false) when moving
             toMove.forEach(n => { n.read = !!n.read; existing.push(n); });
-            localStorage.setItem(userNotifsKey, JSON.stringify(existing));
+            try{ safeStorage.set(userNotifsKey, existing).catch(()=>{}); }catch(e){}
             // remove moved
             delete pending[userId];
-            localStorage.setItem('pendingUserNotifications', JSON.stringify(pending));
+            try{ safeStorage.set('pendingUserNotifications', pending).catch(()=>{}); }catch(e){}
         }
 
         // Move pending conversations
-        const pendingConvs = JSON.parse(localStorage.getItem('pendingUserConversations') || '{}');
+        const pendingConvs = safeStorage.getSync('pendingUserConversations', {});
         if(pendingConvs[userId] && Array.isArray(pendingConvs[userId]) && pendingConvs[userId].length){
             const convsKey = 'conversations_' + userId;
-            const convs = JSON.parse(localStorage.getItem(convsKey) || '[]');
+            const convs = safeStorage.getSync(convsKey, []);
             const userPending = pendingConvs[userId];
             userPending.forEach(pc => {
                 // add or merge
@@ -1321,22 +1320,22 @@ function processPendingForCurrentUser(){
                 // save messages for conversation
                 try{
                     const convKey = 'wispaMessages_' + userId + '_' + pc.id;
-                    const existingMsgs = JSON.parse(localStorage.getItem(convKey) || '[]');
+                    const existingMsgs = safeStorage.getSync(convKey, []);
                     const msgs = Array.isArray(pc.messages) ? pc.messages : [];
-                    const merged = existingMsgs.concat(msgs);
-                    localStorage.setItem(convKey, JSON.stringify(merged));
+                    const merged = (Array.isArray(existingMsgs) ? existingMsgs : []).concat(msgs);
+                    try{ safeStorage.set(convKey, merged).catch(()=>{}); }catch(e){}
                 }catch(e){console.error(e)}
             });
-            localStorage.setItem(convsKey, JSON.stringify(convs));
+            try{ safeStorage.set(convsKey, convs).catch(()=>{}); }catch(e){}
 
             // remove moved
             delete pendingConvs[userId];
-            localStorage.setItem('pendingUserConversations', JSON.stringify(pendingConvs));
+            try{ safeStorage.set('pendingUserConversations', pendingConvs).catch(()=>{}); }catch(e){}
         }
 
         // Refresh badges and signals
         try{ updateNavUnreadCounts(); } catch(e){}
-        try{ localStorage.setItem('wispaMessageSignal_' + userId, String(Date.now())); } catch(e){}
+        try{ try{ safeStorage.set('wispaMessageSignal_' + userId, String(Date.now())).catch(()=>{}); }catch(e){} } catch(e){}
     }catch(e){ console.error('processPendingForCurrentUser error', e); }
 }
 
@@ -1564,14 +1563,29 @@ if (typeof propertyImageIds === 'undefined') {
             if (!user || !user.id) return;
             const userId = user.id;
             // Load from server-backed KV store
-            try{
+            try {
                 const r = await fetch('/api/storage/all', { credentials: 'include' });
-                if(r && r.ok){ const j = await r.json(); const key = 'likedProperties_' + userId; const arr = (j && j.store && j.store[key]) ? j.store[key] : null; if(Array.isArray(arr) && arr.length){ /* nothing to do */ } else {
-                    // Optionally initialize demo likes if none exist
-                    if(properties && properties.length){ const likedIds = []; const count = Math.min(50, properties.length); for(let i=0;i<count;i++){ const randomIndex = Math.floor(Math.random() * properties.length); const randomId = properties[randomIndex].id; if(randomId && !likedIds.includes(randomId)) likedIds.push(randomId); } if(likedIds.length){ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: likedIds }) }); }
+                if (r && r.ok) {
+                    const j = await r.json();
+                    const key = 'likedProperties_' + userId;
+                    const arr = (j && j.store && j.store[key]) ? j.store[key] : null;
+                    if (!Array.isArray(arr) || !arr.length) {
+                        // Optionally initialize demo likes if none exist
+                        if (properties && properties.length) {
+                            const likedIds = [];
+                            const count = Math.min(50, properties.length);
+                            for (let i = 0; i < count; i++) {
+                                const randomIndex = Math.floor(Math.random() * properties.length);
+                                const randomId = properties[randomIndex].id;
+                                if (randomId && !likedIds.includes(randomId)) likedIds.push(randomId);
+                            }
+                            if (likedIds.length) {
+                                await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: likedIds }) });
+                            }
+                        }
                     }
                 }
-            }catch(e){}
+            } catch (e) {}
         } catch (e) { /* ignore */ }
     }
 
@@ -1689,8 +1703,8 @@ if (typeof propertyImageIds === 'undefined') {
                 // If property has an explicit localPhotos key, prefer those data-URLs
                 if(property._localPhotosKey){
                     try{
-                        const raw = localStorage.getItem(property._localPhotosKey);
-                        if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; }
+                        const arr = safeStorage.getSync(property._localPhotosKey, null);
+                        if(Array.isArray(arr) && arr.length) return arr;
                     }catch(e){}
                 }
                 // Prefer photoUrls / photos (may contain data: or remote URLs)
@@ -1973,7 +1987,7 @@ if (typeof propertyImageIds === 'undefined') {
         document.querySelectorAll('#hot-row-1 .like-btn, #hot-row-2 .like-btn, #hot-row-1 .similar-property-like-btn, #hot-row-2 .similar-property-like-btn').forEach(b => b.addEventListener('click', _handleLikeHot));
 
         // Initialize liked state for hot rows
-        const _likedHot = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        const _likedHot = safeStorage.getSync('likedProperties', []);
         document.querySelectorAll('#hot-row-1 .like-btn, #hot-row-2 .like-btn, #hot-row-1 .similar-property-like-btn, #hot-row-2 .similar-property-like-btn').forEach(btn => {
             const idStr = btn.dataset.propertyId || btn.dataset.id;
             if (!idStr) return;
@@ -2333,7 +2347,7 @@ if (typeof propertyImageIds === 'undefined') {
                     const poster = window.apiFetch ? window.apiFetch : fetch;
                     const resp = await poster('/api/contact-messages', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ name: message.name, email: message.email, subject: message.subject, message: message.message }) });
                     if (resp && resp.ok) {
-                        showNotification('Thank you for your message! We\\'ll get back to you soon.');
+                        showNotification('Thank you for your message! We will get back to you soon.');
                         try { contactForm.reset(); } catch(e){}
                         return;
                     }
@@ -2345,18 +2359,18 @@ if (typeof propertyImageIds === 'undefined') {
                             window._pendingContactMessages = window._pendingContactMessages || [];
                             window._pendingContactMessages.unshift(message);
                             try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingContactMessages', value: window._pendingContactMessages }) }); }catch(e){}
-                            showNotification('Message saved offline and will be delivered when possible.');
+                            showNotification('Message saved offline.');
                             try { contactForm.reset(); } catch(e){}
                             return;
                         }
                     }catch(e){}
                     // Legacy fallback
                     try{
-                        const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+                        const messages = safeStorage.getSync('contactMessages', []);
                         messages.unshift(message); // Add to the beginning
-                        localStorage.setItem('contactMessages', JSON.stringify(messages));
+                        try{ safeStorage.set('contactMessages', messages).catch(()=>{}); }catch(e){}
                     }catch(e){}
-                    showNotification('Thank you for your message! We\\'ll get back to you soon.');
+                    showNotification('Thank you for your message! We will get back to you soon.');
                     try { contactForm.reset(); } catch(e){}
                 }
             })();
@@ -2602,13 +2616,7 @@ if (typeof propertyImageIds === 'undefined') {
     const chatInput = document.getElementById('chat-input');
     const sendChatBtn = document.getElementById('send-chat');
 
-    function loadChatMessages() {
-        // Chat is server-backed; prompt user to open a conversation.
-        try{
-            if(!chatMessages) return;
-            chatMessages.innerHTML = '<div style="padding:12px;color:var(--text-light);">Open a conversation to view messages (server-backed).</div>';
-        }catch(e){}
-    }
+    
 
     function sendMessage(text) {
         // Use server API to send messages within a conversation. This generic sendMessage
@@ -2629,7 +2637,7 @@ if (typeof propertyImageIds === 'undefined') {
             // If running in DB-only mode, do not read localStorage
             if (window.WISPA_DB_ONLY) return null;
             // Fallback to localStorage only if present (admin pages shim this)
-            const wispaUser = (typeof localStorage !== 'undefined') ? localStorage.getItem('wispaUser') : null;
+            const wispaUser = safeStorage.getSync('wispaUser', null);
             if (!wispaUser) return null;
             const userData = JSON.parse(wispaUser);
             return userData.id;
@@ -2674,7 +2682,7 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {}
         if (sender === 'user') {
             try {
-                const u = (window._wispaCurrentUser) ? window._wispaCurrentUser : (window.WISPA_DB_ONLY ? null : (JSON.parse(localStorage.getItem('wispaUser') || '{}')));
+                const u = (window._wispaCurrentUser) ? window._wispaCurrentUser : (window.WISPA_DB_ONLY ? null : (safeStorage.getSync('wispaUser', {})));
                 if (u) {
                     if (u.username) msg.userName = u.username;
                     if (u.email) msg.userEmail = u.email;
@@ -2762,7 +2770,7 @@ if (typeof propertyImageIds === 'undefined') {
 
         // Save a lightweight backup of the conversation (per-conversation backup key)
         try {
-            if (!window.WISPA_DB_ONLY) localStorage.setItem(key + '_backup', JSON.stringify(list));
+            try{ safeStorage.set(key + '_backup', list).catch(()=>{}); }catch(e){}
         } catch(e) {}
     };
 
@@ -3222,7 +3230,7 @@ if (typeof propertyImageIds === 'undefined') {
                     }
                 } catch(e){}
                 // Legacy fallback: persist to localStorage if not DB-only
-                try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
+                try { safeStorage.set('properties', properties).catch(()=>{}); } catch (e) {}
                 return Promise.resolve(property);
             }
         } catch (e) {
@@ -3237,7 +3245,7 @@ if (typeof propertyImageIds === 'undefined') {
                     window._pendingProperties.push(property);
                     try { await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: window._pendingProperties }) }); } catch(e){}
                 } else {
-                    localStorage.setItem('properties', JSON.stringify(properties));
+                    try{ safeStorage.set('properties', properties).catch(()=>{}); }catch(e){}
                 }
             } catch (e) {}
             return Promise.resolve(property);
@@ -3252,12 +3260,9 @@ if (typeof propertyImageIds === 'undefined') {
     function loadLikedProperties() {
         // Try to load from localStorage first
         try {
-            const stored = localStorage.getItem('likedProperties');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) {
-                    return Promise.resolve(parsed);
-                }
+            const stored = safeStorage.getSync('likedProperties', null);
+            if (stored && Array.isArray(stored)) {
+                return Promise.resolve(stored);
             }
         } catch (e) {
             console.warn('Failed to parse stored likedProperties', e);
@@ -3279,9 +3284,9 @@ if (typeof propertyImageIds === 'undefined') {
         try{
             if (window._likedPropertiesCache && Array.isArray(window._likedPropertiesCache)) return window._likedPropertiesCache;
             if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) return [];
-            const stored = localStorage.getItem('likedProperties');
+            const stored = safeStorage.getSync('likedProperties', []);
             if (stored) {
-                try { return JSON.parse(stored); } catch(e) { return []; }
+                try { return stored; } catch(e) { return []; }
             }
             return [];
         }catch(e){ return []; }
@@ -3301,7 +3306,7 @@ if (typeof propertyImageIds === 'undefined') {
                     return false;
                 } catch(e) { return false; }
             } else {
-                try { localStorage.setItem('likedProperties', JSON.stringify(liked)); return true; } catch(e){ return false; }
+                try { await safeStorage.set('likedProperties', liked); return true; } catch(e){ return false; }
             }
         } catch(e) { return false; }
     }
@@ -3362,18 +3367,18 @@ if (typeof propertyImageIds === 'undefined') {
                         renderChatMessages([]);
                         return [];
                     }
-                    const msgs = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-                    renderChatMessages(msgs);
-                    return msgs;
+                    const msgs = safeStorage.getSync('chatMessages', []);
+                    renderChatMessages(Array.isArray(msgs) ? msgs : []);
+                    return Array.isArray(msgs) ? msgs : [];
                 });
         } catch (e) {
             if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
                 renderChatMessages([]);
                 return Promise.resolve([]);
             }
-            const msgs = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-            renderChatMessages(msgs);
-            return Promise.resolve(msgs);
+            const msgs = safeStorage.getSync('chatMessages', []);
+            renderChatMessages(Array.isArray(msgs) ? msgs : []);
+            return Promise.resolve(Array.isArray(msgs) ? msgs : []);
         }
     }
 
@@ -3399,10 +3404,10 @@ if (typeof propertyImageIds === 'undefined') {
                         renderChatMessages(messages);
                         return;
                     }
-                    // fallback to localStorage
-                    const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+                    // fallback to storage helper
+                    const messages = safeStorage.getSync('chatMessages', []);
                     messages.push({ text: text, timestamp: new Date().toLocaleString() });
-                    localStorage.setItem('chatMessages', JSON.stringify(messages));
+                    try{ safeStorage.set('chatMessages', messages).catch(()=>{}); }catch(e){}
                     loadChatMessages(cid);
                 });
         } catch (e) {
@@ -3414,9 +3419,9 @@ if (typeof propertyImageIds === 'undefined') {
                 renderChatMessages(messages);
                 return Promise.resolve(messages);
             }
-            const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            const messages = safeStorage.getSync('chatMessages', []);
             messages.push({ text: text, timestamp: new Date().toLocaleString() });
-            localStorage.setItem('chatMessages', JSON.stringify(messages));
+            try{ safeStorage.set('chatMessages', messages).catch(()=>{}); }catch(e){}
             return loadChatMessages(cid);
         }
     }
