@@ -1,12 +1,15 @@
     <script>
-    // Require user login via central helper (uses server session)
+    // Optional: try to detect existing session but DO NOT redirect to login.
+    // Keeping index open for now so users can browse without authentication.
     document.addEventListener('DOMContentLoaded', async function() {
         try{
-            if (window.requireLogin) await window.requireLogin();
-            else {
-                try { const r = await fetch('/api/me', { credentials: 'include' }); if(!r || !r.ok) window.location.href = 'login.html'; } catch(e) { window.location.href = 'login.html'; }
+            // If helpers exist, attempt a graceful non-blocking user fetch for UI personalization
+            if (window.getCurrentUser) {
+                try { window._initialUser = await window.getCurrentUser(); } catch(e) { /* ignore */ }
+            } else {
+                try { const r = await fetch('/api/me', { credentials: 'include' }); if (r && r.ok) { try { const j = await r.json(); window._initialUser = j && j.user ? j.user : j; } catch(e){} } } catch(e) { /* ignore */ }
             }
-        }catch(e){ window.location.href = 'login.html'; }
+        }catch(e){ /* ignore */ }
     });
     </script>
 <!DOCTYPE html>
