@@ -1742,7 +1742,7 @@ if (typeof propertyImageIds === 'undefined') {
                 e.stopPropagation();
                 const idRaw = this.dataset.id || this.dataset.propertyId || this.getAttribute('data-id') || this.getAttribute('data-property-id');
                 const id = isNaN(parseInt(idRaw)) ? idRaw : parseInt(idRaw);
-                const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                const liked = getLikedPropertiesSync();
                 const exists = liked.findIndex(x => String(x) === String(id));
                 if (exists > -1) {
                     liked.splice(exists, 1);
@@ -1756,7 +1756,7 @@ if (typeof propertyImageIds === 'undefined') {
         });
 
         // Load liked state
-        const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        const liked = getLikedPropertiesSync();
         document.querySelectorAll('.like-btn, .similar-property-like-btn').forEach(btn => {
             const idRaw = btn.dataset.id || btn.dataset.propertyId || btn.getAttribute('data-id') || btn.getAttribute('data-property-id');
             if (!idRaw) return;
@@ -1857,7 +1857,7 @@ if (typeof propertyImageIds === 'undefined') {
             const idStr = btn.dataset.propertyId || btn.dataset.id;
             if (!idStr) return;
             const id = String(idStr);
-            const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            const liked = getLikedPropertiesSync();
             const existIndex = liked.findIndex(x => String(x) === id);
             if (existIndex > -1) {
                 liked.splice(existIndex, 1);
@@ -1874,7 +1874,7 @@ if (typeof propertyImageIds === 'undefined') {
         document.querySelectorAll('#featured-list .like-btn, #featured-list .similar-property-like-btn').forEach(btn => btn.addEventListener('click', _handleLikeClickFeatured));
 
         // Initialize liked state
-        const _likedFeatured = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            const _likedFeatured = getLikedPropertiesSync();
         document.querySelectorAll('#featured-list .like-btn, #featured-list .similar-property-like-btn').forEach(btn => {
             const idStr = btn.dataset.propertyId || btn.dataset.id;
             if (!idStr) return;
@@ -1954,7 +1954,7 @@ if (typeof propertyImageIds === 'undefined') {
             const idStr = btn.dataset.propertyId || btn.dataset.id;
             if (!idStr) return;
             const id = String(idStr);
-            const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            const liked = getLikedPropertiesSync();
             const existIndex = liked.findIndex(x => String(x) === id);
             if (existIndex > -1) {
                 liked.splice(existIndex, 1);
@@ -2052,7 +2052,7 @@ if (typeof propertyImageIds === 'undefined') {
                 e.preventDefault();
                 e.stopPropagation();
                 const id = this.dataset.propertyId || this.getAttribute('data-property-id');
-                const liked = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                const liked = getLikedPropertiesSync();
                 const idx = liked.indexOf(id);
                 if (idx > -1) {
                     liked.splice(idx, 1);
@@ -2068,7 +2068,7 @@ if (typeof propertyImageIds === 'undefined') {
         });
 
         // Initialize liked state
-        const likedInit = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        const likedInit = getLikedPropertiesSync();
         document.querySelectorAll('#available-list .like-btn, #available-list .similar-property-like-btn').forEach(btn => {
             const id = btn.dataset.id || btn.dataset.propertyId || btn.getAttribute('data-property-id');
             if (likedInit.includes(String(id)) || likedInit.includes(Number(id))) {
@@ -2098,7 +2098,7 @@ if (typeof propertyImageIds === 'undefined') {
             // Handle property type filtering
             if (currentCategory !== 'all') {
                 if (currentCategory === 'favorites') {
-                    const likedIds = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+                    const likedIds = getLikedPropertiesSync();
                     typeMatch = likedIds.includes(property.id);
                 } else if (currentCategory === 'land') {
                     typeMatch = property.type === 'sale' && property.title.toLowerCase().includes('land');
@@ -3270,6 +3270,19 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {
             return Promise.resolve([]);
         }
+    }
+
+    // Synchronous accessor for liked properties used by renderers.
+    function getLikedPropertiesSync(){
+        try{
+            if (window._likedPropertiesCache && Array.isArray(window._likedPropertiesCache)) return window._likedPropertiesCache;
+            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) return [];
+            const stored = localStorage.getItem('likedProperties');
+            if (stored) {
+                try { return JSON.parse(stored); } catch(e) { return []; }
+            }
+            return [];
+        }catch(e){ return []; }
     }
 
     // Persist liked properties: in DB-only mode POST to API, otherwise localStorage
