@@ -191,13 +191,7 @@ app.get('/api/storage/all', async (req, res) => {
     if(r && r.rows){ r.rows.forEach(row => { try{ out[row.k] = row.v; }catch(e){} }); }
     return res.json({ store: out });
   }catch(e){
-    // fallback to file-backed store
-    try{
-      const entries = await readJson('kv_store.json');
-      const o = {};
-      if(Array.isArray(entries)) entries.forEach(e => { if(e && e.k) o[e.k] = e.v; });
-      return res.json({ store: o });
-    }catch(err){ return res.status(500).json({ error: 'Failed to load storage', details: String(e) }); }
+    return res.status(500).json({ error: 'Failed to load storage from DB', details: String(e) });
   }
 });
 
@@ -215,14 +209,7 @@ app.post('/api/storage', async (req, res) => {
       await pool.query('INSERT INTO kv_store(k, v, updated_at) VALUES($1, $2, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, updated_at = now()', [key, value]);
       return res.json({ ok: true });
     }catch(dbErr){
-      // Fallback to file-backed persistence for environments without DB
-      try{
-        const arr = await readJson('kv_store.json');
-        const filtered = (arr || []).filter(x => x && x.k !== key);
-        if(value !== null) filtered.push({ k: key, v: value });
-        await writeJson('kv_store.json', filtered);
-        return res.json({ ok: true, fallback: true });
-      }catch(err){ return res.status(500).json({ error: 'Failed to persist storage', details: String(dbErr) }); }
+      return res.status(500).json({ error: 'Failed to persist storage to DB', details: String(dbErr) });
     }
   }catch(e){ return res.status(500).json({ error: 'Storage endpoint failed', details: String(e) }); }
 });

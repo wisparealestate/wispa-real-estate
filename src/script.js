@@ -7,6 +7,8 @@ const _configured = window.WISPA_API_BASE || _defaultRemote;
 window.WISPA_API_BASE = window.WISPA_API_BASE || _configured;
 // Ensure legacy pages that use `API_URL` pick up the same base.
 window.API_URL = window.API_URL || window.WISPA_API_BASE;
+// Force DB-only mode: disable localStorage and local fallbacks
+try { window.WISPA_DB_ONLY = true; window.WISPA_DISABLE_LOCALSTORAGE = true; } catch(e) {}
 // Load server-backed storage shim so existing localStorage calls persist to DB
 (function(){
     try{
