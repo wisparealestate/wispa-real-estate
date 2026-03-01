@@ -378,7 +378,22 @@ async function uploadLocalPhotosForProperty(property){
     if(!property || !property._localPhotosKey) return null;
     const key = property._localPhotosKey;
     let stored = null;
-    try{ stored = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){ stored = null; }
+    try{
+        if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+            try{
+                const resp = await fetch('/api/storage/all');
+                if (resp && resp.ok) {
+                    const j = await resp.json();
+                    const entry = j && j.store ? j.store[key] : null;
+                    if (entry === null || entry === undefined) stored = null;
+                    else if (entry && entry.value !== undefined) stored = entry.value;
+                    else stored = entry;
+                }
+            }catch(e){ stored = null; }
+        } else {
+            stored = JSON.parse(localStorage.getItem(key) || 'null');
+        }
+    }catch(e){ stored = null; }
     if(!stored || !Array.isArray(stored) || stored.length===0) return null;
     // convert to blobs
     const blobs = stored.map(d => dataURLToBlob(d)).filter(Boolean);
@@ -408,13 +423,19 @@ async function uploadLocalPhotosForProperty(property){
                 if(Array.isArray(window.properties)){
                     const idx = window.properties.findIndex(p => String(p.id) === String(property.id));
                     if(idx>-1) window.properties[idx] = property;
-                    try{ localStorage.setItem('properties', JSON.stringify(window.properties)); }catch(e){}
+                    try{ if (!(typeof window !== 'undefined' && window.WISPA_DB_ONLY)) localStorage.setItem('properties', JSON.stringify(window.properties)); }catch(e){}
                 }
             }catch(e){}
             // attempt to save to server so remote property record includes photos
             try{ await saveProperty(Object.assign({}, property, { photos: urls })); }catch(e){ /* ignore */ }
             // remove stored data-urls to free space
-            try{ localStorage.removeItem(key); }catch(e){}
+            try{
+                if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: key, value: null }) }); }catch(e){}
+                } else {
+                    localStorage.removeItem(key);
+                }
+            }catch(e){}
             return urls;
         }
     }catch(e){ console.warn('uploadLocalPhotosForProperty error', e); }
@@ -424,7 +445,7 @@ async function uploadLocalPhotosForProperty(property){
 // Process all properties with local photos and try to upload them
 async function processLocalPhotosQueue(){
     try{
-        const props = Array.isArray(window.properties) ? window.properties : (function(){ try{ const s = localStorage.getItem('properties'); return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
+        const props = Array.isArray(window.properties) ? window.properties : (function(){ try{ if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) return []; const s = localStorage.getItem('properties'); return s ? JSON.parse(s) : []; }catch(e){ return []; } })();
         if(!Array.isArray(props) || !props.length) return;
         for(const p of props){
             if(p && p._localPhotosKey){
@@ -1152,8 +1173,12 @@ async function updateNavUnreadCounts(){
                     const notes = nj.notifications || nj || [];
                     notifCount = Array.isArray(notes) ? notes.filter(n => !n.read).length : 0;
                 } else {
-                    const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
-                    notifCount = notes.filter(n => !n.read).length;
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        notifCount = 0;
+                    } else {
+                        const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]');
+                        notifCount = notes.filter(n => !n.read).length;
+                    }
                 }
             } catch (e) {
                 try { const notes = JSON.parse(localStorage.getItem('notifications_' + userId) || '[]'); notifCount = notes.filter(n => !n.read).length; } catch(e){}
@@ -1166,8 +1191,12 @@ async function updateNavUnreadCounts(){
                     const convs = cj.conversations || cj || [];
                     if (Array.isArray(convs)) chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
                 } else {
-                    const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
-                    chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        chatCount = 0;
+                    } else {
+                        const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]');
+                        chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0);
+                    }
                 }
             } catch (e) {
                 try { const convs = JSON.parse(localStorage.getItem('conversations_' + userId) || '[]'); chatCount = convs.reduce((s,c) => s + (Number(c.unread) || 0), 0); } catch(e){}
@@ -1188,9 +1217,18 @@ async function updateNavUnreadCounts(){
         }
 
         // Admin counts (global storage keys) - include post-like reactions
-        const _wispaNotifs = JSON.parse(localStorage.getItem('wispaNotifications') || '[]');
-        const _reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
-        const adminAlertCount = _wispaNotifs.filter(n => !n.read).length + _reactions.filter(r => !r.read).length;
+        let adminAlertCount = 0;
+        try{
+            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                const _wispaNotifs = Array.isArray(window._wispaNotifications) ? window._wispaNotifications : [];
+                const _reactions = Array.isArray(window._notificationReactions) ? window._notificationReactions : [];
+                adminAlertCount = (_wispaNotifs.filter(n => !n.read).length || 0) + (_reactions.filter(r => !r.read).length || 0);
+            } else {
+                const _wispaNotifs = JSON.parse(localStorage.getItem('wispaNotifications') || '[]');
+                const _reactions = JSON.parse(localStorage.getItem('notificationReactions') || '[]');
+                adminAlertCount = _wispaNotifs.filter(n => !n.read).length + _reactions.filter(r => !r.read).length;
+            }
+        }catch(e){ adminAlertCount = 0; }
         // Prefer server-side conversation unread counts for admin badge; fallback to localStorage
         let adminChatCount = 0;
         try {
@@ -1241,6 +1279,7 @@ window.addEventListener('storage', function(e){
 // Process pending notifications/conversations created by admin when the user logs in
 function processPendingForCurrentUser(){
     try{
+        if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) return; // server-side pending processing expected in DB-only mode
         const wispaUserRaw = localStorage.getItem('wispaUser');
         if(!wispaUserRaw) return;
         const userId = JSON.parse(wispaUserRaw).id;
@@ -1712,7 +1751,7 @@ if (typeof propertyImageIds === 'undefined') {
                     liked.push(id);
                     this.classList.add('liked');
                 }
-                localStorage.setItem('likedProperties', JSON.stringify(liked));
+                try{ saveLikedPropertiesArray(liked); }catch(e){}
             });
         });
 
@@ -1829,7 +1868,7 @@ if (typeof propertyImageIds === 'undefined') {
                 btn.textContent = '♥';
                 btn.classList.add('liked');
             }
-            localStorage.setItem('likedProperties', JSON.stringify(liked));
+            try{ saveLikedPropertiesArray(liked); }catch(e){}
         }
 
         document.querySelectorAll('#featured-list .like-btn, #featured-list .similar-property-like-btn').forEach(btn => btn.addEventListener('click', _handleLikeClickFeatured));
@@ -1926,7 +1965,7 @@ if (typeof propertyImageIds === 'undefined') {
                 btn.textContent = '♥';
                 btn.classList.add('liked');
             }
-            localStorage.setItem('likedProperties', JSON.stringify(liked));
+            try{ saveLikedPropertiesArray(liked); }catch(e){}
         }
 
         document.querySelectorAll('#hot-row-1 .like-btn, #hot-row-2 .like-btn, #hot-row-1 .similar-property-like-btn, #hot-row-2 .similar-property-like-btn').forEach(b => b.addEventListener('click', _handleLikeHot));
@@ -2024,7 +2063,7 @@ if (typeof propertyImageIds === 'undefined') {
                     this.textContent = '♥';
                     this.classList.add('liked');
                 }
-                localStorage.setItem('likedProperties', JSON.stringify(liked));
+                try{ saveLikedPropertiesArray(liked); }catch(e){}
             });
         });
 
@@ -2287,12 +2326,38 @@ if (typeof propertyImageIds === 'undefined') {
                 read: false
             };
             
-            const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-            messages.unshift(message); // Add to the beginning
-            localStorage.setItem('contactMessages', JSON.stringify(messages));
-            
-            showNotification('Thank you for your message! We\'ll get back to you soon.');
-            contactForm.reset();
+            (async function(){
+                try{
+                    const poster = window.apiFetch ? window.apiFetch : fetch;
+                    const resp = await poster('/api/contact-messages', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ name: message.name, email: message.email, subject: message.subject, message: message.message }) });
+                    if (resp && resp.ok) {
+                        showNotification('Thank you for your message! We\\'ll get back to you soon.');
+                        try { contactForm.reset(); } catch(e){}
+                        return;
+                    }
+                    throw new Error('Contact POST failed');
+                }catch(e){
+                    // In DB-only mode, queue to server KV and in-memory; otherwise fallback to localStorage
+                    try{
+                        if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                            window._pendingContactMessages = window._pendingContactMessages || [];
+                            window._pendingContactMessages.unshift(message);
+                            try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingContactMessages', value: window._pendingContactMessages }) }); }catch(e){}
+                            showNotification('Message saved offline and will be delivered when possible.');
+                            try { contactForm.reset(); } catch(e){}
+                            return;
+                        }
+                    }catch(e){}
+                    // Legacy fallback
+                    try{
+                        const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+                        messages.unshift(message); // Add to the beginning
+                        localStorage.setItem('contactMessages', JSON.stringify(messages));
+                    }catch(e){}
+                    showNotification('Thank you for your message! We\\'ll get back to you soon.');
+                    try { contactForm.reset(); } catch(e){}
+                }
+            })();
         });
     }
     const postAdModal = document.getElementById('post-ad-modal');
@@ -3140,27 +3205,39 @@ if (typeof propertyImageIds === 'undefined') {
                 try { renderAvailableProperties(); } catch(e) {}
                 return property;
             } catch (err) {
-                console.warn('saveProperty API failed, falling back to localStorage', err);
+                console.warn('saveProperty API failed', err);
                 try {
-                    if (!Array.isArray(properties)) {
-                        console.warn('properties was not an array in saveProperty.catch; resetting to []', properties);
-                        properties = [];
-                    }
+                    if (!Array.isArray(properties)) properties = [];
                     properties.push(property);
                 } catch (e) { console.error('Failed to push property to local properties array', e, properties); }
+                // In DB-only mode, queue pending properties in-memory and persist to server KV
+                try {
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        window._pendingProperties = window._pendingProperties || [];
+                        window._pendingProperties.push(property);
+                        try { await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: window._pendingProperties }) }); } catch(e) {}
+                        return Promise.resolve(property);
+                    }
+                } catch(e){}
+                // Legacy fallback: persist to localStorage if not DB-only
                 try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
                 return Promise.resolve(property);
             }
         } catch (e) {
-            // Fallback to localStorage
+            // Fallback handling: queue to server KV in DB-only mode, otherwise write to localStorage
             try {
-                if (!Array.isArray(properties)) {
-                    console.warn('properties was not an array in saveProperty.fallback; resetting to []', properties);
-                    properties = [];
-                }
+                if (!Array.isArray(properties)) properties = [];
                 properties.push(property);
             } catch (errPush) { console.error('Failed to push property to local properties array (fallback)', errPush, properties); }
-            try { localStorage.setItem('properties', JSON.stringify(properties)); } catch (e) {}
+            try {
+                if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                    window._pendingProperties = window._pendingProperties || [];
+                    window._pendingProperties.push(property);
+                    try { await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'pendingProperties', value: window._pendingProperties }) }); } catch(e){}
+                } else {
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                }
+            } catch (e) {}
             return Promise.resolve(property);
         }
     }
@@ -3193,6 +3270,25 @@ if (typeof propertyImageIds === 'undefined') {
         } catch (e) {
             return Promise.resolve([]);
         }
+    }
+
+    // Persist liked properties: in DB-only mode POST to API, otherwise localStorage
+    async function saveLikedPropertiesArray(liked) {
+        try {
+            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                try {
+                    const poster = window.apiFetch ? window.apiFetch : fetch;
+                    const r = await poster('/api/user/liked-properties', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ liked: liked }) });
+                    if (r && r.ok) return true;
+                    // best-effort: persist to server KV when API call fails
+                    window._pendingLikedProperties = liked;
+                    try{ await fetch('/api/storage', { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: 'likedProperties', value: liked }) }); }catch(e){}
+                    return false;
+                } catch(e) { return false; }
+            } else {
+                try { localStorage.setItem('likedProperties', JSON.stringify(liked)); return true; } catch(e){ return false; }
+            }
+        } catch(e) { return false; }
     }
 
     function loadNotifications(userId) {
