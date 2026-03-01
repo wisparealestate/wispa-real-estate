@@ -1151,10 +1151,12 @@ async function updateNavUnreadCounts(){
     try{
         let userId = null;
         try{
-            const wispaUserRaw = localStorage.getItem('wispaUser');
-            if(wispaUserRaw){ try{ userId = JSON.parse(wispaUserRaw).id; }catch(e){} }
+            if (!window.WISPA_DB_ONLY) {
+                const wispaUserRaw = localStorage.getItem('wispaUser');
+                if(wispaUserRaw){ try{ userId = JSON.parse(wispaUserRaw).id; }catch(e){} }
+            }
         }catch(e){}
-        // If localStorage is disabled (DB-only mode) or empty, ask server for current user via /api/me
+        // If still no userId, ask server for current user via /api/me
         if(!userId){
             try{
                 const r = window.apiFetch ? await window.apiFetch('/api/me') : await fetch('/api/me');

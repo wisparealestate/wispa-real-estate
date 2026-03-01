@@ -1582,14 +1582,21 @@
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                     // Ensure admin conversation thread exists/updated so admin sees it
                     try{ upsertAdminChat(convId, userId, userName, text, propertyId, (property && property.title) || null); }catch(e){}
-                    // persist returned messages to localStorage for admin visibility
+                    // persist returned messages to server KV for admin visibility (DB-only), otherwise localStorage
                     try{
-                        if(userId){
+                        if (userId) {
                             const lk = 'wispaMessages_' + userId + '_' + convId;
-                            let arr = [];
-                            try{ arr = JSON.parse(localStorage.getItem(lk) || '[]'); }catch(e){ arr = []; }
-                            msgs.forEach(m=>arr.push(m));
-                            try{ localStorage.setItem(lk, JSON.stringify(arr)); }catch(e){}
+                            if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                                try{
+                                    const respAll = await fetch('/api/storage/all');
+                                    if (respAll && respAll.ok){ const j = await respAll.json(); const existing = (j && j.store && Array.isArray(j.store[lk])) ? j.store[lk] : (j && j.store && j.store[lk] && j.store[lk].value ? j.store[lk].value : []);
+                                        const merged = Array.isArray(existing) ? existing.concat(msgs) : msgs.slice();
+                                        await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: lk, value: merged }) });
+                                    }
+                                }catch(e){}
+                            } else {
+                                try{ let arr = JSON.parse(localStorage.getItem(lk) || '[]'); msgs.forEach(m=>arr.push(m)); localStorage.setItem(lk, JSON.stringify(arr)); }catch(e){}
+                            }
                         }
                     }catch(e){}
                     return;
@@ -1623,16 +1630,26 @@
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 // ensure admin thread exists when using fallback
                 try{ upsertAdminChat(convId, userId, userName, text, propertyId, (property && property.title) || null); }catch(e){}
-                // also persist fallback messages to localStorage so admin can read them
+                // also persist fallback messages to server KV in DB-only mode, otherwise to localStorage so admin can read them
                 try{
                     if(userId){
                         const lk = 'wispaMessages_' + userId + '_' + convId;
-                        let arr2 = [];
-                        try{ arr2 = JSON.parse(localStorage.getItem(lk) || '[]'); }catch(e){ arr2 = []; }
-                        // append new messages from window._wispaMessages
                         const newMsgs = window._wispaMessages[key] || [];
-                        newMsgs.forEach(m=>arr2.push(m));
-                        try{ localStorage.setItem(lk, JSON.stringify(arr2)); }catch(e){}
+                        if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                            try{
+                                const respAll = await fetch('/api/storage/all');
+                                if (respAll && respAll.ok){ const j = await respAll.json(); const existing = (j && j.store && Array.isArray(j.store[lk])) ? j.store[lk] : (j && j.store && j.store[lk] && j.store[lk].value ? j.store[lk].value : []);
+                                    const merged = Array.isArray(existing) ? existing.concat(newMsgs) : newMsgs.slice();
+                                    await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: lk, value: merged }) });
+                                }
+                            }catch(e){
+                                // queue in-memory pending messages when KV unavailable
+                                window._pendingPropertyMessages = window._pendingPropertyMessages || {};
+                                window._pendingPropertyMessages[lk] = (window._pendingPropertyMessages[lk] || []).concat(newMsgs);
+                            }
+                        } else {
+                            try{ let arr2 = JSON.parse(localStorage.getItem(lk) || '[]'); newMsgs.forEach(m=>arr2.push(m)); localStorage.setItem(lk, JSON.stringify(arr2)); }catch(e){}
+                        }
                     }
                 }catch(e){}
             }
@@ -1643,7 +1660,18 @@
             try{
                 const KEY = 'adminChats';
                 let arr = [];
-                try{ arr = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){ arr = []; }
+                try{ 
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        // read adminChats from server KV
+                        try{
+                            const r = await fetch('/api/storage/all');
+                            if (r && r.ok){ const j = await r.json(); arr = (j && j.store && Array.isArray(j.store[KEY])) ? j.store[KEY] : (j && j.store && j.store[KEY] && j.store[KEY].value ? j.store[KEY].value : []); }
+                            else arr = [];
+                        }catch(e){ arr = []; }
+                    } else {
+                        arr = JSON.parse(localStorage.getItem(KEY) || '[]');
+                    }
+                }catch(e){ arr = []; }
                 let meta = arr.find(a => a.id === convId);
                 const now = Date.now();
                 if(!meta){
@@ -1657,16 +1685,36 @@
                     if(propertyId) meta.propertyId = propertyId;
                     if(propertyTitle) meta.title = propertyTitle;
                 }
-                try{ localStorage.setItem(KEY, JSON.stringify(arr)); }catch(e){}
+                try{
+                    if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                        try{ await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: KEY, value: arr }) }); }catch(e){ window._pendingAdminChats = window._pendingAdminChats || []; window._pendingAdminChats.push({ key: KEY, value: arr }); }
+                    } else {
+                        localStorage.setItem(KEY, JSON.stringify(arr));
+                    }
+                }catch(e){}
                 // also update chatNotifications for older admin UI paths
                 try{
                     const KEY2 = 'chatNotifications';
                     let notifs = [];
-                    try{ notifs = JSON.parse(localStorage.getItem(KEY2) || '[]'); }catch(e){ notifs = []; }
-                    const nIdx = notifs.findIndex(n => n.id === convId);
-                    const notif = { id: convId, title: propertyTitle || ('Conversation ' + convId), lastMessage: lastMessage || '', updated: now, unread: 1 };
-                    if(nIdx === -1) notifs.unshift(notif); else { notifs[nIdx] = Object.assign({}, notifs[nIdx], notif); }
-                    try{ localStorage.setItem(KEY2, JSON.stringify(notifs)); }catch(e){}
+                    try{
+                        if (typeof window !== 'undefined' && window.WISPA_DB_ONLY) {
+                            try{
+                                const r2 = await fetch('/api/storage/all');
+                                let notifsArr = [];
+                                if (r2 && r2.ok){ const j2 = await r2.json(); notifsArr = (j2 && j2.store && Array.isArray(j2.store[KEY2])) ? j2.store[KEY2] : (j2 && j2.store && j2.store[KEY2] && j2.store[KEY2].value ? j2.store[KEY2].value : []); }
+                                const nIdx = notifsArr.findIndex(n => n.id === convId);
+                                const notif = { id: convId, title: propertyTitle || ('Conversation ' + convId), lastMessage: lastMessage || '', updated: now, unread: 1 };
+                                if(nIdx === -1) notifsArr.unshift(notif); else { notifsArr[nIdx] = Object.assign({}, notifsArr[nIdx], notif); }
+                                try{ await fetch('/api/storage', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: KEY2, value: notifsArr }) }); }catch(e){ window._pendingAdminNotifications = window._pendingAdminNotifications || []; window._pendingAdminNotifications.push(notif); }
+                            }catch(e){ }
+                        } else {
+                            notifs = JSON.parse(localStorage.getItem(KEY2) || '[]');
+                            const nIdx = notifs.findIndex(n => n.id === convId);
+                            const notif = { id: convId, title: propertyTitle || ('Conversation ' + convId), lastMessage: lastMessage || '', updated: now, unread: 1 };
+                            if(nIdx === -1) notifs.unshift(notif); else { notifs[nIdx] = Object.assign({}, notifs[nIdx], notif); }
+                            try{ localStorage.setItem(KEY2, JSON.stringify(notifs)); }catch(e){}
+                        }
+                    }catch(e){}
                 }catch(e){}
             }catch(e){ console.warn('upsertAdminChat failed', e); }
         }

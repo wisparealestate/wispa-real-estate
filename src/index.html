@@ -297,8 +297,8 @@
             if (!userObj) { alert('Please log in to like properties'); window.location.href = 'login.html'; return; }
             const userId = userObj.id;
             
-            // Use user-specific liked properties
-            const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+            // Use helper-backed liked properties (may be server-backed)
+            const likedProperties = (typeof getLikedPropertiesSync === 'function') ? getLikedPropertiesSync() : JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
             const index = likedProperties.indexOf(propertyId);
             
             if (index > -1) {
@@ -313,7 +313,7 @@
                 btn.classList.add('liked');
             }
             
-            localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties));
+            try{ if (typeof saveLikedPropertiesArray === 'function') saveLikedPropertiesArray(likedProperties); else localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties)); }catch(e){ try{ localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties)); }catch(_){} }
         }
         
         // Restructure property cards to match similar properties design
@@ -461,7 +461,7 @@
                 const u = await window.getCurrentUser();
                 if (!u) return;
                 try{
-                    const likedProperties = JSON.parse(localStorage.getItem('likedProperties_' + u.id) || '[]');
+                    const likedProperties = (typeof getLikedPropertiesSync === 'function') ? getLikedPropertiesSync() : JSON.parse(localStorage.getItem('likedProperties_' + u.id) || '[]');
                     likedProperties.forEach(id => {
                         const btn = document.querySelector(`.like-btn[data-property-id="${id}"]`);
                         if (btn) { btn.textContent = '♥'; btn.classList.add('liked'); }
