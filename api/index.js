@@ -358,12 +358,21 @@ app.use('/api/admin', async (req, res, next) => {
 
 app.get('/api/admin/sent-notifications', async (req, res) => {
   try {
-    // Return notifications that were sent by admins. We mark these by storing `sentByAdmin: true` inside the JSON `data` column.
-    const result = await pool.query(`SELECT * FROM notifications WHERE (data->> 'sentByAdmin') = 'true' ORDER BY created_at DESC`);
-    return res.json({ notifications: result.rows });
+    // Prefer the new `sent_notifications` table
+    try{
+      const r = await pool.query('SELECT * FROM sent_notifications ORDER BY sent_at DESC LIMIT 200');
+      return res.json({ notifications: r.rows });
+    }catch(e){
+      // Fallback to legacy `notifications` table where sentByAdmin flag may exist
+      try{
+        const result = await pool.query(`SELECT * FROM notifications WHERE (data->> 'sentByAdmin') = 'true' ORDER BY created_at DESC`);
+        return res.json({ notifications: result.rows });
+      }catch(err){
+        return res.status(500).json({ error: 'Failed to load sent notifications', details: err && err.message ? err.message : String(err) });
+      }
+    }
   } catch (err) {
-    // If the notifications table or JSON access is not available, return a helpful error
-    return res.status(500).json({ error: 'Failed to load sent notifications', details: err.message });
+    return res.status(500).json({ error: 'Failed to load sent notifications', details: err && err.message ? err.message : String(err) });
   }
 });
 
@@ -826,6 +835,20 @@ app.post('/api/notifications', async (req, res) => {
     const category = (notification && notification.category) || 'all';
     const target = userId ? String(userId) : (notification && (notification.userId || notification.target)) || null;
     try {
+      // Route into specialized tables when appropriate
+      if(category === 'alerts' || category === 'alert'){
+        const r = await pool.query('INSERT INTO alerts (user_id, type, payload, read, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *', [userId, notification.type || 'generic_alert', JSON.stringify(notification || {}), notification.read ? true : false, createdAt]);
+        return res.json({ notification: r.rows[0] });
+      }
+      if(category === 'requests' || category === 'request'){
+        const r = await pool.query('INSERT INTO requests (user_id, property_id, request_type, status, payload, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *', [userId, notification.propertyId || null, notification.request_type || 'generic', notification.status || 'pending', JSON.stringify(notification || {}), createdAt, createdAt]);
+        return res.json({ notification: r.rows[0] });
+      }
+      if(category === 'activities' || category === 'activity'){
+        const r = await pool.query('INSERT INTO activities (user_id, activity_type, target_type, target_id, payload, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', [userId, notification.activity_type || 'generic', notification.target_type || null, notification.target_id || null, JSON.stringify(notification || {}), createdAt]);
+        return res.json({ notification: r.rows[0] });
+      }
+      // Default: write to legacy notifications table if available
       const result = await pool.query(
         `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
@@ -833,7 +856,7 @@ app.post('/api/notifications', async (req, res) => {
       );
       return res.json({ notification: result.rows[0] });
     } catch (errInsert) {
-      // Fallback to legacy schema if present
+      // Fallback to legacy schema if available
       try {
         const result2 = await pool.query(
           'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
