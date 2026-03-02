@@ -413,13 +413,45 @@ app.post('/api/admin/sent-notifications', async (req, res) => {
 app.get('/api/admin/notifications', async (req, res) => {
   try {
     const category = req.query.category;
-    let result;
-    if (category) {
-      result = await pool.query('SELECT * FROM notifications WHERE category = $1 ORDER BY created_at DESC', [category]);
-    } else {
-      result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
-    }
-    return res.json({ notifications: result.rows });
+    // Aggregate notifications from legacy and new tables into a unified shape
+    const results = [];
+    // legacy notifications (if exists)
+    try{
+      const q = category ? await pool.query('SELECT * FROM notifications WHERE category = $1', [category]) : await pool.query('SELECT * FROM notifications');
+      if(q && q.rows) results.push(...q.rows.map(r => Object.assign({}, r, { source: 'notifications', created_at: r.created_at || r.createdAt })));
+    }catch(e){}
+    // sent_notifications
+    try{
+      const q2 = await pool.query('SELECT * FROM sent_notifications ORDER BY sent_at DESC LIMIT 200');
+      if(q2 && q2.rows){
+        results.push(...q2.rows.map(r => ({ id: r.id, category: 'sent_alert', title: (r.payload && r.payload.title) || null, body: (r.payload && r.payload.body) || null, target: null, data: r.payload || null, is_read: true, created_at: r.sent_at, source: 'sent_notifications' })));
+      }
+    }catch(e){}
+    // alerts
+    try{
+      const q3 = await pool.query('SELECT * FROM alerts ORDER BY created_at DESC LIMIT 200');
+      if(q3 && q3.rows){
+        results.push(...q3.rows.map(r => ({ id: r.id, category: 'alerts', title: (r.payload && r.payload.title) || null, body: (r.payload && r.payload.body) || null, target: null, data: r.payload || null, is_read: !!r.read, created_at: r.created_at, source: 'alerts' })));
+      }
+    }catch(e){}
+    // requests
+    try{
+      const q4 = await pool.query('SELECT * FROM requests ORDER BY created_at DESC LIMIT 200');
+      if(q4 && q4.rows){
+        results.push(...q4.rows.map(r => ({ id: r.id, category: 'requests', title: r.request_type || null, body: r.status || null, target: r.property_id ? String(r.property_id) : null, data: r.payload || null, is_read: false, created_at: r.created_at, source: 'requests' })));
+      }
+    }catch(e){}
+    // activities
+    try{
+      const q5 = await pool.query('SELECT * FROM activities ORDER BY created_at DESC LIMIT 200');
+      if(q5 && q5.rows){
+        results.push(...q5.rows.map(r => ({ id: r.id, category: r.activity_type || 'activities', title: null, body: null, target: null, data: r.payload || null, is_read: false, created_at: r.created_at, source: 'activities' })));
+      }
+    }catch(e){}
+
+    // Sort combined results by created_at desc and return
+    results.sort((a,b)=>{ const ta = new Date(a.created_at).getTime()||0; const tb = new Date(b.created_at).getTime()||0; return tb - ta; });
+    return res.json({ notifications: results });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to load notifications', details: err.message });
   }
@@ -471,9 +503,20 @@ app.get('/api/activities', async (req, res) => {
 app.post('/api/admin/notifications/:id/read', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await pool.query('UPDATE notifications SET is_read = true, updated_at = now() WHERE id = $1 RETURNING *', [id]);
-    if (!result.rows || result.rows.length === 0) return res.status(404).json({ error: 'Notification not found' });
-    return res.json({ notification: result.rows[0] });
+    // Try updating legacy `notifications` first, then alerts, then messages
+    try{
+      const r = await pool.query('UPDATE notifications SET is_read = true, updated_at = now() WHERE id = $1 RETURNING *', [id]);
+      if (r.rows && r.rows.length) return res.json({ notification: r.rows[0], table: 'notifications' });
+    }catch(e){}
+    try{
+      const r2 = await pool.query('UPDATE alerts SET read = true WHERE id = $1 RETURNING *', [id]);
+      if (r2.rows && r2.rows.length) return res.json({ notification: r2.rows[0], table: 'alerts' });
+    }catch(e){}
+    try{
+      const r3 = await pool.query('UPDATE messages SET is_read = true WHERE id = $1 RETURNING *', [id]);
+      if (r3.rows && r3.rows.length) return res.json({ notification: r3.rows[0], table: 'messages' });
+    }catch(e){}
+    return res.status(404).json({ error: 'Notification not found' });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to mark notification read', details: err.message });
   }
@@ -483,12 +526,35 @@ app.post('/api/admin/notifications/:id/read', async (req, res) => {
 app.post('/api/admin/notifications/:id/unread', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await pool.query('UPDATE notifications SET is_read = false, updated_at = now() WHERE id = $1 RETURNING *', [id]);
-    if (!result.rows || result.rows.length === 0) return res.status(404).json({ error: 'Notification not found' });
-    return res.json({ notification: result.rows[0] });
+    try{
+      const r = await pool.query('UPDATE notifications SET is_read = false, updated_at = now() WHERE id = $1 RETURNING *', [id]);
+      if (r.rows && r.rows.length) return res.json({ notification: r.rows[0], table: 'notifications' });
+    }catch(e){}
+    try{
+      const r2 = await pool.query('UPDATE alerts SET read = false WHERE id = $1 RETURNING *', [id]);
+      if (r2.rows && r2.rows.length) return res.json({ notification: r2.rows[0], table: 'alerts' });
+    }catch(e){}
+    try{
+      const r3 = await pool.query('UPDATE messages SET is_read = false WHERE id = $1 RETURNING *', [id]);
+      if (r3.rows && r3.rows.length) return res.json({ notification: r3.rows[0], table: 'messages' });
+    }catch(e){}
+    return res.status(404).json({ error: 'Notification not found' });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to mark notification unread', details: err.message });
   }
+});
+
+// Admin: mark all notifications as read across supported tables
+app.post('/api/admin/notifications/mark-all-read', async (req, res) => {
+  try{
+    // Mark legacy notifications
+    try{ await pool.query('UPDATE notifications SET is_read = true, updated_at = now() WHERE is_read = false'); }catch(e){}
+    // Mark alerts
+    try{ await pool.query('UPDATE alerts SET read = true WHERE read = false'); }catch(e){}
+    // Mark messages
+    try{ await pool.query('UPDATE messages SET is_read = true WHERE is_read = false'); }catch(e){}
+    return res.json({ ok: true });
+  }catch(e){ return res.status(500).json({ error: 'Failed to mark all read', details: e && e.message ? e.message : String(e) }); }
 });
 
 app.get('/api/admin/profile', async (req, res) => {
