@@ -186,6 +186,23 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       try { await writeDiag({ where: 'setval-error', error: e && e.message ? e.message : String(e) }); } catch(_){ }
     }
 
+      // Also record an activity and an owner alert where appropriate
+      try{
+        // Activities feed
+        await pool.query(
+          'INSERT INTO activities (user_id, activity_type, target_type, target_id, payload, created_at) VALUES ($1,$2,$3,$4,$5,now())',
+          [p.user_id || null, 'property_created', 'property', propertyId, JSON.stringify(notifPayload)]
+        );
+      }catch(e){ /* non-fatal */ }
+      try{
+        // Owner alert (if we have an owner user_id)
+        if(p.user_id){
+          await pool.query(
+            'INSERT INTO alerts (user_id, type, payload, read, created_at) VALUES ($1,$2,$3,$4,now())',
+            [p.user_id, 'your_property_posted', JSON.stringify({ propertyId, title: p.title || propertyRow.title || null }), false]
+          );
+        }
+      }catch(e){ /* non-fatal */ }
     try{
       const infoAfter = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
       if(infoAfter && infoAfter.rows && infoAfter.rows[0]){

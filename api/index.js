@@ -218,28 +218,43 @@ app.get("/api/notifications", async (req, res) => {
   const userId = req.query.userId;
   const category = req.query.category;
   try {
-    let result;
-    if (userId && category) {
-      result = await pool.query('SELECT * FROM notifications WHERE (user_id = $1 OR target = $1) AND category = $2 ORDER BY created_at DESC', [userId, category]);
-    } else if (userId) {
-      result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 OR target = $1 ORDER BY created_at DESC', [userId]);
-    } else if (category) {
-      result = await pool.query('SELECT * FROM notifications WHERE category = $1 ORDER BY created_at DESC', [category]);
-    } else {
-      result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+    // Route queries to the new specialized tables when possible
+    if (category === 'alerts' || category === 'alert') {
+      const q = userId ? await pool.query('SELECT * FROM alerts WHERE user_id = $1 ORDER BY created_at DESC', [userId]) : await pool.query('SELECT * FROM alerts ORDER BY created_at DESC');
+      return res.json({ notifications: q.rows });
     }
-    return res.json({ notifications: result.rows });
-  } catch (err) {
-    // Fallback: deployments may not have a `notifications` table. Try file-backed store.
+    if (category === 'requests' || category === 'request') {
+      const q = userId ? await pool.query('SELECT * FROM requests WHERE user_id = $1 ORDER BY created_at DESC', [userId]) : await pool.query('SELECT * FROM requests ORDER BY created_at DESC');
+      return res.json({ notifications: q.rows });
+    }
+    if (category === 'messages' || category === 'conversations') {
+      // For messages/conversations, return messages for the user or all messages grouped by conversation
+      if (userId) {
+        const q = await pool.query('SELECT * FROM messages WHERE sender_id = $1 OR recipient_id = $1 ORDER BY created_at DESC', [userId]);
+        return res.json({ notifications: q.rows });
+      } else {
+        const q = await pool.query('SELECT * FROM messages ORDER BY created_at DESC');
+        return res.json({ notifications: q.rows });
+      }
+    }
+
+    // Activities feed
+    if (category === 'activities' || req.path === '/api/activities') {
+      const q = await pool.query('SELECT * FROM activities ORDER BY created_at DESC');
+      return res.json({ notifications: q.rows });
+    }
+
+    // Default: fallback to legacy `notifications` table if present
     try {
+      const result = await pool.query('SELECT * FROM notifications ORDER BY created_at DESC');
+      return res.json({ notifications: result.rows });
+    } catch (err) {
+      // File-backed fallback
       const rows = await readJson('notifications.json');
-      let filtered = rows;
-      if (userId) filtered = rows.filter(r => String(r.user_id || r.userId || r.user || r.target) === String(userId));
-      if (category) filtered = filtered.filter(r => String(r.category || 'all') === String(category));
-      return res.json({ notifications: filtered });
-    } catch (e) {
-      res.status(500).json({ error: 'Database error fetching notifications', details: err.message });
+      return res.json({ notifications: rows });
     }
+  } catch (err) {
+    return res.status(500).json({ error: 'Database error fetching notifications', details: (err && err.message) ? err.message : String(err) });
   }
 });
 
@@ -361,23 +376,24 @@ app.post('/api/admin/sent-notifications', async (req, res) => {
     const payload = Object.assign({}, data || {}, { sentByAdmin: true, adminId: admin.id });
     const createdAt = new Date().toISOString();
     try {
-      const insert = await pool.query(
-        `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-        ['sent_alert', title || null, body || null, null, JSON.stringify(payload), false, createdAt, createdAt]
+      // Persist into the new `sent_notifications` table
+      const sn = await pool.query(
+        `INSERT INTO sent_notifications (to_user_id, channel, payload, success, sent_at) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [null, 'admin', JSON.stringify({ title: title || null, body: body || null, data: payload }), true, createdAt]
       );
-      return res.json({ notification: insert.rows[0] });
-    } catch (errInsert) {
-      // Fallback for older deployments that expect legacy columns (user_id, read)
-      try {
-        const insert2 = await pool.query(
-          'INSERT INTO notifications (user_id, title, body, data, created_at, read) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-          [null, title || null, body || null, JSON.stringify(payload), createdAt, false]
+      // Also keep legacy notifications table for compatibility when available
+      try{
+        const insert = await pool.query(
+          `INSERT INTO notifications (category, title, body, target, data, is_read, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+          ['sent_alert', title || null, body || null, null, JSON.stringify(payload), false, createdAt, createdAt]
         );
-        return res.json({ notification: insert2.rows[0] });
-      } catch (err2) {
-        return res.status(500).json({ error: 'Failed to create sent notification', details: err2.message || errInsert.message });
+        return res.json({ notification: insert.rows[0], sent: sn.rows[0] });
+      }catch(e){
+        return res.json({ sent: sn.rows[0] });
       }
+    } catch (errInsert) {
+      return res.status(500).json({ error: 'Failed to create sent notification', details: errInsert.message || String(errInsert) });
     }
   } catch (err) {
     return res.status(500).json({ error: 'Failed to create sent notification', details: err.message });
@@ -428,15 +444,17 @@ app.get('/api/admin/messages', async (req, res) => {
 // Activities feed: expose recent notifications as activities
 app.get('/api/activities', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, category, title, body, target, data, is_read, created_at, updated_at FROM notifications ORDER BY created_at DESC LIMIT 200');
-    return res.json({ activities: result.rows });
-  } catch (err) {
-    try {
+    // Prefer the new `activities` table
+    try{
+      const result = await pool.query('SELECT id, activity_type, payload AS data, created_at FROM activities ORDER BY created_at DESC LIMIT 200');
+      return res.json({ activities: result.rows });
+    }catch(e){
+      // Fallback to legacy notifications JSON
       const rows = await readJson('notifications.json');
       return res.json({ activities: rows });
-    } catch (e) {
-      return res.status(500).json({ error: 'Activities not available', details: err.message });
     }
+  } catch (err) {
+    return res.status(500).json({ error: 'Activities not available', details: err.message });
   }
 });
 
