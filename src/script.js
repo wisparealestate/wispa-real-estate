@@ -1182,7 +1182,7 @@ async function updateNavUnreadCounts(){
         let chatCount = 0;
         if (userId) {
             try {
-                const nr = window.apiFetch ? await window.apiFetch('/api/notifications?userId=' + encodeURIComponent(userId)) : await fetch('/api/notifications?userId=' + encodeURIComponent(userId));
+                const nr = window.apiFetch ? await window.apiFetch('/api/notifications?userId=' + encodeURIComponent(userId) + '&category=alerts') : await fetch('/api/notifications?userId=' + encodeURIComponent(userId) + '&category=alerts');
                 if (nr && nr.ok) {
                     const nj = await nr.json();
                     const notes = nj.notifications || nj || [];
@@ -3141,7 +3141,7 @@ if (typeof propertyImageIds === 'undefined') {
                             };
                                     if(u && u.id){
                                         try{
-                                            await poster2('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, notification: notif }) });
+                                            await poster2('/api/notifications?category=alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, notification: notif }) });
                                         }catch(e){
                                             // fallback: queue in-memory pending notifications and try to persist to server KV
                                             try{
@@ -3317,15 +3317,60 @@ if (typeof propertyImageIds === 'undefined') {
         } catch(e) { return false; }
     }
 
-    function loadNotifications(userId) {
+    function loadNotifications(userId, category) {
         // Server-backed notifications only; do not use localStorage fallback.
         try {
             const fetcher = window.apiFetch ? window.apiFetch : fetch;
-            return fetcher('/api/notifications?userId=' + encodeURIComponent(userId))
+            const q = '/api/notifications?userId=' + encodeURIComponent(userId) + (category ? ('&category=' + encodeURIComponent(category)) : '');
+            return fetcher(q)
                 .then(r => r.ok ? r.json() : Promise.reject())
                 .then(data => Array.isArray(data.notifications) ? data.notifications : (data.notifications || []))
                 .catch(() => []);
         } catch (e) { return Promise.resolve([]); }
+    }
+
+    // Create a request (user inquiry/visit/offer/etc.)
+    // Usage: await createRequest(userId, { propertyId, request_type, status, payload })
+    async function createRequest(userId, reqBody) {
+        try {
+            const poster = window.apiFetch ? window.apiFetch : fetch;
+            const payload = Object.assign({}, reqBody || {});
+            const body = { userId: userId || null, notification: payload };
+            const resp = await poster('/api/notifications?category=requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });
+            if (resp && resp.ok) {
+                try { return await resp.json(); } catch (e) { return { ok: true }; }
+            }
+            // fallback: persist to server KV so client can retry later
+            try{
+                const pendingKey = 'pendingRequests_' + (userId || 'anon');
+                const existing = await (async ()=>{ try{ const r = await fetch(STORAGE_ALL_URL, { credentials: 'include' }); if(r && r.ok){ const j = await r.json(); return j.store && j.store[pendingKey] ? JSON.parse(j.store[pendingKey]) : []; } }catch(e){} return []; })();
+                existing.unshift(body);
+                await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: pendingKey, value: JSON.stringify(existing) }) });
+            }catch(e){}
+            return null;
+        } catch (e) { return null; }
+    }
+
+    // Create an activity (analytics/event) record
+    // Usage: await createActivity(userId, { activity_type, target_type, target_id, payload })
+    async function createActivity(userId, act) {
+        try {
+            const poster = window.apiFetch ? window.apiFetch : fetch;
+            const payload = Object.assign({}, act || {});
+            const body = { userId: userId || null, notification: payload };
+            const resp = await poster('/api/notifications?category=activities', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });
+            if (resp && resp.ok) {
+                try { return await resp.json(); } catch (e) { return { ok: true }; }
+            }
+            // fallback: persist to server KV
+            try{
+                const pendingKey = 'pendingActivities_' + (userId || 'anon');
+                const existing = await (async ()=>{ try{ const r = await fetch(STORAGE_ALL_URL, { credentials: 'include' }); if(r && r.ok){ const j = await r.json(); return j.store && j.store[pendingKey] ? JSON.parse(j.store[pendingKey]) : []; } }catch(e){} return []; })();
+                existing.unshift(body);
+                await fetch(STORAGE_URL, { method: 'POST', credentials: 'include', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ key: pendingKey, value: JSON.stringify(existing) }) });
+            }catch(e){}
+            return null;
+        } catch (e) { return null; }
     }
 
     function loadConversations(userId) {
