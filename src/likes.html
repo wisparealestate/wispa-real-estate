@@ -117,7 +117,7 @@
           // post badge
           const postBadge = prop && prop.postTo ? `<span class="property-badge ${prop.postTo}">${prop.postTo==='hot'? '🔥 Hot' : prop.postTo==='featured'? '⭐ Featured' : '✓ Available'}</span>` : '';
 
-          a.innerHTML = `
+                a.innerHTML = `
             <div class="property-image-container">
               ${postBadge}
               ${mediaHtml}
@@ -127,7 +127,10 @@
               <p class="price">${price}</p>
               <div class="location-with-like">
                 <p class="location">${location}</p>
-                <button class="like-btn liked" data-property-id="${id}" onclick="(function(e){e.preventDefault(); removeLike('${id}');})(event)">♥</button>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                      <button class="like-btn liked" data-property-id="${id}" onclick="(function(e){e.preventDefault(); removeLike('${id}');})(event)">♥</button>
+                      <button class="btn" onclick="(function(e){e.preventDefault(); shareProperty('${id}');})(event)" style="padding:6px 10px;border-radius:6px;">Share</button>
+                    </div>
               </div>
             </div>
           `;
@@ -148,6 +151,15 @@
         window._wispaLikedProperties[userId] = arr;
         // re-render list without full page reload
         location.reload();
+      };
+      // Share helper uses createActivity to record a share event
+      window.shareProperty = async function(id){
+        try{
+          const u = (window.getCurrentUser ? await window.getCurrentUser() : null);
+          const uid = u && u.id ? u.id : null;
+          await createActivity(uid, { activity_type: 'property_share', target_type: 'property', target_id: id, payload: { via: 'likes_page' } });
+          alert('Shared — activity recorded');
+        }catch(e){ alert('Share failed'); }
       };
     })();
   </script>

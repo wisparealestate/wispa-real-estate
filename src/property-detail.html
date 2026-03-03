@@ -628,6 +628,24 @@
                     <span>Email</span>
                 </button>
             </div>
+            <div style="margin-top:16px;">
+                <form id="request-form" style="display:flex;flex-direction:column;gap:8px;max-width:720px;margin:12px auto 0;">
+                    <label style="font-weight:600;">Send a Request</label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <select name="type" id="request-type" style="padding:8px;border-radius:6px;border:1px solid var(--border);min-width:160px;">
+                            <option value="inquiry">Inquiry</option>
+                            <option value="visit">Request Visit</option>
+                            <option value="offer">Make Offer</option>
+                        </select>
+                        <input id="request-name" type="text" placeholder="Your name (optional)" style="flex:1;padding:8px;border-radius:6px;border:1px solid var(--border);" />
+                    </div>
+                    <textarea id="request-note" placeholder="Your message" rows="4" style="padding:10px;border-radius:6px;border:1px solid var(--border);"></textarea>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button id="request-send" type="button" class="contact-btn" style="padding:10px 16px;min-width:120px;">Send Request</button>
+                        <span id="request-status" style="color:var(--text-light);font-size:14px;"></span>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Similar Properties Section -->
@@ -808,6 +826,41 @@
                 }
             }
         }
+
+        // Wire request form to createRequest helper
+        document.addEventListener('DOMContentLoaded', function(){
+            try{
+                const sendBtn = document.getElementById('request-send');
+                const statusEl = document.getElementById('request-status');
+                if(!sendBtn) return;
+                sendBtn.addEventListener('click', async function(){
+                    try{
+                        statusEl.textContent = 'Sending...';
+                        const typeEl = document.getElementById('request-type');
+                        const noteEl = document.getElementById('request-note');
+                        const nameEl = document.getElementById('request-name');
+                        const type = typeEl ? typeEl.value : 'inquiry';
+                        const note = noteEl ? noteEl.value : '';
+                        const name = nameEl ? nameEl.value : '';
+                        const u = (window.getCurrentUser ? await window.getCurrentUser() : null);
+                        const uid = u && u.id ? u.id : null;
+                        const body = { propertyId: currentPropId || null, request_type: type, status: 'pending', payload: { note: note || null, name: name || null } };
+                        const res = await createRequest(uid, body);
+                        if(res && (res.notification || res.request)){
+                            statusEl.style.color = 'green';
+                            statusEl.textContent = 'Request sent';
+                            if(noteEl) noteEl.value = '';
+                            if(nameEl) nameEl.value = '';
+                        } else {
+                            statusEl.style.color = 'orange';
+                            statusEl.textContent = 'Queued for delivery (offline)';
+                        }
+                    }catch(e){
+                        try{ document.getElementById('request-status').textContent = 'Failed to send'; }catch(_){}
+                    }
+                });
+            }catch(e){}
+        });
 
         // Navigate carousel
         window.prevImage = function() {
