@@ -1063,6 +1063,9 @@ app.post('/api/conversations/messages', async (req, res) => {
 
     return res.json({ message: result.rows[0] });
   } catch (err) {
+    // Log the original error for diagnostics before attempting fallbacks
+    try{ await writeDiagLog({ where: 'post-conversation-message-error', convId, message: (message && typeof message === 'object') ? Object.assign({}, message, { body: undefined }) : message, error: err && err.stack ? err.stack : String(err) }); }catch(_){ }
+
     // Fallback for older schema: messages table may be legacy with (sender_id, receiver_id, content, sent_at)
     try {
       const senderId = message.userId || null;
@@ -1109,6 +1112,7 @@ app.post('/api/conversations/messages', async (req, res) => {
       } catch (e) {}
       return res.json({ message: r2.rows[0], fallback: true });
     } catch (e2) {
+      try{ await writeDiagLog({ where: 'post-conversation-message-fallback-failed', convId, message: (message && typeof message === 'object') ? Object.assign({}, message, { body: undefined }) : message, error: (e2 && e2.stack) ? e2.stack : String(e2) }); }catch(_){ }
       res.status(500).json({ error: 'Database error appending message', details: err.message + ' / ' + (e2 && e2.message) });
     }
   }
@@ -1200,6 +1204,7 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
 
     return res.json({ messages: mapped, property: convProperty });
   } catch (err) {
+    try{ await writeDiagLog({ where: 'get-conversation-messages-error', convId, error: err && err.stack ? err.stack : String(err) }); }catch(_){ }
     res.status(500).json({ error: 'Database error fetching conversation messages', details: err.message });
   }
 });
