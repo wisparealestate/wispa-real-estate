@@ -406,179 +406,10 @@
     <script src="script.js"></script>
     <script>
         let notifications = [];
-        let currentFilter = 'all';
-
-        // Generate notifications from user activities (user-specific)
-        async function generateNotifications() {
-            const notifies = [];
-            const user = await window.getCurrentUser();
-
-            if (!user || !user.id) {
-                return notifies;
-            }
-
-            const userId = user.id;
-
-            // Server-backed endpoints for likes, purchases, conversations and activity
-            // are not implemented yet; use empty arrays to avoid localStorage.
-            const likedProps = [];
-            const purchases = [];
-            const conversations = [];
-            const activityLog = [];
-
-            // 1. Login Activity Notifications (none available without activityLog)
-            if (activityLog && activityLog.length > 0) {
-                activityLog.slice(0, 3).forEach((activity, idx) => {
-                    if (activity.type === 'login') {
-                        notifies.push({
-                            id: 'login-' + idx,
-                            type: 'login',
-                            title: 'Account Login',
-                            message: `Successful login from ${activity.location || 'unknown location'} at ${new Date(activity.timestamp).toLocaleString()}`,
-                            fullMessage: `Your account was successfully accessed. Login time: ${new Date(activity.timestamp).toLocaleString()}. If this wasn't you, please change your password immediately.`,
-                            timestamp: new Date(activity.timestamp),
-                            read: false,
-                            details: {
-                                'Location': activity.location || 'Unknown',
-                                'Device': activity.device || 'Web Browser',
-                                'IP Address': activity.ip || 'Not recorded'
-                            }
-                        });
-                    }
-                });
-            }
-
-            // 2. Liked Properties Notifications (no client-side store)
-            if (likedProps && likedProps.length > 0) {
-                const recentLikes = likedProps.slice(-3);
-                recentLikes.forEach((propId, idx) => {
-                    notifies.push({
-                        id: 'like-' + idx,
-                        type: 'like',
-                        title: 'Property Liked',
-                        message: `You marked property #${propId} as a favorite`,
-                        fullMessage: `You have successfully added property #${propId} to your liked properties. You can view all your liked properties in the "Likes" section.`,
-                        timestamp: new Date(Date.now() - (idx * 3600000)),
-                        read: idx > 0,
-                        details: {
-                            'Property ID': propId,
-                            'Total Likes': likedProps.length,
-                            'Action': 'View in Likes'
-                        }
-                    });
-                });
-            }
-
-            // 3. Chat/Message Notifications (no client-side store)
-            if (conversations && conversations.length > 0) {
-                conversations.slice(0, 3).forEach((conv, idx) => {
-                    const lastMsg = conv.messages && conv.messages.length > 0 ? 
-                        conv.messages[conv.messages.length - 1] : null;
-                    if (lastMsg) {
-                        notifies.push({
-                            id: 'msg-' + idx,
-                            type: 'message',
-                            title: `New message from ${conv.agentName || 'Agent'}`,
-                            message: lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : ''),
-                            fullMessage: lastMsg.text,
-                            timestamp: new Date(lastMsg.ts),
-                            read: idx > 0,
-                            conversationId: conv.id,
-                            details: {
-                                'From': conv.agentName || 'Agent',
-                                'Conversation': conv.subject || 'Property Inquiry',
-                                'Messages': (conv.messages || []).length
-                            }
-                        });
-                    }
-                });
-            }
-
-            // 4. System Messages
-            const systemMessages = [
-                {
-                    id: 'sys-1',
-                    type: 'system',
-                    title: 'Profile Verification Reminder',
-                    message: 'Complete your profile to unlock more features and match with better listings',
-                    fullMessage: 'Your profile is 75% complete. Finish filling out your profile details to get access to personalized property recommendations and agent connections.',
-                    timestamp: new Date(Date.now() - 86400000),
-                    read: true,
-                    details: {
-                        'Status': '75% Complete',
-                        'Action Required': 'Update Profile Information',
-                        'Priority': 'Medium'
-                    }
-                },
-                {
-                    id: 'sys-2',
-                    type: 'system',
-                    title: 'Security Update Required',
-                    message: 'Update your password to enhance account security',
-                    fullMessage: 'We recommend updating your password at least once every 90 days for security purposes. Your last password change was over 2 months ago.',
-                    timestamp: new Date(Date.now() - 172800000),
-                    read: true,
-                    details: {
-                        'Last Changed': '60 days ago',
-                        'Recommendation': 'Change Password',
-                        'Priority': 'High'
-                    }
-                }
-            ];
-
-            // 5. Listing Notifications (no client-side purchases store)
-            if (purchases && purchases.length > 0) {
-                const listingNotify = {
-                    id: 'lst-1',
-                    type: 'listing',
-                    title: 'New Properties Listed',
-                    message: `${purchases.length} new properties added to your saved searches`,
-                    fullMessage: `We found ${purchases.length} new property listings that match your saved search criteria. These properties were recently added by our agents.`,
-                    timestamp: new Date(Date.now() - 3600000),
-                    read: false,
-                    details: {
-                        'Matching Properties': purchases.length,
-                        'Search Updated': new Date().toLocaleDateString(),
-                        'View': 'Browse New Listings'
-                    }
-                };
-                notifies.push(listingNotify);
-            }
-
-            // Add system messages
-            notifies.push(...systemMessages);
-
-            return notifies.sort((a, b) => b.timestamp - a.timestamp);
-        }
-
-        // Initialize notifications - load user-specific notifications
-        async function init() {
-            const user = await window.getCurrentUser();
-
-            if (!user || !user.id) {
-                console.log('User not logged in');
-                return;
-            }
-
-            const userId = user.id;
-
-            // No client-side persistent store; build notifications in-memory
-            const generated = await generateNotifications();
-            notifications = generated;
-
-            // Persist in-memory for this session
-            window._wispaNotifications = notifications;
-            renderNotifications();
-        }
-
-        function saveNotifications() {
-            // persist in-memory only; server-backed persistence should replace this
-            window._wispaNotifications = notifications;
-        }
+        let loading = false;
 
         function formatTime(date) {
-            // Handle both Date objects and strings from localStorage
-            const dateObj = typeof date === 'string' ? new Date(date) : date;
+            const dateObj = typeof date === 'string' ? new Date(date) : (date instanceof Date ? date : new Date(date));
             const now = new Date();
             const diffMs = now - dateObj;
             const diffMins = Math.floor(diffMs / 60000);
@@ -593,55 +424,148 @@
         }
 
         function getIcon(type) {
-            const icons = {
-                login: '🔐',
-                like: '❤️',
-                message: '💬',
-                system: '⚙️',
-                listing: '🏠',
-                admin: '📢'
-            };
+            const icons = { login: '🔐', like: '❤️', message: '💬', system: '⚙️', listing: '🏠', admin: '📢' };
             return icons[type] || '🔔';
         }
 
-        function renderNotifications() {
-            // Always show all notifications for users on this page.
-            const filtered = Array.isArray(notifications) ? notifications.slice() : [];
+        function mapServerRow(r) {
+            // Normalize server row shapes into UI-friendly notification objects
+            const payload = r.payload || r.data || null;
+            const title = r.title || (payload && payload.title) || (r.body && String(r.body).slice(0, 60)) || 'Notification';
+            const body = r.body || (payload && payload.body) || r.message || '';
+            const created = r.created_at || r.sent_at || r.createdAt || r.sentAt || new Date().toISOString();
+            const readFlag = (r.is_read === true) || (r.read === true) || (r.is_read === 't');
+            return {
+                id: r.id || (payload && payload.id) || Math.random().toString(36).slice(2),
+                type: r.category || (payload && payload.type) || 'system',
+                title: title,
+                message: String(body).slice(0, 240),
+                fullMessage: body,
+                timestamp: created,
+                read: !!readFlag,
+                details: payload || r.meta || null
+            };
+        }
 
+        async function fetchNotifications() {
+            loading = true;
+            renderLoading();
+            try {
+                const user = (window.getCurrentUser && await window.getCurrentUser()) || null;
+                const userIdQuery = user && user.id ? `?userId=${encodeURIComponent(user.id)}` : '';
+                const res = await fetch(`/api/notifications${userIdQuery}`, { credentials: 'same-origin' });
+                if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+                const json = await res.json();
+                const rows = json.notifications || [];
+                notifications = rows.map(mapServerRow).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                renderNotifications();
+            } catch (err) {
+                renderError(err.message || String(err));
+            } finally {
+                loading = false;
+                renderLoading();
+            }
+        }
+
+        function renderLoading() {
+            const list = document.getElementById('notificationsList');
+            const loader = document.getElementById('notificationsLoader');
+            if (loading) {
+                loader.style.display = 'block';
+                list.style.opacity = '0.6';
+            } else {
+                loader.style.display = 'none';
+                list.style.opacity = '1';
+            }
+        }
+
+        function renderError(msg) {
+            const err = document.getElementById('notificationsError');
+            err.textContent = msg;
+            err.style.display = 'block';
+        }
+
+        function clearError() {
+            const err = document.getElementById('notificationsError');
+            err.textContent = '';
+            err.style.display = 'none';
+        }
+
+        function renderNotifications() {
+            clearError();
             const list = document.getElementById('notificationsList');
             const empty = document.getElementById('emptyState');
-
-            if (filtered.length === 0) {
+            if (!Array.isArray(notifications) || notifications.length === 0) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
                 return;
             }
-
             empty.style.display = 'none';
-            list.innerHTML = filtered.map(n => `
-                <div class="notification-item ${n.read ? 'read' : 'unread'} notification-clickable" data-id="${n.id}" onclick="openNotificationModal('${n.id}')">
-                    <div class="notification-icon ${n.type}">
-                        ${getIcon(n.type)}
-                    </div>
+            list.innerHTML = notifications.map(n => `
+                <div class="notification-item ${n.read ? 'read' : 'unread'} notification-clickable" data-id="${n.id}">
+                    <div class="notification-icon ${n.type}">${getIcon(n.type)}</div>
                     <div class="notification-content">
-                        <div class="notification-title">${n.title}</div>
-                        <div class="notification-message">${n.message}</div>
+                        <div class="notification-title">${escapeHtml(n.title)}</div>
+                        <div class="notification-message">${escapeHtml(n.message)}</div>
                         <div class="notification-time">${formatTime(n.timestamp)}</div>
+                        <div class="notification-actions">
+                            <button class="notification-action" onclick="openNotificationModal(event, '${n.id}')">Open</button>
+                            <button class="notification-action" onclick="toggleReadApi(event, '${n.id}')">${n.read ? 'Mark unread' : 'Mark read'}</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
+
+            // attach click handlers for items to open modal
+            document.querySelectorAll('.notification-item').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    // ignore clicks coming from action buttons (they call with stopPropagation)
+                    if (e.target.closest('.notification-action')) return;
+                    const id = el.dataset.id;
+                    openNotificationModal(null, id);
+                });
+            });
         }
 
-        function openNotificationModal(id) {
+        function escapeHtml(str) { return String(str || '').replace(/[&<>"]+/g, (s) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
+
+        async function toggleReadApi(e, id) {
+            e.stopPropagation();
+            const n = notifications.find(x => x.id == id);
+            if (!n) return;
+            const shouldMarkRead = !n.read;
+            try {
+                const endpoint = shouldMarkRead ? `/api/admin/notifications/${encodeURIComponent(id)}/read` : `/api/admin/notifications/${encodeURIComponent(id)}/unread`;
+                const res = await fetch(endpoint, { method: 'POST', credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Server error');
+                n.read = shouldMarkRead;
+                renderNotifications();
+            } catch (err) {
+                // fallback: toggle locally
+                n.read = shouldMarkRead;
+                renderNotifications();
+            }
+        }
+
+        async function markAllReadApi() {
+            try {
+                const res = await fetch('/api/admin/notifications/mark-all-read', { method: 'POST', credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Failed');
+                notifications.forEach(n => n.read = true);
+                renderNotifications();
+            } catch (err) {
+                // still mark locally
+                notifications.forEach(n => n.read = true);
+                renderNotifications();
+            }
+        }
+
+        function openNotificationModal(evt, id) {
+            if (evt && evt.stopPropagation) evt.stopPropagation();
             const notif = notifications.find(n => n.id === id);
             if (!notif) return;
 
-            // Mark as read
-            notif.read = true;
-            saveNotifications();
-            renderNotifications();
-
-            // Set modal content
+            // Show modal content
             const modal = document.getElementById('notificationModal');
             const icon = document.getElementById('modalIcon');
             const title = document.getElementById('modalTitle');
@@ -654,130 +578,39 @@
             icon.textContent = getIcon(notif.type);
             title.textContent = notif.title;
             time.textContent = formatTime(notif.timestamp);
-            content.innerHTML = `<p>${notif.fullMessage || notif.message}</p>`;
+            content.innerHTML = `<p>${escapeHtml(notif.fullMessage || notif.message)}</p>`;
 
-            // Build details section with file info
             let detailsHtml = '';
-            if (notif.details && Object.keys(notif.details).length > 0) {
-                detailsHtml = `
-                    <div class="modal-details">
-                        ${Object.entries(notif.details).map(([key, value]) => `
-                            <div class="modal-detail-row">
-                                <span class="modal-detail-label">${key}</span>
-                                <span class="modal-detail-value">${value}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            
-            // Add file attachment info if available
-            if (notif.file) {
-                detailsHtml += `
-                    <div class="modal-details" style="margin-top:16px;">
-                        <div class="modal-detail-row">
-                            <span class="modal-detail-label">📎 Attachment</span>
-                            <span class="modal-detail-value">${notif.file.name}</span>
-                        </div>
-                        <button class="modal-action-btn primary" style="width:100%;margin-top:10px;" onclick="downloadNotificationFile('${notif.id}');">⬇️ Download File</button>
-                    </div>
-                `;
+            if (notif.details && typeof notif.details === 'object') {
+                detailsHtml = `<div class="modal-details">${Object.entries(notif.details).map(([k,v])=>`<div class="modal-detail-row"><span class="modal-detail-label">${escapeHtml(k)}</span><span class="modal-detail-value">${escapeHtml(v)}</span></div>`).join('')}</div>`;
             }
             details.innerHTML = detailsHtml;
 
-            // Build actions section
-            let actionsHtml = '';
-            if (notif.type === 'login') {
-                actionsHtml = `
-                    <button class="modal-action-btn" onclick="closeNotificationModal()">OK</button>
-                    <button class="modal-action-btn primary" onclick="window.location.href='security.html'">Review Security</button>
-                `;
-            } else if (notif.type === 'message') {
-                actionsHtml = `
-                    <button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>
-                    <button class="modal-action-btn primary" onclick="window.location.href='messages.html?conv=${notif.conversationId || ''}'; closeNotificationModal();">Reply</button>
-                `;
-            } else if (notif.type === 'like') {
-                actionsHtml = `
-                    <button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>
-                    <button class="modal-action-btn primary" onclick="window.location.href='likes.html'; closeNotificationModal();">View Likes</button>
-                `;
-            } else if (notif.type === 'listing') {
-                actionsHtml = `
-                    <button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>
-                    <button class="modal-action-btn primary" onclick="window.location.href='search.html'; closeNotificationModal();">Browse Properties</button>
-                `;
-            } else if (notif.type === 'admin') {
-                actionsHtml = `<button class="modal-action-btn primary" onclick="closeNotificationModal()">✓ Acknowledged</button>`;
-            } else {
-                actionsHtml = `<button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>`;
-            }
-            actions.innerHTML = actionsHtml;
+            actions.innerHTML = `<button class="modal-action-btn" onclick="closeNotificationModal()">Close</button>`;
 
-            // Show modal
+            // mark read locally and via API
+            if (!notif.read) toggleReadApi({stopPropagation:()=>{}}, notif.id);
+
             modal.classList.add('active');
         }
 
-        function closeNotificationModal() {
-            document.getElementById('notificationModal').classList.remove('active');
-        }
-
-        function downloadNotificationFile(notificationId) {
-            const notif = notifications.find(n => n.id === notificationId);
-            if (!notif || !notif.file) return;
-            
-            const file = notif.file;
-            const link = document.createElement('a');
-            link.href = file.data;
-            link.download = file.name;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function toggleRead(id) {
-            const notif = notifications.find(n => n.id === id);
-            if (notif) {
-                notif.read = !notif.read;
-                saveNotifications();
-                renderNotifications();
-            }
-        }
-
-        function deleteNotification(id) {
-            notifications = notifications.filter(n => n.id !== id);
-            saveNotifications();
-            renderNotifications();
-        }
-
-        function markAllRead() {
-            notifications.forEach(n => n.read = true);
-            saveNotifications();
-            renderNotifications();
-        }
+        function closeNotificationModal() { document.getElementById('notificationModal').classList.remove('active'); }
 
         // Close modal when clicking outside
         document.addEventListener('click', function(e) {
             const modal = document.getElementById('notificationModal');
-            if (e.target === modal) {
-                closeNotificationModal();
-            }
+            if (e.target === modal) closeNotificationModal();
         });
 
-        // Event listeners
-        document.querySelectorAll('.filter-tab').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                currentFilter = this.dataset.filter;
-                renderNotifications();
-            });
-        });
+        document.getElementById('markAllReadBtn').addEventListener('click', markAllReadApi);
 
-        document.getElementById('markAllReadBtn').addEventListener('click', markAllRead);
+        // small UI elements for loading/error
+        const listContainer = document.getElementById('notificationsList');
+        listContainer.insertAdjacentHTML('beforebegin', '<div id="notificationsLoader" style="display:none;padding:12px;text-align:center;color:var(--secondary)">Loading notifications…</div>');
+        listContainer.insertAdjacentHTML('beforebegin', '<div id="notificationsError" style="display:none;color:#b91c1c;padding:8px 0;text-align:center"></div>');
 
-        // Initialize on load
-        init();
+        // Init
+        fetchNotifications();
     </script>
 </body>
 </html>
