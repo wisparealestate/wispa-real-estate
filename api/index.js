@@ -1365,6 +1365,10 @@ app.post("/api/properties", async (req, res) => {
     try{
       await writeDiagLog({ where: 'api-props-error-request', error: err && err.stack ? err.stack : String(err), headers: req && req.headers ? req.headers : null, cookie: (req && req.get) ? req.get('cookie') : null, body: (body && typeof body === 'object') ? body : String(body) });
     }catch(e){ console.warn('failed to write api-props error diag', e && e.message ? e.message : e); }
+    // If the thrown error set a statusCode (e.g., validation), respect it
+    if (err && err.statusCode && Number.isFinite(Number(err.statusCode))) {
+      return res.status(Number(err.statusCode)).json({ error: err.message });
+    }
     return res.status(500).json({ error: 'Database error creating/updating property', details: err.message });
   }
 });
@@ -1709,6 +1713,17 @@ app.get('/api/debug/db-info', async (req, res) => {
   } catch (e) {
     return res.status(500).json({ error: 'DB info failed', details: e.message });
   }
+});
+
+// Debug: echo request headers/body for troubleshooting cross-origin client requests
+app.all('/api/debug/echo', async (req, res) => {
+  try{
+    const headers = req.headers || {};
+    // attempt to capture raw body if present (bodyParser.json applied earlier may have parsed it)
+    const body = (req.body !== undefined) ? req.body : null;
+    const cookie = (req.get && req.get('cookie')) ? req.get('cookie') : null;
+    return res.json({ ok: true, method: req.method, headers, cookie, body });
+  }catch(e){ return res.status(500).json({ error: 'echo failed', details: e && e.message ? e.message : String(e) }); }
 });
  
 

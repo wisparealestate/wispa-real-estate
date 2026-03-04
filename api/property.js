@@ -59,6 +59,33 @@ export async function addPropertyWithPhotos(property, photoUrls) {
     p.area = p.area != null ? (Number(p.area) || 0) : (p.size != null ? Number(p.size) || 0 : null);
     // Ensure required DB columns are satisfied: `price` is NOT NULL in schema — default to 0 when missing
     if (p.price == null) p.price = 0;
+
+    // Server-side sanitization to prevent numeric overflow errors when writing to DB.
+    // NUMERIC(12,2) for price -> max 9,999,999,999.99 (10 digits before decimal)
+    // NUMERIC(10,2) for area  -> max 99,999,999.99 (8 digits before decimal)
+    const sanitizeFloat = (val, scale) => {
+      if (val === null || val === undefined) return null;
+      const n = Number(val);
+      if (!Number.isFinite(n)) return null;
+      const factor = Math.pow(10, scale || 2);
+      return Math.round(n * factor) / factor;
+    };
+    // Coerce and round
+    p.price = sanitizeFloat(p.price, 2);
+    p.area = sanitizeFloat(p.area, 2);
+    // Bedrooms/bathrooms should be integers
+    p.bedrooms = p.bedrooms != null ? (Number.isFinite(Number(p.bedrooms)) ? parseInt(Number(p.bedrooms), 10) : null) : null;
+    p.bathrooms = p.bathrooms != null ? (Number.isFinite(Number(p.bathrooms)) ? parseInt(Number(p.bathrooms), 10) : null) : null;
+
+    // Validate ranges to match DB precision/scale and provide a clear client error
+    const MAX_PRICE = 9999999999.99; // NUMERIC(12,2)
+    const MAX_AREA = 99999999.99; // NUMERIC(10,2)
+    if (p.price != null && Math.abs(p.price) > MAX_PRICE) {
+      const e = new Error('price exceeds maximum allowed value'); e.statusCode = 400; throw e;
+    }
+    if (p.area != null && Math.abs(p.area) > MAX_AREA) {
+      const e = new Error('area exceeds maximum allowed value'); e.statusCode = 400; throw e;
+    }
     // Normalize type / sale_rent / post_to
     p.type = p.type || p.property_type || null;
     p.sale_rent = p.sale_rent || p.saleRent || p.for || null;
