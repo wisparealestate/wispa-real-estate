@@ -148,8 +148,8 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       // Persist photos on the properties table in the `images` jsonb column.
       let photos = [];
       if (Array.isArray(photoUrls)) {
-        // pass the JS array directly so pg stores a proper jsonb array (avoid double-stringifying)
-        await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [photoUrls || [], propertyId]);
+        // Store images as jsonb explicitly: pass JSON string and cast to jsonb in SQL
+        await client.query('UPDATE public.properties SET images = $1::jsonb WHERE id = $2', [JSON.stringify(photoUrls || []), propertyId]);
         photos = photoUrls.filter(Boolean);
       } else {
         const pImgs = await client.query('SELECT images FROM public.properties WHERE id = $1', [propertyId]);

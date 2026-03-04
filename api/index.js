@@ -858,9 +858,9 @@ app.post('/api/upload-photos', upload.array('files'), async (req, res) => {
           const existing = await client.query('SELECT images FROM public.properties WHERE id = $1', [propertyId]);
           const existingImages = (existing && existing.rows && existing.rows[0] && Array.isArray(existing.rows[0].images)) ? existing.rows[0].images : [];
           const merged = existingImages.concat(urls).filter(Boolean);
-          await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify(merged), propertyId]);
+          await client.query('UPDATE public.properties SET images = $1::jsonb WHERE id = $2', [JSON.stringify(merged), propertyId]);
         } else {
-          await client.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify(urls.filter(Boolean)), propertyId]);
+          await client.query('UPDATE public.properties SET images = $1::jsonb WHERE id = $2', [JSON.stringify(urls.filter(Boolean)), propertyId]);
         }
         await client.query('COMMIT');
         return res.json({ urls, persisted: true, propertyId });
