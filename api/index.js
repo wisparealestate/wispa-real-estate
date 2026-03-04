@@ -169,12 +169,34 @@ async function readJson(name){
     const p = path.join(dataDir, name);
     const raw = await fs.readFile(p, 'utf8');
     return JSON.parse(raw || '[]');
-  }catch(e){ return []; }
+  }catch(e){
+    try{ await writeDiagLog({ event: 'readJson-failed', name, error: e && e.message ? e.message : String(e) }); }catch(_){ }
+    return [];
+  }
 }
 async function writeJson(name, data){
   await ensureDataDir();
   const p = path.join(dataDir, name);
-  await fs.writeFile(p, JSON.stringify(data, null, 2), 'utf8');
+  try{
+    // If file exists, create a timestamped backup to prevent accidental data loss
+    try{
+      const stat = await fs.stat(p).catch(()=>null);
+      if(stat && stat.isFile()){
+        const bakName = `${name}.bak.${Date.now()}`;
+        const bakPath = path.join(dataDir, bakName);
+        await fs.copyFile(p, bakPath).catch(()=>{});
+        await writeDiagLog({ event: 'backup-created', name, backup: bakName });
+      }
+    }catch(_){ }
+
+    // Atomic write: write to temp file then rename
+    const tmp = p + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
+    await fs.rename(tmp, p);
+  }catch(e){
+    try{ await writeDiagLog({ event: 'writeJson-failed', name, error: e && e.message ? e.message : String(e) }); }catch(_){ }
+    throw e;
+  }
 }
 // Key/value storage endpoints - back a simple KV store in the DB (or fallback to file)
 async function ensureKvTable(){
