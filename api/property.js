@@ -108,7 +108,22 @@ export async function addPropertyWithPhotos(property, photoUrls) {
       }catch(e){ /* ignore */ }
 
       if (incomingId) {
-        const updateRes = await client.query(
+          // Snapshot existing row before updating to allow rollback/recovery if needed
+          try{
+            const existing = await client.query('SELECT * FROM public.properties WHERE id = $1', [incomingId]);
+            if(existing && existing.rows && existing.rows[0]){
+              const backupsDir = path.join(process.cwd(), 'data', 'property-backups');
+              await fs.mkdir(backupsDir, { recursive: true }).catch(()=>{});
+              const bakName = `property-${incomingId}-preupdate-${Date.now()}.json`;
+              const bakPath = path.join(backupsDir, bakName);
+              const tmp = bakPath + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+              await fs.writeFile(tmp, JSON.stringify(existing.rows[0], null, 2), 'utf8');
+              await fs.rename(tmp, bakPath);
+              await writeDiag({ event: 'property-preupdate-backup', id: incomingId, file: bakName });
+            }
+          }catch(e){ try{ await writeDiag({ event: 'preupdate-backup-failed', id: incomingId, error: e && e.message ? e.message : String(e) }); }catch(_){ } }
+
+          const updateRes = await client.query(
           `UPDATE properties SET
              user_id = $1, title = $2, description = $3, price = $4, address = $5, image_url = $6,
              bedrooms = $7, bathrooms = $8, type = $9, area = $10, sale_rent = $11, post_to = $12

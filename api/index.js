@@ -1754,6 +1754,24 @@ app.delete('/api/properties/:id', async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing id' });
   try {
+    // Snapshot the row to data/property-backups before deletion to allow recovery
+    try{
+      const rows = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+      if(rows && rows.rows && rows.rows[0]){
+        try{
+          await ensureDataDir();
+          const backupsDir = path.join(dataDir, 'property-backups');
+          await fs.mkdir(backupsDir, { recursive: true }).catch(()=>{});
+          const bakName = `property-${id}-${Date.now()}.json`;
+          const bakPath = path.join(backupsDir, bakName);
+          const tmp = bakPath + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+          await fs.writeFile(tmp, JSON.stringify(rows.rows[0], null, 2), 'utf8');
+          await fs.rename(tmp, bakPath);
+          await writeDiagLog({ event: 'property-backup-created', id, file: bakName });
+        }catch(e){ try{ await writeDiagLog({ event: 'property-backup-failed', id, error: e && e.message ? e.message : String(e) }); }catch(_){ } }
+      }
+    }catch(e){ /* ignore snapshot errors */ }
+
     // Remove images from properties (if column exists)
     try {
       await pool.query('UPDATE public.properties SET images = $1 WHERE id = $2', [JSON.stringify([]), id]);
