@@ -1362,6 +1362,9 @@ app.post("/api/properties", async (req, res) => {
     return res.json({ propertyId: resObj });
   } catch (err) {
     console.error('addPropertyWithPhotos error:', err && err.stack ? err.stack : err);
+    try{
+      await writeDiagLog({ where: 'api-props-error-request', error: err && err.stack ? err.stack : String(err), headers: req && req.headers ? req.headers : null, cookie: (req && req.get) ? req.get('cookie') : null, body: (body && typeof body === 'object') ? body : String(body) });
+    }catch(e){ console.warn('failed to write api-props error diag', e && e.message ? e.message : e); }
     return res.status(500).json({ error: 'Database error creating/updating property', details: err.message });
   }
 });
