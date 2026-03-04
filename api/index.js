@@ -1742,6 +1742,22 @@ app.get('/api/debug/db-info', async (req, res) => {
   }
 });
 
+// Debug: return recent conversation-related diagnostic log entries
+app.get('/api/debug/conversation-errors', async (req, res) => {
+  try {
+    const file = path.join(process.cwd(), 'logs', 'property-debug.log');
+    const raw = await fs.readFile(file, 'utf8').catch(()=>null);
+    if(!raw) return res.json({ entries: [] });
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    // Return the last 200 lines that mention conversation handlers or message errors
+    const matched = lines.filter(l => /get-conversation-messages-error|post-conversation-message-error|post-conversation-message-fallback-failed|conversation/i.test(l));
+    const tail = matched.slice(-200);
+    return res.json({ entries: tail });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to read conversation diagnostics', details: e && e.message ? e.message : String(e) });
+  }
+});
+
 // Debug: echo request headers/body for troubleshooting cross-origin client requests
 app.all('/api/debug/echo', async (req, res) => {
   try{
