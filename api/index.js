@@ -1819,7 +1819,24 @@ app.post('/api/properties/:id/generate-document', async (req, res) => {
     try { await fs.mkdir(uploadsDir, { recursive: true }); } catch (e) {}
     const filename = `property-doc-${String(id)}-${Date.now()}.json`;
     const filePath = path.join(uploadsDir, filename);
-    await fs.writeFile(filePath, JSON.stringify(doc, null, 2), 'utf8');
+    try{
+      // If file exists create a timestamped backup before overwriting (defensive)
+      const existing = await fs.stat(filePath).catch(()=>null);
+      if(existing && existing.isFile()){
+        const bak = path.join(uploadsDir, `${filename}.bak.${Date.now()}`);
+        await fs.copyFile(filePath, bak).catch(()=>{});
+        await writeDiagLog({ event: 'upload-backup-created', file: filename, backup: path.basename(bak) });
+      }
+
+      // Atomic write: write to temp file then rename into place
+      const tmp = filePath + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+      await fs.writeFile(tmp, JSON.stringify(doc, null, 2), 'utf8');
+      await fs.rename(tmp, filePath);
+      await writeDiagLog({ event: 'property-doc-written', file: filename });
+    }catch(e){
+      try{ await writeDiagLog({ event: 'property-doc-write-failed', file: filename, error: e && e.message ? e.message : String(e) }); }catch(_){ }
+      return res.status(500).json({ error: 'Failed to write property document', details: e && e.message ? e.message : String(e) });
+    }
     const url = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
 
     // Optionally persist document_url in DB when possible

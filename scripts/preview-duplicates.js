@@ -27,8 +27,15 @@ async function run() {
     `;
     const res = await client.query(q);
     const out = { found: res.rowCount, groups: res.rows };
-    fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
-    console.log('Wrote', outPath, 'groups=', res.rowCount);
+    try{
+      const data = JSON.stringify(out, null, 2);
+      // backup existing
+      try{ if(fs.existsSync(outPath)) fs.copyFileSync(outPath, outPath + '.bak.' + Date.now()); }catch(_){ }
+      const tmp = outPath + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+      fs.writeFileSync(tmp, data, 'utf8');
+      fs.renameSync(tmp, outPath);
+      console.log('Wrote', outPath, 'groups=', res.rowCount);
+    }catch(e){ console.error('Failed to write', outPath, e && e.message ? e.message : e); throw e; }
   } finally {
     client.release();
     await pool.end();

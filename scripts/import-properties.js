@@ -9,6 +9,17 @@ const __dirname = path.dirname(__filename);
 const INPUT = path.join(__dirname, '..', 'data', 'properties.to_import.json');
 const REPORT = path.join(__dirname, '..', 'data', 'import-report.json');
 
+function safeWriteSync(filePath, obj){
+  try{
+    const data = JSON.stringify(obj, null, 2);
+    // backup existing
+    try{ if(fs.existsSync(filePath)){ fs.copyFileSync(filePath, filePath + '.bak.' + Date.now()); } }catch(_){ }
+    const tmp = filePath + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+    fs.writeFileSync(tmp, data, 'utf8');
+    fs.renameSync(tmp, filePath);
+  }catch(e){ console.error('Failed to write report', filePath, e && e.message ? e.message : e); throw e; }
+}
+
 function normalize(p){
   return {
     source_id: p.id ?? null,
@@ -72,7 +83,7 @@ async function main(){
   console.log(`Duplicates found within input: ${duplicates.length}`);
 
   if(DRY){
-    fs.writeFileSync(REPORT, JSON.stringify(report, null, 2));
+    safeWriteSync(REPORT, report);
     console.log('Dry-run complete. Report written to', REPORT);
     console.log('To perform DB upsert, rerun with --apply and ensure DATABASE_URL is set.');
     process.exit(0);
@@ -155,7 +166,7 @@ async function main(){
   }
 
   await client.end();
-  fs.writeFileSync(REPORT, JSON.stringify(report, null, 2));
+  safeWriteSync(REPORT, report);
   console.log('Apply complete. Report written to', REPORT);
 }
 

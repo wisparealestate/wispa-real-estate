@@ -10,8 +10,22 @@ async function ensureDataDir(){
 async function write(name, data){
   const d = await ensureDataDir();
   const p = path.join(d, name);
-  await fs.writeFile(p, JSON.stringify(data, null, 2), 'utf8');
-  console.log('Wrote', p);
+  try{
+    // create backup if file exists
+    const stat = await fs.stat(p).catch(()=>null);
+    if(stat && stat.isFile()){
+      const bak = path.join(d, `${name}.bak.${Date.now()}`);
+      await fs.copyFile(p, bak).catch(()=>{});
+      console.log('Backup created:', bak);
+    }
+    const tmp = p + `.tmp.${Math.random().toString(36).slice(2,8)}`;
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
+    await fs.rename(tmp, p);
+    console.log('Wrote', p);
+  }catch(e){
+    console.error('Failed to write', p, e && e.message ? e.message : e);
+    throw e;
+  }
 }
 
 (async()=>{
