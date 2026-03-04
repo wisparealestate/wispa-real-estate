@@ -1526,7 +1526,9 @@ app.post("/api/admin-login", async (req, res) => {
     // Create admin session cookie only
     try{
       const token = createSessionToken(admin.id);
-      const isSecureLocal = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
+      const hostHeader = (req.get && req.get('host')) ? req.get('host') : '';
+      const isLocalHost = /localhost|127\.0\.0\.1|::1/.test(hostHeader);
+      const isSecureLocal = (req.protocol === 'https') || (process.env.NODE_ENV === 'production' && !isLocalHost);
       const cookieOpts = { httpOnly: true, sameSite: isSecureLocal ? 'none' : 'lax', secure: isSecureLocal, maxAge: 7*24*3600*1000 };
       res.cookie('wispa_admin_session', token, cookieOpts);
     }catch(e){ /* ignore cookie set errors */ }
@@ -1574,7 +1576,9 @@ app.get('/set-session', async (req, res) => {
         const a = await pool.query('SELECT id FROM admin_logins WHERE id = $1', [payload.uid]);
         if(a && a.rows && a.rows[0]) isAdmin = true;
       }catch(e){}
-      const isSecure2 = (req.protocol === 'https') || (process.env.NODE_ENV === 'production');
+      const hostHeader = (req.get && req.get('host')) ? req.get('host') : '';
+      const isLocalHost = /localhost|127\.0\.0\.1|::1/.test(hostHeader);
+      const isSecure2 = (req.protocol === 'https') || (process.env.NODE_ENV === 'production' && !isLocalHost);
       const cookieOpts = { httpOnly: true, sameSite: isSecure2 ? 'none' : 'lax', secure: isSecure2, maxAge: (payload.exp - Math.floor(Date.now()/1000)) * 1000 };
       if(isAdmin) {
         res.cookie('wispa_admin_session', st, cookieOpts);
