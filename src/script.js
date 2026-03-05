@@ -22,6 +22,13 @@ try { window.WISPA_DB_ONLY = true; window.WISPA_DISABLE_LOCALSTORAGE = true; } c
 window.normalizeImageUrl = window.normalizeImageUrl || function(u){
     try{ if(!u) return u; const s = String(u).trim(); if(s.indexOf('data:')===0) return s; if(location && location.protocol === 'https:'){ if(s.startsWith('http://')) return s.replace(/^http:/,'https:'); if(s.startsWith('//')) return 'https:' + s; } return s; }catch(e){ return u; }
 };
+// Site-wide inline fallback image used when an image URL is missing or fails to load
+window.SITE_FALLBACK_IMAGE = window.SITE_FALLBACK_IMAGE || ('data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500">'
+    + '<rect width="100%" height="100%" fill="#f3f4f6"/>'
+    + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-family="Arial, Helvetica, sans-serif" font-size="24">Image not available</text>'
+    + '</svg>'
+));
 window.escapeHtml = window.escapeHtml || function(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 if (!window.apiFetch) {
     window.apiFetch = async function(url, opts) {
@@ -1728,6 +1735,7 @@ if (typeof propertyImageIds === 'undefined') {
             // Render homepage post using the similar-property-card layout
             const imgs = getPropertyImages(property);
             const mainImage = imgs && imgs.length ? imgs[0] : '';
+            const imgSrc = normalizeImageUrl(mainImage) || window.SITE_FALLBACK_IMAGE;
             const totalMedia = imgs ? imgs.length : 0;
             const imageCountBadge = totalMedia >= 2 ? `<div class="image-counter">${totalMedia} 📷</div>` : '';
             const categoryClass = property.postTo || (property.featured ? 'featured' : (property.hot ? 'hot' : 'available'));
@@ -1739,7 +1747,7 @@ if (typeof propertyImageIds === 'undefined') {
 
             a.innerHTML = `
                 <div style="position: relative;">
-                    <img src="${mainImage}" alt="${property.title}" class="similar-property-image">
+                    <img src="${imgSrc}" alt="${property.title}" class="similar-property-image" onerror="if(this.src !== window.SITE_FALLBACK_IMAGE) this.src = window.SITE_FALLBACK_IMAGE;">
                     ${imageCountBadge}
                 </div>
                 <div class="similar-property-info">

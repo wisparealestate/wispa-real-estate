@@ -1215,10 +1215,12 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const fromLikes = urlParams.get('fromLikes') === 'true' ? '&fromLikes=true' : '';
                 
+                const simImg = (prop.image || (prop.images ? prop.images[0] : ''));
+                const simImgSrc = (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(simImg) : (simImg || '')) || (window.SITE_FALLBACK_IMAGE || FALLBACK_IMAGE);
                 return `
                 <a href="property-detail.html?id=${prop.id}&category=${prop.category}${fromLikes}" class="similar-property-card">
                     <div style="position: relative;">
-                        <img src="${prop.image || (prop.images ? prop.images[0] : '')}" alt="${prop.title}" class="similar-property-image">
+                        <img src="${simImgSrc}" alt="${prop.title}" class="similar-property-image" onerror="if(this.src !== (window.SITE_FALLBACK_IMAGE || FALLBACK_IMAGE)) this.src = (window.SITE_FALLBACK_IMAGE || FALLBACK_IMAGE);">
                         ${imageCountBadge}
                     </div>
                     <div class="similar-property-info">
