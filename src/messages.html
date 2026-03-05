@@ -94,7 +94,15 @@
                     cardWrap.style.alignItems = 'center';
                     cardWrap.style.cursor = 'pointer';
                     const img = prop.image || (prop.images && prop.images[0]) || '';
-                    if(img){ const im = document.createElement('img'); im.src = normalizeImageUrlLocal(img); im.alt = prop.title || ''; im.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;'; cardWrap.appendChild(im); }
+                    if(img){
+                        const im = document.createElement('img');
+                        const fallback = (window.SITE_FALLBACK_IMAGE || ('data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-family="Arial, Helvetica, sans-serif" font-size="16">Image not available</text></svg>')));
+                        im.src = normalizeImageUrlLocal(img) || fallback;
+                        im.alt = prop.title || '';
+                        im.style.cssText = 'width:84px;height:64px;object-fit:cover;border-radius:6px;';
+                        im.addEventListener('error', function(){ try{ if(this.src !== (window.SITE_FALLBACK_IMAGE || fallback)) this.src = (window.SITE_FALLBACK_IMAGE || fallback); }catch(e){} });
+                        cardWrap.appendChild(im);
+                    }
                     const info = document.createElement('div'); info.style.flex = '1';
                     const t = document.createElement('div'); t.style.fontWeight = '700'; t.style.marginBottom='4px'; t.textContent = prop.title || prop.name || 'Property';
                     const s = document.createElement('div'); s.style.color='#666'; s.style.fontSize='13px'; s.textContent = (prop.location||prop.address||'') + (prop.price ? (' — '+prop.price) : '');

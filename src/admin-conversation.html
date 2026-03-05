@@ -93,7 +93,27 @@
 
       function buildMessageHtml(m){ const isAdmin = (m.sender === 'admin' || (m.senderName && m.senderName.toLowerCase && m.senderName.toLowerCase()==='admin')); const username = m.senderName || m.userName || m.sender || (isAdmin? 'Admin':'User'); const ts = m.time ? new Date(m.time).toLocaleString() : (m.ts ? new Date(m.ts).toLocaleString() : ''); const txt = escapeHtml(m.text||''); return `<div style="display:flex;justify-content:${isAdmin?'flex-end':'flex-start'};margin-bottom:12px;"><div style="max-width:70%;background:${isAdmin?'#3498db':'#fff'};color:${isAdmin?'#fff':'#222'};padding:10px;border-radius:10px;border:1px solid #eee;">` + `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:${isAdmin?'#fff':'#666'};">${escapeHtml(username)}</div>` + `<div style="white-space:pre-wrap">${txt}</div>` + `<div style="font-size:11px;color:rgba(0,0,0,0.45);margin-top:6px;text-align:${isAdmin?'right':'left'};">${escapeHtml(ts)}</div>` + `</div></div>`; }
 
-      function getPropertyPreviewCard(){ if(!convId.startsWith('property-')) return ''; const m = convId.match(/^property-(\d+)-/); if(!m) return ''; try{ const props = (window.adminLoadKeySync ? (window.adminLoadKeySync('properties') || []) : (window._adminCache && window._adminCache['properties'] ? JSON.parse(window._adminCache['properties']) : [])); const p = Array.isArray(props) ? props.find(x=>String(x.id)===String(m[1])) : null; if(!p) return ''; const badge = p.hot ? '🔥 Hot Property' : (p.featured ? '⭐ Featured Property' : '✅ Available Property'); const img = p.images && p.images.length ? p.images[0] : ''; return `<div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;border:1px solid var(--border);max-width:900px;">` + `<a href="property-detail.html?id=${p.id}&conversation=true" style="text-decoration:none;color:inherit;display:flex;gap:18px;align-items:center;">` + `<div style="width:110px;height:80px;flex:0 0 110px;">${img?`<img src="${img}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;">`:'<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;"></div>'}</div>` + `<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:17px;">${escapeHtml(p.title||p.name||'Property')}</div><div style="color:var(--secondary)">${escapeHtml(p.location||'')} <span style="background:#3498db;color:#fff;padding:2px 8px;border-radius:6px;margin-left:8px;">${badge}</span></div></div>` + `</a></div>`; }catch(e){return ''; } }
+      function getPropertyPreviewCard(){
+        if(!convId.startsWith('property-')) return '';
+        const m = convId.match(/^property-(\d+)-/);
+        if(!m) return '';
+        try{
+          const props = (window.adminLoadKeySync ? (window.adminLoadKeySync('properties') || []) : (window._adminCache && window._adminCache['properties'] ? JSON.parse(window._adminCache['properties']) : []));
+          const p = Array.isArray(props) ? props.find(x=>String(x.id)===String(m[1])) : null;
+          if(!p) return '';
+          const badge = p.hot ? '🔥 Hot Property' : (p.featured ? '⭐ Featured Property' : '✅ Available Property');
+          const img = p.images && p.images.length ? p.images[0] : '';
+          try{
+            const imgSrc = img ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(img) : img) : '';
+            const finalImg = imgSrc || (window.SITE_FALLBACK_IMAGE || '');
+            return `<div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;border:1px solid var(--border);max-width:900px;">` +
+              `<a href="property-detail.html?id=${p.id}&conversation=true" style="text-decoration:none;color:inherit;display:flex;gap:18px;align-items:center;">` +
+              `<div style="width:110px;height:80px;flex:0 0 110px;">${finalImg?`<img src="${escapeHtml(finalImg)}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f7f7f7;" onerror="if(this.src !== (window.SITE_FALLBACK_IMAGE || '') ) this.src = (window.SITE_FALLBACK_IMAGE || '');">`:'<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;"></div>'}</div>` +
+              `<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:17px;">${escapeHtml(p.title||p.name||'Property')}</div><div style="color:var(--secondary)">${escapeHtml(p.location||'')} <span style="background:#3498db;color:#fff;padding:2px 8px;border-radius:6px;margin-left:8px;">${badge}</span></div></div>` +
+              `</a></div>`;
+          }catch(e){ return ''; }
+        }catch(e){return ''; }
+      }
 
       function render(){ const msgs = loadMessages(); try{ const lastMsg = msgs && msgs.length ? (msgs[msgs.length-1].time || msgs[msgs.length-1].ts || '') : ''; const lastSig = String(lastMsg) + '|' + String(msgs.length) + '|' + String(convId); if(messagesEl && messagesEl.dataset && messagesEl.dataset.lastSig === lastSig) return; if(messagesEl && messagesEl.dataset) messagesEl.dataset.lastSig = lastSig; }catch(e){}
         let hadFocus=false, selStart=null, selEnd=null; try{ hadFocus = (document.activeElement === inputEl); selStart = inputEl.selectionStart; selEnd = inputEl.selectionEnd; }catch(e){}

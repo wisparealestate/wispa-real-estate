@@ -100,7 +100,7 @@
         row.innerHTML = `
           <div style="display:flex;gap:12px;align-items:center">
             <div style="flex:0 0 auto">
-              ${avatarUrl ? `<img src="${this.escape(avatarUrl)}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)">` : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f3f6;border:1px solid var(--border);"></div>`}
+              ${avatarUrl ? `<img src="${this.escape(avatarUrl)}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)" onerror="if(this.src !== window.SITE_FALLBACK_IMAGE) this.src = window.SITE_FALLBACK_IMAGE;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f3f6;border:1px solid var(--border);"></div>`}
             </div>
             <div style="flex:1;min-width:0">
               <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escape(leftTitle)}</div>
@@ -193,6 +193,7 @@
             const p = property;
             const img = p.image || (p.images && p.images[0]) || '';
             const imgSrc = img ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(img) : img) : '';
+            const finalImgSrc = imgSrc || (window.SITE_FALLBACK_IMAGE || '');
             const title = p.title || p.name || 'Property';
             const price = (p.price != null) ? (`€${Number(p.price).toLocaleString()}`) : '';
             const loc = p.location || p.address || '';
@@ -205,7 +206,7 @@
               <a href="property-detail.html?id=${this.escape(String(propId))}&conversation=true" style="text-decoration:none;color:inherit;display:block">
               <div id="messages-property-card" style="padding:12px;border-radius:8px;background:#f7fafd;margin-bottom:10px;display:flex;gap:18px;align-items:center;border:1px solid var(--border);max-width:900px;">
                   <div style="width:110px;height:80px;flex:0 0 110px;">
-                      ${imgSrc ? `<img src="${this.escape(imgSrc)}" alt="${this.escape(title)}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f7f7f7;">` : `<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;border:1px solid var(--border);"></div>`}
+                      ${finalImgSrc ? `<img src="${this.escape(finalImgSrc)}" alt="${this.escape(title)}" style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f7f7f7;" onerror="if(this.src !== window.SITE_FALLBACK_IMAGE) this.src = window.SITE_FALLBACK_IMAGE;">` : `<div style="width:110px;height:80px;border-radius:8px;background:#f7f7f7;border:1px solid var(--border);"></div>`}
                   </div>
                   <div style="flex:1;min-width:0">
                       <div style="font-weight:700;font-size:17px;line-height:1.2;">${this.escape(title)}</div>
