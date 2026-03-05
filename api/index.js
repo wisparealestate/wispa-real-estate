@@ -1807,6 +1807,70 @@ app.delete('/api/properties/:id', async (req, res) => {
   }
 });
 
+// Admin: list property backup files
+app.get('/api/admin/property-backups', async (req, res) => {
+  try {
+    const backupsDir = path.join(dataDir, 'property-backups');
+    // ensure dir exists
+    try{ await fs.mkdir(backupsDir, { recursive: true }); }catch(e){}
+    const files = await fs.readdir(backupsDir).catch(()=>[]);
+    const items = [];
+    for (const f of files) {
+      try{
+        const p = path.join(backupsDir, f);
+        const stat = await fs.stat(p).catch(()=>null);
+        if(!stat || !stat.isFile()) continue;
+        const raw = await fs.readFile(p, 'utf8').catch(()=>null);
+        let parsed = null;
+        try{ parsed = raw ? JSON.parse(raw) : null; }catch(e){ parsed = null }
+        items.push({ file: f, size: stat.size, mtime: stat.mtime, preview: parsed && (parsed.id || parsed.title) ? { id: parsed.id || null, title: parsed.title || null } : null });
+      }catch(e){}
+    }
+    // sort by mtime desc
+    items.sort((a,b)=> (b.mtime && a.mtime) ? new Date(b.mtime).getTime() - new Date(a.mtime).getTime() : 0);
+    return res.json({ backups: items });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to list backups', details: e && e.message ? e.message : String(e) });
+  }
+});
+
+// Admin: restore a property backup file into the properties table
+app.post('/api/admin/property-backups/restore', async (req, res) => {
+  try {
+    const admin = req.currentUser;
+    if (!admin) return res.status(401).json({ error: 'Admin authentication required' });
+    const { file, overwrite } = req.body || {};
+    if (!file) return res.status(400).json({ error: 'Missing file' });
+    const backupsDir = path.join(dataDir, 'property-backups');
+    const p = path.join(backupsDir, file);
+    const raw = await fs.readFile(p, 'utf8').catch(()=>null);
+    if(!raw) return res.status(404).json({ error: 'Backup not found' });
+    let obj = null;
+    try{ obj = JSON.parse(raw); }catch(e){ return res.status(400).json({ error: 'Invalid backup JSON' }); }
+
+    // Upsert into properties table using available columns only
+    const client = await pool.connect();
+    try{
+      await client.query('BEGIN');
+      // get columns available
+      const colRes = await client.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'properties'");
+      const existingCols = (colRes.rows || []).map(r=>r.column_name);
+      const keys = Object.keys(obj).filter(k => existingCols.indexOf(k) !== -1 && k !== 'id');
+      const cols = ['id', ...keys];
+      const placeholders = cols.map((c,idx) => '$' + (idx+1));
+      const values = [obj.id, ...keys.map(k => obj[k])];
+      // build ON CONFLICT update set
+      const updates = keys.map((k) => `${k} = EXCLUDED.${k}`);
+      const sql = `INSERT INTO properties (${cols.join(',')}) VALUES (${placeholders.join(',')}) ON CONFLICT (id) DO UPDATE SET ${updates.join(',')} RETURNING *`;
+      const up = await client.query(sql, values);
+      await client.query('COMMIT');
+      return res.json({ ok: true, restored: up.rows && up.rows[0] ? up.rows[0] : null });
+    }catch(e){ try{ await client.query('ROLLBACK'); }catch(_){} return res.status(500).json({ error: 'Restore failed', details: e && e.message ? e.message : String(e) }); } finally { client.release(); }
+  } catch (e) {
+    return res.status(500).json({ error: 'Restore failed', details: e && e.message ? e.message : String(e) });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Wispa Real Estate Backend is running!");
 });
