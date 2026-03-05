@@ -1,0 +1,589 @@
+    <script>
+    // Point frontend to API host so storage and API calls go to the proper backend.
+    // Change this value if your API is hosted elsewhere.
+    window.WISPA_API_BASE = window.WISPA_API_BASE || 'https://wispa-real-estate-2ew3.onrender.com';
+    // Optional: try to detect existing session but DO NOT redirect to login.
+    // Keeping index open for now so users can browse without authentication.
+    document.addEventListener('DOMContentLoaded', async function() {
+        try{
+            // If helpers exist, attempt a graceful non-blocking user fetch for UI personalization
+            if (window.getCurrentUser) {
+                try { window._initialUser = await window.getCurrentUser(); } catch(e) { /* ignore */ }
+            } else {
+                try { const r = await fetch((window.WISPA_API_BASE||'') + '/api/me', { credentials: 'include' }); if (r && r.ok) { try { const j = await r.json(); window._initialUser = j && j.user ? j.user : j; } catch(e){} } } catch(e) { /* ignore */ }
+            }
+        }catch(e){ /* ignore */ }
+    });
+    </script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wispa Real Estate</title>
+        <link rel="stylesheet" href="styles.css">
+</head>
+<body class="home">
+<div class="top-hero-wrap">
+    <!-- UNIFIED HEADER (Same on desktop & mobile) -->
+    <header class="main-header">
+        <div class="header-left">
+            <a class="profile-btn" aria-label="User profile" href="profile.html">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.2c-3.3 0-9.8 1.7-9.8 5v2.2h19.6V19c0-3.3-6.5-5-9.8-5z" fill="currentColor"/>
+                </svg>
+            </a>
+        </div>
+        <div class="header-center">
+            <form class="search-bar" id="header-search-form">
+                <div class="search-bar-wrapper">
+                    <input type="text" id="header-search-input" placeholder="Search for Properties" />
+                    <span class="search-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+                        </svg>
+                    </span>
+                </div>
+            </form>
+        </div>
+        <div class="header-right">
+            <a href="notifications.html" class="notification-btn" aria-label="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/>
+                </svg>
+            </a>
+            <div class="hamburger-menu-container" id="hamburgerMenuContainer">
+                <button type="button" class="hamburger-btn" aria-label="Open menu">&#9776;</button>
+                <div class="hamburger-dropdown" role="menu" aria-hidden="true">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="profile.html" class="nav-link">Profile</a>
+                    <a href="about.html" class="nav-link">About</a>
+                    <a href="services.html" class="nav-link">Services</a>
+                    <a href="agents.html" class="nav-link">Agents</a>
+                    <a href="likes.html" class="nav-link">Likes</a>
+                    <a href="notifications.html" class="nav-link">Notifications</a>
+                    <button class="chat-btn" type="button">Chat</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Modals -->
+    <div id="post-ad-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Post a Property Ad</h2>
+            <form id="post-ad-form">
+                <input type="text" id="ad-title" placeholder="Property Title" required>
+                <input type="number" id="ad-price" placeholder="Price (€)" required>
+                <select id="ad-type" required>
+                    <option value="sale">For Sale</option>
+                    <option value="rent">For Rent</option>
+                </select>
+                                <label style="display:block;margin-top:8px">Post to
+                                    <select id="ad-post-to" style="width:100%;padding:8px;margin-top:6px">
+                                        <option value="available">Available</option>
+                                        <option value="hot">Hot</option>
+                                        <option value="featured">Featured</option>
+                                    </select>
+                                </label>
+                <input type="number" id="ad-bedrooms" placeholder="Bedrooms" required>
+                <input type="number" id="ad-bathrooms" placeholder="Bathrooms" required>
+                <input type="number" id="ad-area" placeholder="Area (m²)" required>
+                <input type="text" id="ad-location" placeholder="Location" required>
+                <input type="url" id="ad-image" placeholder="Image URL">
+                <input type="file" id="ad-media" accept="image/*,video/*" multiple style="margin-top:8px;">
+                <button type="submit" class="btn">Post Ad</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="chat-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Chat with Us</h2>
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Type your message...">
+            <button id="send-chat" class="btn">Send</button>
+        </div>
+    </div>
+
+    <div id="user-agreements-modal" class="modal" style="display: none;">
+        <div class="modal-content agreements-content">
+            <h2>User Agreement & Privacy Policy</h2>
+            <div class="agreements-text">
+                <h3>Terms of Service</h3>
+                <p>By using the Wispa Real Estate platform, you agree to comply with all terms and conditions outlined herein. You are responsible for maintaining the confidentiality of your account information and password.</p>
+                
+                <h3>User Conduct</h3>
+                <p>You agree not to engage in any conduct that is unlawful, threatening, abusive, defamatory, obscene, or otherwise objectionable. You will not post false, inaccurate, or misleading information or representations on this platform.</p>
+                
+                <h3>Property Listings</h3>
+                <p>All property information must be accurate and complete. Users are responsible for the accuracy of all information provided in property listings and advertisements. Misleading or false information may result in account suspension or termination.</p>
+                
+                <h3>Privacy Policy</h3>
+                <p>We are committed to protecting your personal information. Your data will be used only for services provided and will not be shared with third parties without your consent, except as required by law.</p>
+                
+                <h3>Liability Disclaimer</h3>
+                <p>Wispa Real Estate is provided "as is" without warranties of any kind. We are not liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from your use of this platform.</p>
+                
+                <h3>Account Termination</h3>
+                <p>We reserve the right to suspend or terminate your account if you violate these terms or engage in fraudulent or illegal activity.</p>
+            </div>
+            <div class="agreements-buttons">
+                <button id="decline-agreements" class="btn btn-secondary">Decline</button>
+                <button id="accept-agreements" class="btn">Accept & Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <div class="main-container">
+            <!-- FILTER SECTION (first content visible under header) -->
+            <section class="quick-search">
+                <h2>Find Your Perfect Property</h2>
+                <form id="quick-search-form" class="search-form">
+                    <div class="form-group">
+                        <div class="custom-select" id="quick-type-dropdown">
+                            <button type="button" class="custom-select-btn">Property Type</button>
+                            <div class="custom-select-menu">
+                                <div class="custom-select-option" data-value="">Property Type</div>
+                                <div class="custom-select-option" data-value="lands">Lands</div>
+                                <div class="custom-select-option" data-value="apartment">Apartment</div>
+                                <div class="custom-select-option" data-value="houses">Houses</div>
+                                <div class="custom-select-option" data-value="offices">Offices</div>
+                            </div>
+                            <input type="hidden" id="quick-type" class="custom-select-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-select" id="quick-status-dropdown">
+                            <button type="button" class="custom-select-btn">For Sale / Rent</button>
+                            <div class="custom-select-menu">
+                                <div class="custom-select-option" data-value="">Any</div>
+                                <div class="custom-select-option" data-value="sale">For Sale</div>
+                                <div class="custom-select-option" data-value="rent">For Rent</div>
+                            </div>
+                            <input type="hidden" id="quick-status" class="custom-select-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input id="quick-location" list="countries-list" class="form-control" placeholder="Location">
+                        <datalist id="countries-list">
+                            <option value=""></option>
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <input type="number" id="quick-min-price" class="form-control" placeholder="Min Price (€)">
+                    </div>
+                    <div class="form-group">
+                        <input type="number" id="quick-max-price" class="form-control" placeholder="Max Price (€)">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-search">Filter</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- FILTERED SEARCH RESULTS (populated dynamically by filter/search) -->
+            <section class="featured-section" id="filtered-results-section" style="display: none;">
+                <h2>Search Results</h2>
+                <div id="property-list" class="property-grid"></div>
+            </section>
+
+            <!-- PROPERTY INDEX SECTIONS -->
+            <section class="featured-section" id="hot-properties-section">
+                <h2><span class="section-icon">🔥</span> Hot Properties</h2>
+                <div id="hot-properties" class="property-grid">
+                    <div id="hot-row-1" class="hot-row"></div>
+                    <div id="hot-row-2" class="hot-row"></div>
+                </div>
+            </section>
+
+            <section class="featured-section" id="featured-properties-section">
+                <h2><span class="section-icon">⭐</span> Featured Properties</h2>
+                <!-- legacy wrapper expected by script.js -->
+                <div id="featured-section">
+                    <div id="featured-list" class="property-grid"></div>
+                </div>
+                <div id="featured-properties" style="display:none"></div>
+            </section>
+
+            <section class="featured-section" id="available-properties-section">
+                <h2><span class="section-icon">✓</span> Available Properties</h2>
+                <!-- legacy wrapper expected by script.js -->
+                <div id="listings-section">
+                    <div id="available-list" class="property-grid"></div>
+                </div>
+                <div id="available-properties" style="display:none"></div>
+            </section>
+
+        <!-- FOOTER -->
+        <footer class="main-footer">
+            <div class="footer-content">
+                <div class="footer-services" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:12px">
+                    <article class="service-card">
+                        <div class="service-icon">🔑</div>
+                        <h3>Property Rentals</h3>
+                        <p>Find the perfect rental property for your needs.</p>
+                        <a href="services.html" class="btn btn-secondary">Learn More</a>
+                    </article>
+                    <article class="service-card">
+                        <div class="service-icon">📊</div>
+                        <h3>Mortgage Calculator</h3>
+                        <p>Calculate your mortgage payments easily.</p>
+                        <a href="calculator.html" class="btn btn-secondary">Try Now</a>
+                    </article>
+                    <article class="service-card">
+                        <div class="service-icon">💎</div>
+                        <h3>Property Valuation</h3>
+                        <p>Get instant property value estimates.</p>
+                        <a href="valuation.html" class="btn btn-secondary">Get Estimate</a>
+                    </article>
+                </div>
+                <p style="text-align: center; margin:0">&copy; 2026 Wispa Real Estate. All rights reserved.</p>
+            </div>
+        </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // User Agreements Modal Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const agreementsModal = document.getElementById('user-agreements-modal');
+            const acceptBtn = document.getElementById('accept-agreements');
+            const declineBtn = document.getElementById('decline-agreements');
+            
+            (async function(){
+                const user = await window.getCurrentUser();
+                if (!user) return;
+                // Only show the modal immediately after login/signup (transient flag)
+                // Do NOT show it on ordinary page refreshes. Require both: user hasn't
+                // accepted agreements AND the transient sessionStorage flag (set at login/signup).
+                const shouldShowFlag = (function(){
+                    try { if (sessionStorage.getItem('showUserAgreement') === '1') return true; } catch(e){}
+                    try { if (window.location && window.location.search && window.location.search.indexOf('showAgreement=1') !== -1) return true; } catch(e){}
+                    return false;
+                })();
+
+                // If user already accepted agreements, never show the modal here
+                if (user.agreementsAccepted) return;
+
+                // Require the transient flag (set immediately after login/signup)
+                if (!shouldShowFlag) return;
+
+                // Show modal and clear transient flag so it doesn't reappear on refresh
+                try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
+                agreementsModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+
+                acceptBtn.addEventListener('click', async function() {
+                    // Prefer calling server to persist acceptance (best-effort)
+                    try { await (window.apiFetch ? window.apiFetch('/api/users/accept-agreements', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) }) : fetch('/api/users/accept-agreements', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) })); } catch(e){}
+                    // Close modal (will not persist if server endpoint missing)
+                    agreementsModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                });
+
+                declineBtn.addEventListener('click', function() {
+                    agreementsModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                    try { sessionStorage.removeItem('showUserAgreement'); } catch(e){}
+                    window.location.href = 'login.html';
+                });
+            })();
+        });
+    </script>
+    <script>
+        // Like/Unlike functionality
+        async function toggleLike(event, propertyId) {
+            event.stopPropagation();
+            event.preventDefault();
+            const btn = event.target;
+            const userObj = await window.getCurrentUser();
+            if (!userObj) { alert('Please log in to like properties'); window.location.href = 'login.html'; return; }
+            const userId = userObj.id;
+            
+            // Use helper-backed liked properties (may be server-backed)
+            const likedProperties = (typeof getLikedPropertiesSync === 'function') ? getLikedPropertiesSync() : JSON.parse(localStorage.getItem('likedProperties_' + userId) || '[]');
+            const index = likedProperties.indexOf(propertyId);
+            
+            if (index > -1) {
+                // Unlike
+                likedProperties.splice(index, 1);
+                btn.textContent = '♡';
+                btn.classList.remove('liked');
+            } else {
+                // Like
+                likedProperties.push(propertyId);
+                btn.textContent = '♥';
+                btn.classList.add('liked');
+            }
+            
+            try{ if (typeof saveLikedPropertiesArray === 'function') saveLikedPropertiesArray(likedProperties); else localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties)); }catch(e){ try{ localStorage.setItem('likedProperties_' + userId, JSON.stringify(likedProperties)); }catch(_){} }
+        }
+        
+        // Restructure property cards to match similar properties design
+        function restructurePropertyCards() {
+            // Properties with multiple images
+            const multiImageProperties = {
+                1: 3, 3: 4, 5: 3, 7: 2, 10: 3, 15: 3, 20: 2, 25: 4, 30: 3, 35: 2, 40: 3
+            };
+
+            const propertyCards = document.querySelectorAll('.property-card');
+
+            propertyCards.forEach(card => {
+                const likeBtn = card.querySelector('.like-btn');
+                if (!likeBtn) return;
+
+                const propertyId = parseInt(likeBtn.dataset.propertyId || likeBtn.dataset.id);
+                const locationDiv = card.querySelector('.location-with-like');
+                const img = card.querySelector('img');
+
+                // Determine category based on property ID
+                let category = 'available';
+                let categoryLabel = '✓ Available';
+                if (propertyId >= 1 && propertyId <= 20) {
+                    category = 'hot';
+                    categoryLabel = '🔥 Hot';
+                } else if (propertyId >= 21 && propertyId <= 30) {
+                    category = 'featured';
+                    categoryLabel = '⭐ Featured';
+                }
+
+                // Remove like button from index post card (we keep likes on detail page only)
+                // (do not move it into the price row)
+                likeBtn.remove();
+
+                // Move like button next to the price label (skipped on index)
+                const propertyInfo = card.querySelector('.property-info');
+                if (propertyInfo) {
+                    const priceElem = propertyInfo.querySelector('.price') || propertyInfo.querySelector('.property-price');
+                    if (priceElem) {
+                        const priceRow = document.createElement('div');
+                        priceRow.className = 'property-price-row';
+
+                        // Insert priceRow before the priceElem and move priceElem into it
+                        if (priceElem && priceElem.parentElement === propertyInfo) {
+                            propertyInfo.insertBefore(priceRow, priceElem);
+                        } else {
+                            propertyInfo.appendChild(priceRow);
+                        }
+                        priceRow.appendChild(priceElem);
+
+                        // We removed the like button for index page; keep price row without it
+                    }
+
+                    // If original like button lived in a .location-with-like block, replace it with an inline counter
+                    if (locationDiv) {
+                        const inlineCounter = document.createElement('div');
+                        inlineCounter.className = 'image-count-inline';
+                        if (multiImageProperties[propertyId]) {
+                            inlineCounter.textContent = `${multiImageProperties[propertyId]} 📷`;
+                        } else {
+                            inlineCounter.textContent = '';
+                        }
+
+                        const oldLike = locationDiv.querySelector('.like-btn');
+                        if (oldLike) locationDiv.replaceChild(inlineCounter, oldLike);
+                    }
+                }
+
+                // Add footer row with badge (left) and counter (right)
+                if (propertyInfo) {
+                    // ensure image container is positioned for overlays if needed
+                    if (img && img.parentElement) {
+                        img.parentElement.style.position = 'relative';
+                        img.parentElement.classList.add('property-image-container');
+                    }
+
+                    // create footer with badge and counter
+                    const footer = document.createElement('div');
+                    footer.className = 'property-footer';
+
+                    const badge = document.createElement('span');
+                    badge.className = `property-badge ${category}`;
+                    badge.textContent = categoryLabel;
+
+                    const counter = document.createElement('div');
+                    counter.className = 'footer-image-count';
+                    if (multiImageProperties[propertyId]) {
+                        counter.textContent = `${multiImageProperties[propertyId]} 📷`;
+                    } else {
+                        counter.textContent = '';
+                    }
+
+                    footer.appendChild(badge);
+                    footer.appendChild(counter);
+                    propertyInfo.appendChild(footer);
+
+                    // move location text into property-info (preserve location)
+                    const locDiv = card.querySelector('.location-with-like');
+                    if (locDiv) {
+                        const locTextElem = locDiv.querySelector('.location');
+                            if (locTextElem) {
+                                const newLoc = document.createElement('p');
+                                newLoc.className = 'location';
+                                newLoc.textContent = locTextElem.textContent;
+                                // insert before footer if footer is still a child, otherwise append
+                                if (footer && footer.parentElement === propertyInfo) {
+                                    propertyInfo.insertBefore(newLoc, footer);
+                                } else {
+                                    propertyInfo.appendChild(newLoc);
+                                }
+                            }
+                        // remove original location-with-like container
+                        locDiv.remove();
+                    }
+                }
+            });
+
+            // Fallback: remove any remaining like buttons in .location-with-like and replace with inline counter
+            document.querySelectorAll('.location-with-like .like-btn').forEach(oldLike => {
+                const card = oldLike.closest('.property-card');
+                if (!card) {
+                    oldLike.remove();
+                    return;
+                }
+
+                const locationDiv = oldLike.closest('.location-with-like');
+                if (locationDiv) {
+                    const inlineCounter = document.createElement('div');
+                    inlineCounter.className = 'image-count-inline';
+                    inlineCounter.textContent = '';
+                    locationDiv.replaceChild(inlineCounter, oldLike);
+                } else {
+                    oldLike.remove();
+                }
+            });
+        }
+        
+        // Load liked status on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            // Restructure cards first
+            restructurePropertyCards();
+            
+            // Load liked status for current user (use server session)
+            (async function(){
+                const u = await window.getCurrentUser();
+                if (!u) return;
+                try{
+                    const likedProperties = (typeof getLikedPropertiesSync === 'function') ? getLikedPropertiesSync() : JSON.parse(localStorage.getItem('likedProperties_' + u.id) || '[]');
+                    likedProperties.forEach(id => {
+                        const btn = document.querySelector(`.like-btn[data-property-id="${id}"]`);
+                        if (btn) { btn.textContent = '♥'; btn.classList.add('liked'); }
+                    });
+                }catch(e){}
+            })();
+        });
+    </script>
+    <script>
+        // Custom dropdown functionality - initialize all custom selects
+        function initCustomDropdown(dropdownId, inputId) {
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+
+            const btn = dropdown.querySelector('.custom-select-btn');
+            const menu = dropdown.querySelector('.custom-select-menu');
+            const options = dropdown.querySelectorAll('.custom-select-option');
+            const input = dropdown.querySelector(inputId);
+
+            // Toggle menu on button click
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menu.classList.toggle('show');
+            });
+
+            // Handle option selection
+            options.forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const value = this.getAttribute('data-value');
+                    const text = this.textContent;
+                    
+                    // Update button text
+                    btn.textContent = text;
+                    btn.setAttribute('aria-selected', 'true');
+                    
+                    // Update hidden input
+                    input.value = value;
+                    
+                    // Update selected state on options
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    // Close menu
+                    menu.classList.remove('show');
+                    
+                    // Trigger change event on input
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!dropdown.contains(e.target)) {
+                    menu.classList.remove('show');
+                }
+            });
+
+            // Close menu on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && menu.classList.contains('show')) {
+                    menu.classList.remove('show');
+                }
+            });
+        }
+        
+        // Initialize both custom dropdowns
+        initCustomDropdown('quick-type-dropdown', '#quick-type');
+        initCustomDropdown('quick-status-dropdown', '#quick-status');
+    </script>
+    <script>
+        // Optimize initial property loading: try the lightweight debug/recent endpoint
+        // first to reduce latency and avoid showing the local placeholder UI.
+        (function(){
+            const orig = window._globalLoadProperties || window.loadProperties;
+            window._globalLoadProperties = window.loadProperties = async function(){
+                try {
+                    const res = window.apiFetch ? await window.apiFetch('/api/debug/properties-recent') : await fetch('/api/debug/properties-recent');
+                    if (res && res.ok && typeof res.json === 'function') {
+                        const body = await res.json();
+                        const arr = Array.isArray(body.recent) ? body.recent : (Array.isArray(body) ? body : []);
+                        if (arr && arr.length) {
+                            // Normalize to the same shape `loadProperties` expects
+                            const mapped = arr.map(p => {
+                                const prop = Object.assign({}, p);
+                                if (prop.image_url && !prop.image) prop.image = prop.image_url;
+                                if (prop.image_url && (!prop.images || !Array.isArray(prop.images) || prop.images.length === 0)) prop.images = [prop.image_url];
+                                if (prop.post_to && !prop.postTo) prop.postTo = prop.post_to;
+                                if (prop.postTo) { prop.featured = prop.postTo === 'featured'; prop.hot = prop.postTo === 'hot'; }
+                                if (prop.price && typeof prop.price === 'string') { const num = Number(prop.price); if (!Number.isNaN(num)) prop.price = num; }
+                                return prop;
+                            });
+                            try { localStorage.setItem('properties', JSON.stringify(mapped)); } catch(e) {}
+                            // If the lightweight recent rows don't include images, fall back to original loader
+                            const hasImages = mapped.some(p => (Array.isArray(p.images) && p.images.length) || p.image || p.image_url || (Array.isArray(p.photoUrls) && p.photoUrls.length));
+                            if (!hasImages) {
+                                if (typeof orig === 'function') return orig();
+                                return mapped;
+                            }
+                            // Expose globals expected by renderers
+                            try { properties = mapped; } catch(e) { window.properties = mapped; }
+                            try { filteredProperties = mapped.slice(); } catch(e) { window.filteredProperties = mapped.slice(); }
+                            if (typeof renderProperties === 'function') renderProperties(filteredProperties);
+                            return mapped;
+                        }
+                    }
+                } catch (e) { /* ignore and fall back */ }
+                // Fallback to original loader
+                if (typeof orig === 'function') return orig();
+                return [];
+            };
+        })();
+    </script>
+</body>
+</html>
+
+
+
+
