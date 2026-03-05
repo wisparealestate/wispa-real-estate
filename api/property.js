@@ -107,6 +107,18 @@ export async function addPropertyWithPhotos(property, photoUrls) {
         }
       }catch(e){ /* ignore */ }
 
+      // Validate provided user_id exists to avoid foreign key violations
+      try{
+        if (p.user_id) {
+          const ures = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1', [p.user_id]);
+          if (!ures || !ures.rows || ures.rows.length === 0) {
+            await writeDiag({ where: 'invalid-user-id', provided: p.user_id });
+            // clear to avoid FK violation; ownership can be set by admin later
+            p.user_id = null;
+          }
+        }
+      }catch(e){ /* ignore user lookup failures and proceed (DB may be unavailable) */ }
+
       if (incomingId) {
           // Snapshot existing row before updating to allow rollback/recovery if needed
           try{
